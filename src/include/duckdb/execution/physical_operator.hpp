@@ -20,6 +20,7 @@
 #include "duckdb/optimizer/cascade/operators/Operator.h"
 #include "duckdb/optimizer/join_order/join_node.hpp"
 #include "duckdb/planner/bound_result_modifier.hpp"
+#include "duckdb/optimizer/cascade/base/CUtils.h"
 
 namespace duckdb {
 using namespace gpopt;
@@ -42,7 +43,6 @@ public:
 	mutex lock;
 	//! total number of optimization requests
 	ULONG m_total_opt_requests;
-	vector<ColumnBinding> v_column_binding;
 
 public:
 	PhysicalOperator(PhysicalOperatorType type, vector<LogicalType> types, idx_t estimated_cardinality);
@@ -99,14 +99,25 @@ public:
 
 public:
 	// return order property enforcing type for this operator
-	virtual CEnfdOrder::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> peo) const {
-		return CEnfdOrder::EPropEnforcingType::EpetUnnecessary;
+	virtual CEnfdOrder::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const {
+		return CEnfdOrder::EPropEnforcingType::EpetRequired;
 	}
 
 	// compute required sort order of the n-th child
 	virtual COrderSpec *PosRequired(CExpressionHandle &exprhdl, COrderSpec *posRequired, ULONG child_index,
 	                                vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) const {
-		return new COrderSpec();
+		if (child_index == 0) {
+			COrderSpec* res = new COrderSpec();
+			for (auto &child : posRequired->m_pdrgpoe) {
+				if (CUtils::ContainsAll(children[0]->GetColumnBindings(), 
+										child.expression->getColumnBinding())) {
+					res->m_pdrgpoe.push_back(child.Copy());
+				}
+			}
+			return res;
+		} else {
+			return new COrderSpec();
+		}
 	}
 
 	virtual bool FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
@@ -207,15 +218,10 @@ public:
 	// compute required output columns of the n-th child
 	virtual vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
 	                                           ULONG child_index, vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) {
-		vector<ColumnBinding> v;
-		return v;
+		return children[child_index]->GetColumnBindings();
 	}
 
 	CReqdProp *PrpCreate() const override;
-
-	vector<ColumnBinding> GetColumnBindings() override {
-		return v_column_binding;
-	}
 
 	bool FUnaryProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired) const;
 
