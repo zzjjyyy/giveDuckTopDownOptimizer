@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CReqdProp.h
+//		CRequiredProperty.h
 //
 //	@doc:
 //		Base class for all required properties
@@ -8,31 +8,31 @@
 #ifndef GPOPT_CReqdProp_H
 #define GPOPT_CReqdProp_H
 
+#include "duckdb/common/vector.hpp"
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CDrvdProp.h"
-#include "duckdb/common/vector.hpp"
+
 #include <memory>
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace gpos;
 using namespace duckdb;
 
 // forward declarations
 class CExpressionHandle;
 class Operator;
-class CReqdProp;
+class CRequiredProperty;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CReqdProp
+//		CRequiredProperty
 //
 //	@doc:
 //		Abstract base class for all required properties. Individual property
-//		components are added separately. CReqdProp is memory pool-agnostic.
+//		components are added separately. CRequiredProperty is memory pool-agnostic.
 //
 //		All derived property classes implement a pure virtual function
-//		CReqdProp::Compute(). This function is responsible for filling in the
+//		CRequiredProperty::Compute(). This function is responsible for filling in the
 //		different properties in the property container.
 //
 //		During query optimization, the optimizer looks for a physical plan that
@@ -50,7 +50,7 @@ class CReqdProp;
 //		Recursively, this operation keeps going until the requirements are
 //		propagated to all nodes in a given plan in a top-down fashion.  The
 //		initial set of requirements from the query are constructed in
-//		CQueryContext::PqcGenerate().
+//		CQueryContext::QueryContextGenerate().
 //
 //		Thus each operator needs to implement a virtual requirement function
 //		to be called by this mechanism. For example, CPhysical::PcrsChildReqd()
@@ -58,39 +58,34 @@ class CReqdProp;
 //		children.
 //
 //---------------------------------------------------------------------------
-class CReqdProp
-{
+class CRequiredProperty {
 public:
 	// types of required properties
-	enum EPropType
-	{
-		EptRelational, EptPlan, EptSentinel
-	};
+	enum EPropType { EptRelational, EptPlan, EptSentinel };
 
 public:
 	// ctor
-	CReqdProp();
-	
+	CRequiredProperty();
+
 	// no copy ctor
-	CReqdProp(const CReqdProp &) = delete;
-	
+	CRequiredProperty(const CRequiredProperty &) = delete;
+
 	// dtor
-	virtual ~CReqdProp();
+	virtual ~CRequiredProperty();
 
 	// is it a relational property?
-	virtual bool FRelational() const
-	{
+	virtual bool FRelational() const {
 		return false;
 	}
 
 	// is it a plan property?
-	virtual bool FPlan() const
-	{
+	virtual bool FPlan() const {
 		return false;
 	}
 
 	// required properties computation function
-	virtual void Compute(CExpressionHandle &exprhdl, CReqdProp* prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptRe) = 0;
-};	// class CReqdProp
-}  // namespace gpopt
+	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
+	                     duckdb::vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptRe) = 0;
+}; // class CRequiredProperty
+} // namespace gpopt
 #endif

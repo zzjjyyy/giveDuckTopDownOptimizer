@@ -29,14 +29,15 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CCostContext::CCostContext(COptimizationContext* poc, ULONG ulOptReq, CGroupExpression* pgexpr)
-	:m_cost(GPOPT_INVALID_COST), m_estate(estUncosted), m_group_expression(pgexpr), m_pgexprForStats(nullptr), m_pdpplan(nullptr), m_ulOptReq(ulOptReq), m_fPruned(false), m_poc(poc)
+	:m_cost(GPOPT_INVALID_COST), m_estate(estUncosted), m_group_expression(pgexpr), m_group_expr_for_stats(nullptr),
+      m_derived_prop_plan(nullptr), m_optimization_request_num(ulOptReq), m_fPruned(false), m_poc(poc)
 {
 	if(m_group_expression != nullptr)
 	{
-		CGroupExpression* pgexprForStats = m_group_expression->m_pgroup->PgexprBestPromise(m_group_expression);
+		CGroupExpression* pgexprForStats = m_group_expression->m_group->PgexprBestPromise(m_group_expression);
 		if (nullptr != pgexprForStats)
 		{
-			m_pgexprForStats = pgexprForStats;
+			m_group_expr_for_stats = pgexprForStats;
 		}
 	}
 }
@@ -80,14 +81,14 @@ bool CCostContext::FNeedsNewStats() const
 //---------------------------------------------------------------------------
 void CCostContext::DerivePlanProps()
 {
-	if (nullptr == m_pdpplan)
+	if (nullptr == m_derived_prop_plan)
 	{
 		// derive properties of the plan carried by cost context
 		CExpressionHandle exprhdl;
 		exprhdl.Attach(this);
 		exprhdl.DerivePlanPropsForCostContext();
 		CDrvdPropPlan* pdpplan = CDrvdPropPlan::Pdpplan(exprhdl.Pdp());
-		m_pdpplan = pdpplan;
+		m_derived_prop_plan = pdpplan;
 	}
 }
 
@@ -116,11 +117,11 @@ bool CCostContext::operator==(const CCostContext &cc) const
 bool CCostContext::IsValid()
 {
 	// obtain relational properties from group
-	CDrvdPropRelational* pdprel = CDrvdPropRelational::GetRelationalProperties(m_group_expression->m_pgroup->m_pdp);
+	CDrvdPropRelational* pdprel = CDrvdPropRelational::GetRelationalProperties(m_group_expression->m_group->m_pdp);
 	// derive plan properties
 	DerivePlanProps();
 	// checking for required properties satisfaction
-	bool fValid = m_poc->m_prpp->FSatisfied(pdprel, m_pdpplan);
+	bool fValid = m_poc->m_prpp->FSatisfied(pdprel, m_derived_prop_plan);
 	return fValid;
 }
 
@@ -145,15 +146,15 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext* pccFst, CCostContext*
 	// to have more reliable statistics on this side
 	*pfTiesResolved = false;
 	*ppccPrefered = nullptr;
-	double dRowsOuterFst = pccFst->m_pdrgpoc[0]->m_pccBest->m_cost;
-	double dRowsInnerFst = pccFst->m_pdrgpoc[1]->m_pccBest->m_cost;
+	double dRowsOuterFst = pccFst->m_optimization_contexts[0]->m_pccBest->m_cost;
+	double dRowsInnerFst = pccFst->m_optimization_contexts[1]->m_pccBest->m_cost;
 	if (dRowsOuterFst != dRowsInnerFst)
 	{
 		// two children of first plan have different row estimates
 		return;
 	}
-	double dRowsOuterSnd = pccSnd->m_pdrgpoc[0]->m_pccBest->m_cost;
-	double dRowsInnerSnd = pccSnd->m_pdrgpoc[1]->m_pccBest->m_cost;
+	double dRowsOuterSnd = pccSnd->m_optimization_contexts[0]->m_pccBest->m_cost;
+	double dRowsInnerSnd = pccSnd->m_optimization_contexts[1]->m_pccBest->m_cost;
 	if (dRowsOuterSnd != dRowsInnerSnd)
 	{
 		// two children of second plan have different row estimates
@@ -255,10 +256,10 @@ double CCostContext::CostCompute(duckdb::vector<double> pdrgpcostChildren)
 	if(!this->m_group_expression->m_pop->has_estimated_cardinality) {
 		this->m_group_expression->m_pop->CE();
 	}
-	if(m_pdrgpoc.size() == 0) {
+	if(m_optimization_contexts.size() == 0) {
 		return static_cast<double>(this->m_group_expression->m_pop->estimated_cardinality);
 	} 
-	else if(m_pdrgpoc.size() == 1) {
+	else if(m_optimization_contexts.size() == 1) {
 		return pdrgpcostChildren[0] + this->m_group_expression->m_pop->estimated_cardinality;
 	}
 	else {

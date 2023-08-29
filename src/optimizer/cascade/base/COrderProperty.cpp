@@ -1,14 +1,15 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CEnfdOrder.cpp
+//		COrderProperty.cpp
 //
 //	@doc:
 //		Implementation of enforceable order property
 //---------------------------------------------------------------------------
-#include "duckdb/optimizer/cascade/base/CEnfdOrder.h"
-#include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/COrderProperty.h"
+
 #include "duckdb/execution/operator/order/physical_order.hpp"
+#include "duckdb/optimizer/cascade/base.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
 
 namespace gpopt
 {
@@ -16,17 +17,17 @@ using namespace duckdb;
 using namespace gpos;
 
 // initialization of static variables
-const CHAR* CEnfdOrder::m_szOrderMatching[EomSentinel] = {"satisfy"};
+const CHAR*COrderProperty::m_szOrderMatching[EomSentinel] = {"satisfy"};
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CEnfdOrder::CEnfdOrder
+//		COrderProperty::COrderProperty
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CEnfdOrder::CEnfdOrder(COrderSpec* pos, EOrderMatching eom)
+COrderProperty::COrderProperty(COrderSpec* pos, EOrderMatching eom)
 	: m_pos(pos), m_eom(eom)
 {
 }
@@ -34,27 +35,27 @@ CEnfdOrder::CEnfdOrder(COrderSpec* pos, EOrderMatching eom)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CEnfdOrder::~CEnfdOrder
+//		COrderProperty::COrderPropertyerty
 //
 //	@doc:
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CEnfdOrder::~CEnfdOrder()
+COrderProperty::~COrderProperty()
 {
 }
 
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CEnfdOrder::FCompatible
+//		COrderProperty::FCompatible
 //
 //	@doc:
 //		Check if the given order specification is compatible with the
 //		order specification of this object for the specified matching type
 //
 //---------------------------------------------------------------------------
-bool CEnfdOrder::FCompatible(COrderSpec* pos) const
+bool COrderProperty::FCompatible(COrderSpec* pos) const
 {
 	switch (m_eom)
 	{
@@ -69,26 +70,26 @@ bool CEnfdOrder::FCompatible(COrderSpec* pos) const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CEnfdOrder::HashValue
+//		COrderProperty::HashValue
 //
 //	@doc:
 // 		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG CEnfdOrder::HashValue() const
+ULONG COrderProperty::HashValue() const
 {
 	return gpos::CombineHashes(m_eom + 1, m_pos->HashValue());
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CEnfdOrder::Epet
+//		COrderProperty::Epet
 //
 //	@doc:
 // 		Get order enforcing type for the given operator
 //
 //---------------------------------------------------------------------------
-CEnfdOrder::EPropEnforcingType CEnfdOrder::Epet(CExpressionHandle &exprhdl, PhysicalOperator* popPhysical, bool fOrderReqd) const
+COrderProperty::EPropEnforcingType COrderProperty::Epet(CExpressionHandle &exprhdl, PhysicalOperator* popPhysical, bool fOrderReqd) const
 {
 	if (fOrderReqd)
 	{

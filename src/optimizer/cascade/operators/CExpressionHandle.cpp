@@ -16,8 +16,8 @@
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/CKeyCollection.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
 #include "duckdb/optimizer/cascade/operators/CPattern.h"
 #include "duckdb/planner/logical_operator.hpp"
 
@@ -160,7 +160,7 @@ void CExpressionHandle::DerivePlanPropsForCostContext() {
 //
 //
 //---------------------------------------------------------------------------
-void CExpressionHandle::InitReqdProps(CReqdProp *prpInput) {
+void CExpressionHandle::InitReqdProps(CRequiredProperty *prpInput) {
 	// set required properties of attached expr/gexpr
 	m_prp = prpInput;
 	// compute required properties of children
@@ -185,7 +185,7 @@ void CExpressionHandle::InitReqdProps(CReqdProp *prpInput) {
 void CExpressionHandle::ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDrvdProp *> pdrgpdpCtxt,
                                               ULONG ulOptReq) {
 	// compute required properties based on child type
-	CReqdProp *prp = Pop()->PrpCreate();
+	CRequiredProperty *prp = Pop()->PrpCreate();
 	prp->Compute(*this, m_prp, child_index, pdrgpdpCtxt, ulOptReq);
 	// replace required properties of given child
 	m_pdrgprp[child_index] = prp;
@@ -199,7 +199,7 @@ void CExpressionHandle::ComputeChildReqdProps(ULONG child_index, duckdb::vector<
 //		Copy required properties of the n-th child
 //
 //---------------------------------------------------------------------------
-void CExpressionHandle::CopyChildReqdProps(ULONG child_index, CReqdProp *prp) {
+void CExpressionHandle::CopyChildReqdProps(ULONG child_index, CRequiredProperty *prp) {
 	m_pdrgprp[child_index] = prp;
 }
 
@@ -212,8 +212,8 @@ void CExpressionHandle::CopyChildReqdProps(ULONG child_index, CReqdProp *prp) {
 //
 //---------------------------------------------------------------------------
 void CExpressionHandle::ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDrvdProp *> pdrgpdpCtxt) {
-	CReqdProp *prp = Pop()->PrpCreate();
-	CReqdPropPlan::Prpp(prp)->ComputeReqdCols(*this, m_prp, child_index, pdrgpdpCtxt);
+	CRequiredProperty *prp = Pop()->PrpCreate();
+	CRequiredPropPlan::Prpp(prp)->ComputeReqdCols(*this, m_prp, child_index, pdrgpdpCtxt);
 	// replace required properties of given child
 	m_pdrgprp[child_index] = prp;
 }
@@ -227,7 +227,7 @@ void CExpressionHandle::ComputeChildReqdCols(ULONG child_index, duckdb::vector<C
 //		properties of all children
 //
 //---------------------------------------------------------------------------
-void CExpressionHandle::ComputeReqdProps(CReqdProp *prpInput, ULONG ulOptReq) {
+void CExpressionHandle::ComputeReqdProps(CRequiredProperty *prpInput, ULONG ulOptReq) {
 	InitReqdProps(prpInput);
 	const ULONG arity = Arity();
 	for (ULONG ul = 0; ul < arity; ul++) {
@@ -392,7 +392,7 @@ CDrvdPropRelational *CExpressionHandle::GetRelationalProperties() const {
 		return CDrvdPropRelational::GetRelationalProperties(Pop()->PdpDerive());
 	}
 	// get relational props from group
-	CDrvdPropRelational *drvdProps = CDrvdPropRelational::GetRelationalProperties(m_pgexpr->m_pgroup->m_pdp);
+	CDrvdPropRelational *drvdProps = CDrvdPropRelational::GetRelationalProperties(m_pgexpr->m_group->m_pdp);
 	return drvdProps;
 }
 
@@ -409,7 +409,7 @@ CDrvdPropPlan *CExpressionHandle::Pdpplan(ULONG child_index) const {
 	if (nullptr != m_pop) {
 		return CDrvdPropPlan::Pdpplan(m_pop->children[child_index]->Pdp(CDrvdProp::EptPlan));
 	}
-	CDrvdPropPlan *pdpplan = m_pcc->m_pdrgpoc[child_index]->m_pccBest->m_pdpplan;
+	CDrvdPropPlan *pdpplan = m_pcc->m_optimization_contexts[child_index]->m_pccBest->m_derived_prop_plan;
 	return pdpplan;
 }
 
@@ -422,9 +422,9 @@ CDrvdPropPlan *CExpressionHandle::Pdpplan(ULONG child_index) const {
 //		Assumes caller knows what properties to ask for;
 //
 //---------------------------------------------------------------------------
-CReqdPropRelational *CExpressionHandle::GetReqdRelationalProps(ULONG child_index) const {
-	CReqdProp *prp = m_pdrgprp[child_index];
-	return CReqdPropRelational::GetReqdRelationalProps(prp);
+CRequiredPropRelational *CExpressionHandle::GetReqdRelationalProps(ULONG child_index) const {
+	CRequiredProperty *prp = m_pdrgprp[child_index];
+	return CRequiredPropRelational::GetReqdRelationalProps(prp);
 }
 
 //---------------------------------------------------------------------------
@@ -436,9 +436,9 @@ CReqdPropRelational *CExpressionHandle::GetReqdRelationalProps(ULONG child_index
 //		Assumes caller knows what properties to ask for;
 //
 //---------------------------------------------------------------------------
-CReqdPropPlan *CExpressionHandle::Prpp(ULONG child_index) const {
-	CReqdProp *prp = m_pdrgprp[child_index];
-	return CReqdPropPlan::Prpp(prp);
+CRequiredPropPlan *CExpressionHandle::Prpp(ULONG child_index) const {
+	CRequiredProperty *prp = m_pdrgprp[child_index];
+	return CRequiredPropPlan::Prpp(prp);
 }
 
 //---------------------------------------------------------------------------
@@ -472,7 +472,7 @@ Operator *CExpressionHandle::Pop(ULONG child_index) const {
 		return m_pop->children[child_index].get();
 	}
 	if (nullptr != m_pcc) {
-		COptimizationContext *pocChild = m_pcc->m_pdrgpoc[child_index];
+		COptimizationContext *pocChild = m_pcc->m_optimization_contexts[child_index];
 		CCostContext *pccChild = pocChild->m_pccBest;
 		return pccChild->m_group_expression->m_pop.get();
 	}
@@ -491,9 +491,9 @@ Operator *CExpressionHandle::PopGrandchild(ULONG child_index, ULONG grandchild_i
 		return nullptr;
 	}
 	if (nullptr != m_pcc) {
-		COptimizationContext *pocChild = (m_pcc->m_pdrgpoc)[child_index];
+		COptimizationContext *pocChild = (m_pcc->m_optimization_contexts)[child_index];
 		CCostContext *pccChild = pocChild->m_pccBest;
-		COptimizationContext *pocGrandchild = (pccChild->m_pdrgpoc)[grandchild_index];
+		COptimizationContext *pocGrandchild = (pccChild->m_optimization_contexts)[grandchild_index];
 		if (nullptr != pocGrandchild) {
 			CCostContext *pccgrandchild = pocGrandchild->m_pccBest;
 			if (grandchildContext) {
@@ -529,7 +529,7 @@ Expression *CExpressionHandle::PexprScalarRepChild(ULONG child_index) const {
 		// if the expression does not come from a group, but its child does then
 		// get the scalar child from that group
 		CGroupExpression *pgexpr = m_pop->children[child_index]->m_group_expression;
-		Expression *pexprScalar = pgexpr->m_pgroup->m_pexprScalarRep;
+		Expression *pexprScalar = pgexpr->m_group->m_pexprScalarRep;
 		return pexprScalar;
 	}
 	// access scalar expression from the child expression node
@@ -552,7 +552,7 @@ Expression *CExpressionHandle::PexprScalarRep() const {
 		return m_expr;
 	}
 	if (nullptr != m_pgexpr) {
-		return m_pgexpr->m_pgroup->m_pexprScalarRep;
+		return m_pgexpr->m_group->m_pexprScalarRep;
 	}
 	return nullptr;
 }
@@ -564,7 +564,7 @@ Expression *CExpressionHandle::PexprScalarExactChild(ULONG child_index, BOOL err
 	if (nullptr != m_pgexpr && !(*m_pgexpr)[child_index]->m_pexprScalarRepIsExact) {
 		result_expr = nullptr;
 	} else if (nullptr != m_pop && nullptr != m_pop->children[child_index]->m_group_expression &&
-	           !(m_pop->children[child_index]->m_group_expression->m_pgroup->m_pexprScalarRepIsExact)) {
+	           !(m_pop->children[child_index]->m_group_expression->m_group->m_pexprScalarRepIsExact)) {
 		// the expression does not come from a group, but its child does and
 		// the child group does not have an exact expression
 		result_expr = nullptr;
@@ -580,7 +580,7 @@ Expression *CExpressionHandle::PexprScalarExactChild(ULONG child_index, BOOL err
 // return an exact scalar expression attached to handle or null if not possible
 // (use this where exactness is required, e.g. for constraint derivation)
 Expression *CExpressionHandle::PexprScalarExact() const {
-	if (nullptr != m_pgexpr && !m_pgexpr->m_pgroup->m_pexprScalarRepIsExact) {
+	if (nullptr != m_pgexpr && !m_pgexpr->m_group->m_pexprScalarRepIsExact) {
 		return nullptr;
 	}
 	return PexprScalarRep();
@@ -706,7 +706,7 @@ CDrvdProp *CExpressionHandle::Pdp() const {
 	if (nullptr != m_pop) {
 		return m_pop->Pdp(m_pop->Ept());
 	}
-	return m_pgexpr->m_pgroup->m_pdp;
+	return m_pgexpr->m_group->m_pdp;
 }
 
 // The below functions use on-demand property derivation

@@ -31,8 +31,8 @@ class CDrvdProp;
 class CDrvdPropCtxtPlan;
 class CGroupProxy;
 class COptimizationContext;
-class CReqdPropPlan;
-class CReqdPropRelational;
+class CRequiredPropPlan;
+class CRequiredPropRelational;
 
 // optimization levels in ascending order,
 // under a given optimization context, group expressions in higher levels
@@ -159,7 +159,7 @@ public:
 	ULONG m_ulGExprs;
 
 	// map of cost lower bounds
-	std::map<CReqdPropPlan*, double> m_pcostmap;
+	std::map<CRequiredPropPlan *, double> m_pcostmap;
 
 	// number of optimization contexts
 	ULONG_PTR m_ulpOptCtxts;
@@ -225,7 +225,7 @@ public:
 	void RecursiveBuildTreeMap(COptimizationContext* poc, CCostContext* pccParent, CGroupExpression* pgexprCurrent, ULONG child_index, CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> *ptmap);
 
 	// find the group expression having the best stats promise
-	CGroupExpression* PgexprBestPromise(CReqdPropRelational* prprelInput);
+	CGroupExpression* PgexprBestPromise(CRequiredPropRelational * prprelInput);
 
 	// hash function
 	ULONG HashValue() const;
@@ -277,10 +277,10 @@ public:
 	void MergeGroup();
 
 	// lookup a given context in contexts hash table
-	COptimizationContext* PocLookup(CReqdPropPlan* prpp, ULONG ulSearchStageIndex);
+	COptimizationContext* PocLookup(CRequiredPropPlan * prpp, ULONG ulSearchStageIndex);
 
 	// lookup the best context across all stages for the given required properties
-	COptimizationContext* PocLookupBest(ULONG ulSearchStages, CReqdPropPlan* prpp);
+	COptimizationContext* PocLookupBest(ULONG ulSearchStages, CRequiredPropPlan * prpp);
 
 	// find a context by id
 	COptimizationContext* Ppoc(ULONG id) const;
@@ -307,7 +307,7 @@ public:
 	void ResetLinkMap();
 
 	// compute cost lower bound for the plan satisfying given required properties
-	double CostLowerBound(CReqdPropPlan* prppInput);
+	double CostLowerBound(CRequiredPropPlan * prppInput);
 
 	// matching of pairs of arrays of groups
 	static bool FMatchGroups(duckdb::vector<CGroup*> pdrgpgroupFst, duckdb::vector<CGroup*> pdrgpgroupSnd);

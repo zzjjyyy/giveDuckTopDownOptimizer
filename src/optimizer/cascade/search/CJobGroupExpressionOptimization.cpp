@@ -6,12 +6,13 @@
 //		Implementation of group expression optimization job
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CJobGroupExpressionOptimization.h"
+
 #include "duckdb/optimizer/cascade/base/CCostContext.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
 #include "duckdb/optimizer/cascade/engine/CEngine.h"
 #include "duckdb/optimizer/cascade/operators/CExpressionHandle.h"
-#include "duckdb/planner/logical_operator.hpp"
 #include "duckdb/optimizer/cascade/search/CGroup.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/optimizer/cascade/search/CJobFactory.h"
@@ -19,7 +20,7 @@
 #include "duckdb/optimizer/cascade/search/CJobTransformation.h"
 #include "duckdb/optimizer/cascade/search/CScheduler.h"
 #include "duckdb/optimizer/cascade/search/CSchedulerContext.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropRelational.h"
+#include "duckdb/planner/logical_operator.hpp"
 
 using namespace gpopt;
 
@@ -202,12 +203,12 @@ void CJobGroupExpressionOptimization::InitChildGroupsOptimization(CSchedulerCont
 	m_pexprhdlPlan->InitReqdProps(m_poc->m_prpp);
 	// initialize required relational properties computation
 	m_pexprhdlRel = new CExpressionHandle();
-	CGroupExpression* pgexprForStats = m_pgexpr->m_pgroup->PgexprBestPromise(m_pgexpr);
+	CGroupExpression* pgexprForStats = m_pgexpr->m_group->PgexprBestPromise(m_pgexpr);
 	if (NULL != pgexprForStats)
 	{
 		m_pexprhdlRel->Attach(pgexprForStats);
 		m_pexprhdlRel->DeriveProps(NULL);
-		m_pexprhdlRel->ComputeReqdProps((CReqdProp*)m_poc->m_prprel, 0);
+		m_pexprhdlRel->ComputeReqdProps((CRequiredProperty *)m_poc->m_prprel, 0);
 	}
 }
 
@@ -226,7 +227,7 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtIni
 	CExpressionHandle exprhdl;
 	exprhdl.Attach(pjgeo->m_pgexpr);
 	exprhdl.DeriveProps(NULL);
-	if (!psc->m_peng->FCheckReqdProps(exprhdl, pjgeo->m_poc->m_prpp, pjgeo->m_ulOptReq))
+	if (!psc->m_peng->FCheckRequiredProps(exprhdl, pjgeo->m_poc->m_prpp, pjgeo->m_ulOptReq))
 	{
 		return eevFinalized;
 	}
@@ -261,7 +262,7 @@ void CJobGroupExpressionOptimization::DerivePrevChildProps(CSchedulerContext* ps
 		// exit if previous child is a scalar group
 		return;
 	}
-	COptimizationContext* pocChild = pgroupChild->PocLookupBest(psc->m_peng->UlSearchStages(), m_pexprhdlPlan->Prpp(ulPrevChildIndex));
+	COptimizationContext* pocChild = pgroupChild->PocLookupBest(psc->m_peng->PreviousSearchStageIdx(), m_pexprhdlPlan->Prpp(ulPrevChildIndex));
 	CCostContext* pccChildBest = pocChild->m_pccBest;
 	if (NULL == pccChildBest)
 	{
@@ -340,10 +341,11 @@ void CJobGroupExpressionOptimization::ScheduleChildGroupsJobs(CSchedulerContext*
 		return;
 	}
 	// compute required relational properties
-	CReqdPropRelational* prprel = new CReqdPropRelational(); // m_pexprhdlRel->GetReqdRelationalProps(m_ulChildIndex);
+	CRequiredPropRelational * prprel = new CRequiredPropRelational(); // m_pexprhdlRel->GetReqdRelationalProps(m_ulChildIndex);
 	// schedule optimization job for current child group
-	COptimizationContext* pocChild = new COptimizationContext(pgroupChild, m_pexprhdlPlan->Prpp(m_ulChildIndex), prprel, psc->m_peng->UlCurrSearchStage());
-	if (pgroupChild == m_pgexpr->m_pgroup && pocChild->Matches(m_poc))
+	COptimizationContext* pocChild = new COptimizationContext(pgroupChild, m_pexprhdlPlan->Prpp(m_ulChildIndex), prprel,
+	                                                          psc->m_peng->CurrentSearchStageIdx());
+	if (pgroupChild == m_pgexpr->m_group && pocChild->Matches(m_poc))
 	{
 		// this is to prevent deadlocks, child context cannot be the same as parent context
 		m_fChildOptimizationFailed = true;
@@ -397,9 +399,10 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtAdd
 	// get a job pointer
 	CJobGroupExpressionOptimization* pjgeo = PjConvert(pjOwner);
 	// build child contexts array
-	pjgeo->m_pdrgpoc = psc->m_peng->PdrgpocChildren(*pjgeo->m_pexprhdlPlan);
+	pjgeo->m_pdrgpoc = psc->m_peng->ChildrenOptimizationContext(*pjgeo->m_pexprhdlPlan);
 	// enforce physical properties
-	BOOL fCheckEnfdProps = psc->m_peng->FCheckEnfdProps(pjgeo->m_pgexpr, pjgeo->m_poc, pjgeo->m_ulOptReq, pjgeo->m_pdrgpoc);
+	BOOL fCheckEnfdProps =
+	    psc->m_peng->FCheckEnforceableProps(pjgeo->m_pgexpr, pjgeo->m_poc, pjgeo->m_ulOptReq, pjgeo->m_pdrgpoc);
 	if (fCheckEnfdProps)
 	{
 		// No new enforcers group expressions were added because they were either
@@ -440,7 +443,7 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtOpt
 		// failed to create cost context, terminate optimization job
 		return eevFinalized;
 	}
-	pgexpr->m_pgroup->UpdateBestCost(poc, pcc);
+	pgexpr->m_group->UpdateBestCost(poc, pcc);
 	return eevSelfOptimized;
 }
 

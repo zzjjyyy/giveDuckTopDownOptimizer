@@ -10,7 +10,7 @@
 #define GPOPT_COptimizationContext_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
 #include "duckdb/optimizer/cascade/search/CJobQueue.h"
  
 #define GPOPT_INVALID_OPTCTXT_ID gpos::ulong_max
@@ -24,7 +24,7 @@ class CGroup;
 class CGroupExpression;
 class CCostContext;
 class COptimizationContext;
-class CReqdPropRelational;
+class CRequiredPropRelational;
 
 // optimization context pointer definition
 typedef COptimizationContext* OPTCTXT_PTR;
@@ -52,10 +52,10 @@ public:
 	CGroup* m_pgroup;
 
 	// required plan properties
-	CReqdPropPlan* m_prpp;
+	CRequiredPropPlan * m_prpp;
 
 	// required relational properties -- used for stats computation during costing
-	CReqdPropRelational* m_prprel;
+	CRequiredPropRelational * m_prprel;
 
 	// index of search stage where context is generated
 	ULONG m_ulSearchStageIndex;
@@ -89,10 +89,10 @@ public:
 	//---------------------------------------------------------------------------
 	// ctor
 	// @inputs:
-	//	 CReqdPropRelational* prprel: required relational props -- used during stats derivation
+	//	 CRequiredPropRelational* prprel: required relational props -- used during stats derivation
 	//	 IStatisticsArray* stats_ctxt: stats of previously optimized expressions
 	//---------------------------------------------------------------------------
-	COptimizationContext(CGroup* pgroup, CReqdPropPlan* prpp, CReqdPropRelational* prprel, ULONG ulSearchStageIndex)
+	COptimizationContext(CGroup* pgroup, CRequiredPropPlan * prpp, CRequiredPropRelational * prprel, ULONG ulSearchStageIndex)
 		: m_id(GPOPT_INVALID_OPTCTXT_ID), m_pgroup(pgroup), m_prpp(prpp), m_prprel(prprel), m_ulSearchStageIndex(ulSearchStageIndex), m_pccBest(NULL), m_estate(estUnoptimized), m_fHasMultiStageAggPlan(false)
 	{
 	}
@@ -207,7 +207,7 @@ public:
 	static bool FEqualContextIds(duckdb::vector<COptimizationContext*> pdrgpocFst, duckdb::vector<COptimizationContext*> pdrgpocSnd);
 
 	// compute required properties to CTE producer based on plan properties of CTE consumer
-	// static CReqdPropPlan *PrppCTEProducer(COptimizationContext *poc, ULONG ulSearchStages);
+	// static CRequiredPropPlan *PrppCTEProducer(COptimizationContext *poc, ULONG ulSearchStages);
 };	// class COptimizationContext
 }  // namespace gpopt
 #endif

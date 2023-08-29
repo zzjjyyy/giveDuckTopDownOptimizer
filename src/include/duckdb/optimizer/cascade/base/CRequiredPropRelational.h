@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CReqdPropRelational.h
+//		CRequiredPropRelational.h
 //
 //	@doc:
 //		Derived required relational properties
@@ -9,8 +9,8 @@
 #define GPOPT_CReqdPropRelational_H
 
 #include "duckdb/optimizer/cascade/base.h"
+#include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
 #include "duckdb/planner/expression.hpp"
-#include "duckdb/optimizer/cascade/base/CReqdProp.h"
 
 namespace gpopt
 {
@@ -23,30 +23,29 @@ class CColRefSet;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CReqdPropRelational
+//		CRequiredPropRelational
 //
 //	@doc:
 //		Required relational properties container.
 //
 //---------------------------------------------------------------------------
-class CReqdPropRelational : public CReqdProp
-{
+class CRequiredPropRelational : public CRequiredProperty {
 public:
 	// required stat columns
 	duckdb::vector<ColumnBinding> m_pcrsStat;
 
 public:
 	// default ctor
-	CReqdPropRelational();
+	CRequiredPropRelational();
 	
 	// private copy ctor
-	CReqdPropRelational(const CReqdPropRelational &) = delete;
+	CRequiredPropRelational(const CRequiredPropRelational &) = delete;
 	
 	// ctor
-	explicit CReqdPropRelational(duckdb::vector<ColumnBinding> pcrs);
+	explicit CRequiredPropRelational(duckdb::vector<ColumnBinding> pcrs);
 
 	// dtor
-	virtual ~CReqdPropRelational();
+	virtual ~CRequiredPropRelational();
 
 	// type of properties
 	virtual bool FRelational() const override
@@ -61,17 +60,17 @@ public:
 	}
 
 	// required properties computation function
-	virtual void Compute(CExpressionHandle &exprhdl, CReqdProp* prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq) override;
+	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq) override;
 
 	// return difference from given properties
-	CReqdPropRelational* PrprelDifference(CReqdPropRelational* prprel);
+	CRequiredPropRelational * PrprelDifference(CRequiredPropRelational * prprel);
 
 	// return true if property container is empty
 	bool IsEmpty() const;
 
 	// shorthand for conversion
-	static CReqdPropRelational* GetReqdRelationalProps(CReqdProp* prp);
-};	// class CReqdPropRelational
+	static CRequiredPropRelational * GetReqdRelationalProps(CRequiredProperty * prp);
+};	// class CRequiredPropRelational
 
 }  // namespace gpopt
 

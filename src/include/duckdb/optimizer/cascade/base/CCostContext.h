@@ -57,33 +57,24 @@ public:
 public:
 	// cost of group expression under optimization context
 	double m_cost;
-
 	// cost context state
 	EState m_estate;
-
 	// back pointer to owner group expression
 	CGroupExpression *m_group_expression;
-
 	// group expression to be used stats derivation during costing
-	CGroupExpression *m_pgexprForStats;
-
+	CGroupExpression *m_group_expr_for_stats;
 	// array of optimization contexts of child groups
-	duckdb::vector<COptimizationContext *> m_pdrgpoc;
-
+	duckdb::vector<COptimizationContext *> m_optimization_contexts;
 	// derived properties of the carried plan
-	CDrvdPropPlan *m_pdpplan;
-
+	CDrvdPropPlan *m_derived_prop_plan;
 	// optimization request number
-	ULONG m_ulOptReq;
-
+	ULONG m_optimization_request_num;
 	// flag to indicate if cost context is pruned,
 	// a cost context is pruned during branch-and-bound search if there exists
 	// an equivalent context with better cost
 	bool m_fPruned;
-
 	// main optimization context
 	COptimizationContext *m_poc;
-
 	// link for cost context hash table in CGroupExpression
 	SLink m_link;
 
@@ -125,9 +116,9 @@ public:
 	}
 
 	// set child contexts
-	void SetChildContexts(duckdb::vector<COptimizationContext *> pdrgpoc) {
-		for (auto &child : pdrgpoc) {
-			m_pdrgpoc.push_back(child);
+	void SetChildContexts(duckdb::vector<COptimizationContext *> optimization_contexts) {
+		for (auto &child : optimization_contexts) {
+			m_optimization_contexts.push_back(child);
 		}
 	}
 
@@ -149,8 +140,8 @@ public:
 		if (NULL == ccLeft.m_poc || NULL == ccRight.m_poc) {
 			return NULL == ccLeft.m_poc && NULL == ccRight.m_poc;
 		}
-		return ccLeft.m_ulOptReq == ccRight.m_ulOptReq && ccLeft.m_group_expression == ccRight.m_group_expression &&
-		       ccLeft.m_poc->Matches(ccRight.m_poc);
+		return ccLeft.m_optimization_request_num == ccRight.m_optimization_request_num &&
+		       ccLeft.m_group_expression == ccRight.m_group_expression && ccLeft.m_poc->Matches(ccRight.m_poc);
 	}
 
 	// equality function

@@ -18,7 +18,7 @@ using namespace gpos;
 class CExpressionHandle;
 class Operator;
 class CDrvdPropCtxt;
-class CReqdPropPlan;
+class CRequiredPropPlan;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -81,7 +81,7 @@ public:
 	virtual void Derive(CExpressionHandle& pop, CDrvdPropCtxt* pdpctxt) = 0;
 
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CReqdPropPlan* prpp) const = 0;
+	virtual BOOL FSatisfies(const CRequiredPropPlan * prpp) const = 0;
 
 	virtual BOOL IsComplete() const
 	{

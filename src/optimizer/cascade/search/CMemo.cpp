@@ -6,17 +6,19 @@
 //		Implementation of Memo structure
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CMemo.h"
+
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/common/CAutoTimer.h"
-#include "duckdb/optimizer/cascade/io/COstreamString.h"
-#include "duckdb/optimizer/cascade/string/CWStringDynamic.h"
 #include "duckdb/optimizer/cascade/base/CDrvdProp.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/common/CAutoTimer.h"
 #include "duckdb/optimizer/cascade/engine/CEngine.h"
+#include "duckdb/optimizer/cascade/io/COstreamString.h"
 #include "duckdb/optimizer/cascade/search/CGroupProxy.h"
+#include "duckdb/optimizer/cascade/string/CWStringDynamic.h"
+
 #include <assert.h>
 #include <list>
 
@@ -88,7 +90,7 @@ void CMemo::Add(CGroup* pgroup, Operator* pexprOrigin)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMemo::PgroupInsert
+//		CMemo::GroupInsert
 //
 //	@doc:
 //		Helper for inserting group expression in target group
@@ -111,15 +113,15 @@ CGroup* CMemo::PgroupInsert(CGroup* pgroupTarget, CGroupExpression* pgexpr, Oper
 		{
 			Add(pgroupTarget, pexprOrigin);
 		}
-		return pgexpr->m_pgroup;
+		return pgexpr->m_group;
 	}
 	CGroupExpression* pgexprFound = itr->second;
-	return pgexprFound->m_pgroup;
+	return pgexprFound->m_group;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMemo::PgroupInsert
+//		CMemo::GroupInsert
 //
 //	@doc:
 //		Helper to check if a new group needs to be created
@@ -137,7 +139,7 @@ bool CMemo::FNewGroup(CGroup** ppgroupTarget, CGroupExpression* pgexpr, bool fSc
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMemo::PgroupInsert
+//		CMemo::GroupInsert
 //
 //	@doc:
 //		Attempt inserting a group expression in a target group;
@@ -169,14 +171,14 @@ CGroup* CMemo::PgroupInsert(CGroup* pgroupTarget, CGroupExpression* pgexpr)
 	}
 	if (NULL != pgexprFound)
 	{
-		pgroupContainer = pgexprFound->m_pgroup;
+		pgroupContainer = pgexprFound->m_group;
 	}
 	else
 	{
 		pgroupContainer = PgroupInsert(pgroupTarget, pgexpr, pexprOrigin, fNewGroup);
 	}
 	// if insertion failed, release group as needed
-	if (NULL == pgexpr->m_pgroup && fNewGroup)
+	if (NULL == pgexpr->m_group && fNewGroup)
 	{
 		fNewGroup = false;
 	}
@@ -191,13 +193,13 @@ CGroup* CMemo::PgroupInsert(CGroup* pgroupTarget, CGroupExpression* pgexpr)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CMemo::PexprExtractPlan
+//		CMemo::ExprExtractPlan
 //
 //	@doc:
 //		Extract a plan that delivers the given required properties
 //
 //---------------------------------------------------------------------------
-duckdb::unique_ptr<Operator> CMemo::PexprExtractPlan(CGroup* pgroupRoot, CReqdPropPlan* prppInput, ULONG ulSearchStages)
+duckdb::unique_ptr<Operator> CMemo::PexprExtractPlan(CGroup* pgroupRoot, CRequiredPropPlan * prppInput, ULONG ulSearchStages)
 {
 	CGroupExpression* pgexprBest;
 	COptimizationContext* poc;
@@ -240,7 +242,7 @@ duckdb::unique_ptr<Operator> CMemo::PexprExtractPlan(CGroup* pgroupRoot, CReqdPr
 	for (ULONG i = 0; i < arity; i++)
 	{
 		CGroup* pgroupChild = (*pgexprBest)[i];
-		CReqdPropPlan* prpp = nullptr;
+		CRequiredPropPlan * prpp = nullptr;
 		// If the child group doesn't have scalar expression, we get the optimization
 		// context for that child group as well as the required plan properties.
 		//
@@ -266,7 +268,7 @@ duckdb::unique_ptr<Operator> CMemo::PexprExtractPlan(CGroup* pgroupRoot, CReqdPr
 				// Orca doesn't support this feature yet, so falls back to planner.
 				assert(false);
 			}
-			COptimizationContext* pocChild = poc->m_pccBest->m_pdrgpoc[i];
+			COptimizationContext* pocChild = poc->m_pccBest->m_optimization_contexts[i];
 			prpp = pocChild->m_prpp;
 		}
 		duckdb::unique_ptr<Operator> pexprChild = PexprExtractPlan(pgroupChild, prpp, ulSearchStages);
@@ -352,7 +354,7 @@ bool CMemo::FRehash()
 		}
 		// mark duplicate group expression
 		pgexpr->SetDuplicate(pgexprFound);
-		CGroup* pgroup = pgexpr->m_pgroup;
+		CGroup* pgroup = pgexpr->m_group;
 		// move group expression to duplicates list in owner group
 		{
 			// group proxy scope
@@ -360,7 +362,7 @@ bool CMemo::FRehash()
 			gp.MoveDuplicateGExpr(pgexpr);
 		}
 		// check if we need also to mark duplicate groups
-		CGroup* pgroupFound = pgexprFound->m_pgroup;
+		CGroup* pgroupFound = pgexprFound->m_group;
 		if (pgroupFound != pgroup)
 		{
 			CGroup* pgroupDup = pgroup->m_pgroupDuplicate;
