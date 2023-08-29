@@ -1,10 +1,10 @@
-name: Clang Format Check
+name: Clang Format
 
 on: [push, pull_request]
 
 jobs:
   format:
-    name: Clang Format
+    name: Format Code
     runs-on: ubuntu-latest
 
     steps:
@@ -14,8 +14,13 @@ jobs:
       - name: Install clang-format
         run: sudo apt-get install clang-format-10
 
-      - name: Check Code Format
+      - name: Format Code
         run: |
           cp .github/.clang-format .
           find . -name '*.h' -or -name '*.cpp' -or -name '*.cc' | xargs clang-format-10 -style=file -i
-          git diff --exit-code
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git diff --exit-code || (git commit -am "Apply clang-format" && git push)
