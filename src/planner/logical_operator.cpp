@@ -5,7 +5,7 @@
 #include "duckdb/common/serializer/buffered_deserializer.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/common/tree_renderer.hpp"
-#include "duckdb/optimizer/cascade/base/CReqdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
 #include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/parser/parser.hpp"
@@ -45,8 +45,8 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type, vector<unique_ptr<Exp
 LogicalOperator::~LogicalOperator() {
 }
 
-CReqdProp *LogicalOperator::PrpCreate() const {
-	return new CReqdPropRelational();
+CRequiredProperty *LogicalOperator::PrpCreate() const {
+	return new CRequiredPropRelational();
 }
 
 vector<ColumnBinding> LogicalOperator::GetColumnBindings() {

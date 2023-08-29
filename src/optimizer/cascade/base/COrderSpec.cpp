@@ -6,9 +6,10 @@
 //		Specification of order property
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/base/COrderSpec.h"
-#include "duckdb/optimizer/cascade/base/COptCtxt.h"
+
 #include "duckdb/execution/operator/order/physical_order.hpp"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/COptCtxt.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
 
 using namespace gpopt;
 using namespace duckdb;
@@ -91,7 +92,7 @@ bool COrderSpec::FSatisfies(COrderSpec* pos) const
 //		Add required enforcers enforcers to dynamic array
 //
 //---------------------------------------------------------------------------
-void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CReqdPropPlan* prpp,
+void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan * prpp,
 								duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
 								duckdb::unique_ptr<Operator> pexpr)
 {
@@ -101,7 +102,7 @@ void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CReqdPropPlan* prpp
 		projections.push_back(i);
 	}
 	duckdb::vector<BoundOrderByNode> v_orders;
-	for(auto &child : prpp->m_peo->m_pos->m_pdrgpoe) {
+	for(auto &child : prpp->m_required_sort_order->m_pos->m_pdrgpoe) {
 		v_orders.emplace_back(child.Copy());
 	}
 	auto pexprSort = make_uniq<PhysicalOrder>(pexpr->types, std::move(v_orders), std::move(projections), 0);

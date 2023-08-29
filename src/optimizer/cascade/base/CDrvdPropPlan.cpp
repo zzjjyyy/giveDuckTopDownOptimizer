@@ -6,11 +6,12 @@
 //		Derived plan properties
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/base/CDrvdPropPlan.h"
+
+#include "duckdb/execution/physical_operator.hpp"
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
-#include "duckdb/optimizer/cascade/base/CEnfdOrder.h"
-#include "duckdb/execution/physical_operator.hpp"
+#include "duckdb/optimizer/cascade/base/COrderProperty.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
 
 namespace gpopt
 {
@@ -76,9 +77,9 @@ CDrvdPropPlan* CDrvdPropPlan::Pdpplan(CDrvdProp* pdp)
 //		Check for satisfying required properties
 //
 //---------------------------------------------------------------------------
-BOOL CDrvdPropPlan::FSatisfies(const CReqdPropPlan *prpp) const
+BOOL CDrvdPropPlan::FSatisfies(const CRequiredPropPlan *prpp) const
 {
-	return m_pos->FSatisfies(prpp->m_peo->m_pos);
+	return m_pos->FSatisfies(prpp->m_required_sort_order->m_pos);
 }
 
 //---------------------------------------------------------------------------

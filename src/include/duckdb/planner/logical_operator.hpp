@@ -45,7 +45,7 @@ public:
 
 public:
 	// ---------------------------- ORCA -------------------------------------
-	CReqdProp *PrpCreate() const override;
+	CRequiredProperty *PrpCreate() const override;
 
 	ULONG DeriveJoinDepth(CExpressionHandle &exprhdl) override;
 

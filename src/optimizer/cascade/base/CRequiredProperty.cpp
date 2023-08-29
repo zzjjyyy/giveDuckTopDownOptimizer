@@ -1,11 +1,12 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CReqdProp.cpp
+//		CRequiredProperty.cpp
 //
 //	@doc:
 //		Implementation of required properties
 //---------------------------------------------------------------------------
-#include "duckdb/optimizer/cascade/base/CReqdProp.h"
+#include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
+
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/operators/Operator.h"
 
@@ -13,24 +14,24 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdProp::CReqdProp
+//		CRequiredProperty::CRequiredProperty
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CReqdProp::CReqdProp()
+CRequiredProperty::CRequiredProperty()
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdProp::~CReqdProp
+//		CRequiredProperty::CRequiredPropertyProperty
 //
 //	@doc:
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CReqdProp::~CReqdProp()
+CRequiredProperty::~CRequiredProperty()
 {
 }

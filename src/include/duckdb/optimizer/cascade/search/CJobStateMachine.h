@@ -115,7 +115,7 @@ public:
 		do
 		{
 			// check if current search stage is timed-out
-			if (psc->m_peng->PssCurrent()->FTimedOut())
+			if (psc->m_peng->CurrentSearchStage()->FTimedOut())
 			{
 				// cleanup job state and terminate state machine
 				pjOwner->Cleanup();

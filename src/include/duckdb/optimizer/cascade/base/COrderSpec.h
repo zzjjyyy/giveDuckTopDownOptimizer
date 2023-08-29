@@ -86,7 +86,7 @@ public:
 	bool FSatisfies(COrderSpec* pos) const;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CExpressionHandle &exprhdl, CReqdPropPlan* prpp, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr, duckdb::unique_ptr<Operator> pexpr);
+	virtual void AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan * prpp, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr, duckdb::unique_ptr<Operator> pexpr);
 
 	// hash function
 	virtual ULONG HashValue() const;

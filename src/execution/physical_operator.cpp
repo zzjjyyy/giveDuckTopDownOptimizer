@@ -246,8 +246,8 @@ CDrvdProp* PhysicalOperator::PdpCreate()
 	return new CDrvdPropPlan();
 }
 
-CEnfdOrder::EOrderMatching PhysicalOperator::Eom(CReqdPropPlan*, ULONG, vector<CDrvdProp*>, ULONG) {
-	return CEnfdOrder::EomSatisfy;
+COrderProperty::EOrderMatching PhysicalOperator::Eom(CRequiredPropPlan *, ULONG, vector<CDrvdProp*>, ULONG) {
+	return COrderProperty::EomSatisfy;
 }
 
 // The ColumnBinding will change after pass through the projection operator
@@ -263,7 +263,7 @@ unique_ptr<Expression> PhysicalOperator::ExpressionPassThrough(const PhysicalOpe
 	}
 }
 
-CEnfdOrder::EPropEnforcingType PhysicalOperator::EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const {
+COrderProperty::EPropEnforcingType PhysicalOperator::EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const {
 	if (exprhdl.Pgexpr() != nullptr) {
 		vector<BoundOrderByNode> v;
 		/* In case inconsistence */
@@ -273,18 +273,18 @@ CEnfdOrder::EPropEnforcingType PhysicalOperator::EpetOrder(CExpressionHandle &ex
 		}
 		// derive all the possible order of this CGroupExpression
 		CGroupExpression* pgexpr = exprhdl.Pgexpr();
-		if(pgexpr->m_pdrgpgroup.size() > 0) {
+		if(pgexpr->m_child_groups.size() > 0) {
 			// Only the order of the first child influence the order of its parent
-			CGroup* gp = pgexpr->m_pdrgpgroup[0];
+			CGroup* gp = pgexpr->m_child_groups[0];
 			for (auto iter = gp->m_sht.begin(); iter != gp->m_sht.end(); iter++) {
 				auto op_ctxt = iter->second;
-				if(CUtils::ContainsAll(op_ctxt->m_prpp->m_peo->m_pos->m_pdrgpoe, v)) {
-					return CEnfdOrder::EPropEnforcingType::EpetOptional;
+				if(CUtils::ContainsAll(op_ctxt->m_prpp->m_required_sort_order->m_pos->m_pdrgpoe, v)) {
+					return COrderProperty::EPropEnforcingType::EpetOptional;
 				}
 			}
 		}
 	}
-	return CEnfdOrder::EPropEnforcingType::EpetRequired;
+	return COrderProperty::EPropEnforcingType::EpetRequired;
 }
 
 bool CachingPhysicalOperator::CanCacheType(const LogicalType &type)
@@ -391,9 +391,9 @@ OperatorFinalizeResultType CachingPhysicalOperator::FinalExecute(ExecutionContex
 //		Create base container of required properties
 //
 //---------------------------------------------------------------------------
-CReqdProp* PhysicalOperator::PrpCreate() const
+CRequiredProperty * PhysicalOperator::PrpCreate() const
 {
-	return new CReqdPropPlan();
+	return new CRequiredPropPlan();
 }
 
 //---------------------------------------------------------------------------

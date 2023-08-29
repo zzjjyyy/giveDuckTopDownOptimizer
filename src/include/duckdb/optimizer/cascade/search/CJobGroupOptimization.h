@@ -94,7 +94,7 @@ public:
 	// damp optimization level of member group expressions
 	void DampOptimizationLevel()
 	{
-		m_eolCurrent = CEngine::EolDamp(m_eolCurrent);
+		m_eolCurrent = CEngine::DampOptimizationLevel(m_eolCurrent);
 	}
 
 	// get first unscheduled expression

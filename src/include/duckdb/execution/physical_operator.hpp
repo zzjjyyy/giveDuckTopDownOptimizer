@@ -15,12 +15,12 @@
 #include "duckdb/common/types/data_chunk.hpp"
 #include "duckdb/execution/execution_context.hpp"
 #include "duckdb/execution/physical_operator_states.hpp"
-#include "duckdb/optimizer/cascade/base/CEnfdOrder.h"
+#include "duckdb/optimizer/cascade/base/COrderProperty.h"
 #include "duckdb/optimizer/cascade/base/COrderSpec.h"
+#include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/operators/Operator.h"
 #include "duckdb/optimizer/join_order/join_node.hpp"
 #include "duckdb/planner/bound_result_modifier.hpp"
-#include "duckdb/optimizer/cascade/base/CUtils.h"
 
 namespace duckdb {
 using namespace gpopt;
@@ -95,13 +95,13 @@ public:
 	// virtual CCTEMap *PcmDerive() const;
 
 	// order matching type
-	virtual CEnfdOrder::EOrderMatching Eom(CReqdPropPlan *, ULONG, vector<CDrvdProp *>, ULONG);
+	virtual COrderProperty::EOrderMatching Eom(CRequiredPropPlan *, ULONG, vector<CDrvdProp *>, ULONG);
 
 public:
 	static unique_ptr<Expression> ExpressionPassThrough(const PhysicalOperator* op, Expression* expr);
 
 	// return order property enforcing type for this operator
-	virtual CEnfdOrder::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const;
+	virtual COrderProperty::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const;
 
 	// compute required sort order of the n-th child
 	virtual COrderSpec *PosRequired(CExpressionHandle &exprhdl, COrderSpec *posRequired, ULONG child_index,
@@ -224,7 +224,7 @@ public:
 		return children[child_index]->GetColumnBindings();
 	}
 
-	CReqdProp *PrpCreate() const override;
+	CRequiredProperty *PrpCreate() const override;
 
 	bool FUnaryProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired) const;
 

@@ -18,7 +18,7 @@ PhysicalOrder::PhysicalOrder(vector<LogicalType> types, vector<BoundOrderByNode>
       orders(std::move(orders)), projections(std::move(projections)) {
 }
 
-CEnfdOrder::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &exprhdl,
+COrderProperty::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &exprhdl,
                                                         vector<BoundOrderByNode> &peo) const {
 	bool compactible = true;
 	for (size_t ul = 0; ul < peo.size(); ul++) {
@@ -36,11 +36,11 @@ CEnfdOrder::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &exprh
 	}
 	if (compactible) {
 		// required order is already established by sort operator
-		return CEnfdOrder::EpetUnnecessary;
+		return COrderProperty::EpetUnnecessary;
 	}
 	// required order is incompatible with the order established by the
 	// sort operator, prohibit adding another sort operator on top
-	return CEnfdOrder::EpetProhibited;
+	return COrderProperty::EpetProhibited;
 }
 
 COrderSpec *PhysicalOrder::PosRequired(CExpressionHandle &exprhdl, COrderSpec *pos_required, ULONG child_index,

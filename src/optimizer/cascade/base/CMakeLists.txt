@@ -7,7 +7,7 @@ add_library_unity(
     CDrvdPropCtxtPlan.cpp
     CDrvdPropPlan.cpp
     CDrvdPropRelational.cpp
-    CEnfdOrder.cpp
+        COrderProperty.cpp
     CFunctionalDependency.cpp
     CKeyCollection.cpp
     COptCtxt.cpp
@@ -15,8 +15,8 @@ add_library_unity(
     COrderSpec.cpp
     CPropConstraint.cpp
     CQueryContext.cpp
-    CReqdProp.cpp
-    CReqdPropPlan.cpp
+        CRequiredProperty.cpp
+        CRequiredPropPlan.cpp
     CReqPropRelational.cpp
     CUtils.cpp)
 set(ALL_OBJECT_FILES

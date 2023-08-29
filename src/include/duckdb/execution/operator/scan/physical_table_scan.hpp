@@ -13,7 +13,7 @@
 #include "duckdb/storage/data_table.hpp"
 
 namespace gpopt {
-class CEnfdOrder;
+class COrderProperty;
 }
 
 namespace duckdb {
@@ -81,8 +81,8 @@ public:
 
 public:
 	ULONG HashValue() const override;
-	
-	CEnfdOrder::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
+
+	COrderProperty::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
 
 	COrderSpec* PosRequired(CExpressionHandle &exprhdl, gpopt::COrderSpec* posRequired,
 							ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt,

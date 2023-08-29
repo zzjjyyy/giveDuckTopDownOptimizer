@@ -30,59 +30,68 @@ using namespace gpopt;
 
 duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<LogicalOperator> plan) {
 	/* Used for CCostContext::CostCompute */
-	unsigned seed;
-	seed = time(0);
+	unsigned seed = time(0);
 	srand(seed);
-	/* */
+
 	// ColumnBindingResolver resolver;
 	// resolver.VisitOperator(*plan);
+
 	// now resolve types of all the operators
 	plan->ResolveOperatorTypes();
+
 	// extract dependencies from the logical plan
 	// DependencyExtractor extractor(dependencies);
 	// extractor.VisitOperator(*plan);
-	if (GPOS_OK != CWorkerPoolManager::Init()) {
-		return nullptr;
-	}
+
+	// init Xform factory
 	if (GPOS_OK != CXformFactory::Init()) {
 		return nullptr;
 	}
-	CWorkerPoolManager *pwpm = CWorkerPoolManager::m_worker_pool_manager.get();
-	// check if worker pool is initialized
+
+	// init worker pool manager
+	if (GPOS_OK != CWorkerPoolManager::Init()) {
+		return nullptr;
+	}
 	if (nullptr == CWorkerPoolManager::m_worker_pool_manager) {
 		return nullptr;
 	}
-	void *pvStackStart = &pwpm;
-	duckdb::unique_ptr<CWorker> wrkr = make_uniq<CWorker>(GPOS_WORKER_STACK_SIZE, (ULONG_PTR)pvStackStart);
-	CWorkerPoolManager::m_worker_pool_manager->RegisterWorker(std::move(wrkr));
-	CAutoTaskProxy atp(pwpm, true);
-	CTask *ptsk = atp.Create(nullptr, nullptr);
-	// init TLS
-	ptsk->GetTls().Reset();
-	atp.Execute(ptsk);
-	vector<CSearchStage *> search_strategy_arr;
-	IConstExprEvaluator *pceeval = nullptr;
+	CWorkerPoolManager *worker_pool_manager = CWorkerPoolManager::m_worker_pool_manager.get();
+	duckdb::unique_ptr<CWorker> worker = make_uniq<CWorker>(GPOS_WORKER_STACK_SIZE, (ULONG_PTR)&worker_pool_manager);
+	CWorkerPoolManager::m_worker_pool_manager->RegisterWorker(std::move(worker));
+
+	// init task proxy and TLS
+	CAutoTaskProxy task_proxy(worker_pool_manager, true);
+	CTask *task = task_proxy.Create(nullptr, nullptr);
+	task->GetTls().Reset();
+	task_proxy.Execute(task);
+	IConstExprEvaluator *expr_evaluator = nullptr;
 	COptimizerConfig *optimizer_config = nullptr;
-	CAutoOptCtxt aoc(pceeval, optimizer_config);
-	duckdb::vector<ULONG *> pdrgpul;
-	ULONG x = 0;
-	pdrgpul.emplace_back(&x);
-	duckdb::vector<std::string> pdrgpmdname;
-	std::string str = "A";
-	pdrgpmdname.push_back(str);
-	CQueryContext *pqc = CQueryContext::PqcGenerate(std::move(plan), pdrgpul, pdrgpmdname, true);
-	CEngine eng;
-	eng.Init(pqc, search_strategy_arr);
-	eng.Optimize();
+	CAutoOptCtxt optimizer_context(expr_evaluator, optimizer_config);
+
+	// init query context, it describes the requirements of the query output.
+	duckdb::vector<ULONG *> output_column_ids(1, 0);
+	duckdb::vector<std::string> output_column_names(1, "A");
+	CQueryContext *query_context =
+	    CQueryContext::QueryContextGenerate(std::move(plan), output_column_ids, output_column_names, true);
+
+	// init orca engine
+	CEngine engine;
+	vector<CSearchStage *> search_strategy;
+	engine.Init(query_context, search_strategy);
+
+	// optimize
+	engine.Optimize();
 	duckdb::unique_ptr<PhysicalOperator> physical_plan =
-	    duckdb::unique_ptr<PhysicalOperator>((PhysicalOperator *)eng.PssPrevious()->m_pexprBest.release());
+	    duckdb::unique_ptr<PhysicalOperator>((PhysicalOperator *)engine.PreviousSearchStage()->m_pexprBest.release());
+
 	/* I comment here */
-	// CExpression* physical_plan = eng.PexprExtractPlan();
+	// CExpression* physical_plan = engine.ExprExtractPlan();
 	// CheckCTEConsistency(physical_plan);
 	// PrintQueryOrPlan(physical_plan);
-	// (void) physical_plan->PrppCompute(pqc->m_required_plan_property);
-	atp.DestroyAll();
-	wrkr.release();
+	// (void) physical_plan->PrppCompute(query_context->m_required_plan_property);
+	task_proxy.DestroyAll();
+	worker.release();
+
 	// resolve column references
 	NewColumnBindingResolver new_resolver;
 	new_resolver.VisitOperator(*physical_plan);
