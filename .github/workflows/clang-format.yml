@@ -1,6 +1,10 @@
 name: Clang Format
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
   cpp-formatting-check:
@@ -13,7 +17,7 @@ jobs:
       - name: Get changed files
         id: getfile
         run: |
-          echo "::set-output name=files::$(git diff --name-only --diff-filter=d origin/main | grep -E '\.(cpp|h)$' | xargs)"
+          echo "::set-output name=files::$(git diff --name-only --diff-filter=d origin/master | grep -E '\.(cpp|h)$' | xargs)"
       - name: Run clang-format style check for changed C/C++ programs
         run: |
           clang-format -i ${{ steps.getfile.outputs.files }}
