@@ -3,26 +3,18 @@ name: Clang Format
 on: [ push, pull_request ]
 
 jobs:
-  format:
-    name: Format Code
+  cpp-formatting-check:
+    name: Cpp Formatting Check
     runs-on: ubuntu-latest
-
+    strategy:
+      matrix:
+        check:
+          - 'src/'
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - name: Run clang-format style check for C/C++ programs.
+        uses: jidicula/clang-format-action@v4.11.0
+        with:
+          clang-format-version: '13'
+          check-path: ${{ matrix.check }}
 
-      - name: Install latest clang-format
-        run: |
-          sudo apt-get update
-          sudo apt-get install clang-format
-
-      - name: Format Code
-        run: |
-          cp .github/.clang-format .
-          find . -name '*.h' -or -name '*.cpp' -or -name '*.cc' | xargs clang-format -style=file -i
-
-      - name: Commit changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git diff --exit-code || (git commit -am "Apply clang-format" && git push)
