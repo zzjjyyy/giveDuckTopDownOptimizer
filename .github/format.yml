@@ -1,0 +1,21 @@
+name: Clang Format Check
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    name: Clang Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install clang-format
+        run: sudo apt-get install clang-format-10
+
+      - name: Check Code Format
+        run: |
+          cp .github/.clang-format .
+          find . -name '*.h' -or -name '*.cpp' -or -name '*.cc' | xargs clang-format-10 -style=file -i
+          git diff --exit-code
