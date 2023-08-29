@@ -19,7 +19,7 @@ jobs:
       - name: Format Code
         run: |
           cp .github/.clang-format .
-          find . -name '*.h' -or -name '*.cpp' -or -name '*.cc' | xargs clang-format-10 -style=file -i
+          find . -name '*.h' -or -name '*.cpp' -or -name '*.cc' | xargs clang-format -style=file -i
 
       - name: Commit changes
         run: |
