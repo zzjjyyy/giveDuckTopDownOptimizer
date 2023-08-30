@@ -34,7 +34,7 @@ public:
 	CGroup* m_pgroup;
 
 	// last scheduled group expression
-	list<CGroupExpression*>::iterator m_pgexprLastScheduled;
+	list<CGroupExpression*>::iterator m_last_scheduled_expr;
 
 	// ctor
 	CJobGroup()

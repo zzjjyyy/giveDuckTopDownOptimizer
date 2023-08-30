@@ -163,7 +163,7 @@ CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
 	}
 	// if a new scalar group is added, we materialize a scalar expression
 	// for statistics derivation purposes
-	if (is_new && group_target->m_is_calar) {
+	if (is_new && group_target->m_is_scalar) {
 		group_target->CreateDummyCostContext();
 	}
 	return group_container;
@@ -182,7 +182,7 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan 
 	CGroupExpression *best_group_expr;
 	COptimizationContext *opt_context;
 	double cost = GPOPT_INVALID_COST;
-	if (root->m_is_calar) {
+	if (root->m_is_scalar) {
 		// If the group has scalar expression, this group is called scalar group.
 		// It has one and only one group expression, so the expression is also picked
 		// up as the best expression for that group.
@@ -223,13 +223,13 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan 
 		// because CJobGroupExpressionOptimization does not create optimization context
 		// for that group. Besides, the scalar expression doesn't have plan properties.
 		// In this case, the child_required_property is left to be NULL.
-		if (!child_group->m_is_calar) {
-			if (root->m_is_calar) {
+		if (!child_group->m_is_scalar) {
+			if (root->m_is_scalar) {
 				// In very rare case, Orca may generate the plan that a group is a scalar
 				// group, but it has non-scalar sub groups. i.e.:
-				// Group 7 ():  --> root->m_is_calar == true
+				// Group 7 ():  --> root->m_is_scalar == true
 				//   0: CScalarSubquery["?column?" (19)] [ 6 ]
-				// Group 6 (#GExprs: 2): --> child_group->m_is_calar == false
+				// Group 6 (#GExprs: 2): --> child_group->m_is_scalar == false
 				//   0: CLogicalProject [ 2 5 ]
 				//   1: CPhysicalComputeScalar [ 2 5 ]
 				// In the above case, because group 7 has scalar expression, Orca skipped

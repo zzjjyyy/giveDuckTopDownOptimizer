@@ -54,7 +54,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CGroup* pgroupChild = (*m_pgexpr)[ul];
-		if (pgroupChild->m_is_calar)
+		if (pgroupChild->m_is_scalar)
 		{
 			// skip scalar children
 			continue;

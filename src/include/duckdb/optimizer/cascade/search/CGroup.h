@@ -112,7 +112,7 @@ public:
 	// id is used when printing memo contents
 	ULONG m_id;
 	// true if group hold scalar expressions
-	bool m_is_calar;
+	bool m_is_scalar;
 	// join keys for outer child (only for scalar groups) (used by hash & merge joins)
 	duckdb::vector<Expression *> m_join_keys_outer;
 	// join keys for inner child (only for scalar groups) (used by hash & merge joins)

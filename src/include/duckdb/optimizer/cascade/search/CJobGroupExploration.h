@@ -12,8 +12,7 @@
 #include "duckdb/optimizer/cascade/search/CJobGroup.h"
 #include "duckdb/optimizer/cascade/search/CJobStateMachine.h"
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace gpos;
 
 //---------------------------------------------------------------------------
@@ -29,20 +28,13 @@ using namespace gpos;
 //		InnerJoin(B,A))
 //
 //---------------------------------------------------------------------------
-class CJobGroupExploration : public CJobGroup
-{
+class CJobGroupExploration : public CJobGroup {
 public:
 	// transition events of group exploration
-	enum EEvent
-	{
-		eevStartedExploration, eevNewChildren, eevExplored, eevSentinel
-	};
+	enum EEvent { eevStartedExploration, eevNewChildren, eevExplored, eevSentinel };
 
 	// states of group exploration job
-	enum EState
-	{
-		estInitialized = 0, estExploringChildren, estCompleted, estSentinel
-	};
+	enum EState { estInitialized = 0, estExploringChildren, estCompleted, estSentinel };
 
 public:
 	// shorthand for job state machine
@@ -62,34 +54,32 @@ public:
 	~CJobGroupExploration();
 
 	// initialize job
-	void Init(CGroup* pgroup);
+	void Init(CGroup *pgroup);
 
 	// get first unscheduled expression
-	virtual list<CGroupExpression*>::iterator PgexprFirstUnsched()
-	{
+	virtual list<CGroupExpression *>::iterator PgexprFirstUnsched() {
 		return CJobGroup::PgexprFirstUnschedLogical();
 	}
 
 	// schedule exploration jobs for of all new group expressions
-	virtual bool FScheduleGroupExpressions(CSchedulerContext* psc);
+	virtual bool FScheduleGroupExpressions(CSchedulerContext *psc);
 
 	// schedule a new group exploration job
-	static void ScheduleJob(CSchedulerContext* psc, CGroup* pgroup, CJob* pjParent);
+	static void ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent);
 
 	// job's function
-	virtual bool FExecute(CSchedulerContext* psc);
+	virtual bool FExecute(CSchedulerContext *psc);
 
 	// conversion function
-	static CJobGroupExploration* PjConvert(CJob* pj)
-	{
-		return dynamic_cast<CJobGroupExploration*>(pj);
+	static CJobGroupExploration *PjConvert(CJob *pj) {
+		return dynamic_cast<CJobGroupExploration *>(pj);
 	}
 
 	// start exploration action
-	static EEvent EevtStartExploration(CSchedulerContext* psc, CJob* pj);
+	static EEvent EevtStartExploration(CSchedulerContext *psc, CJob *pj);
 
 	// explore child group expressions action
-	static EEvent EevtExploreChildren(CSchedulerContext* psc, CJob* pj);
-};	// class CJobGroupExploration
-}  // namespace gpopt
+	static EEvent EevtExploreChildren(CSchedulerContext *psc, CJob *pj);
+}; // class CJobGroupExploration
+} // namespace gpopt
 #endif

@@ -6,6 +6,7 @@
 //		Implementation of group implementation job
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CJobGroupImplementation.h"
+
 #include "duckdb/optimizer/cascade/base/CQueryContext.h"
 #include "duckdb/optimizer/cascade/engine/CEngine.h"
 #include "duckdb/optimizer/cascade/search/CGroup.h"
@@ -42,11 +43,14 @@ using namespace gpopt;
 // |       estCompleted        |
 // +---------------------------+
 //
-const CJobGroupImplementation::EEvent rgeev4[CJobGroupImplementation::estSentinel][CJobGroupImplementation::estSentinel] =
-{
-	{CJobGroupImplementation::eevExploring, CJobGroupImplementation::eevExplored, CJobGroupImplementation::eevSentinel},
-	{CJobGroupImplementation::eevSentinel, CJobGroupImplementation::eevImplementing, CJobGroupImplementation::eevImplemented},
-	{CJobGroupImplementation::eevSentinel, CJobGroupImplementation::eevSentinel, CJobGroupImplementation::eevSentinel},
+const CJobGroupImplementation::EEvent
+    rgeev4[CJobGroupImplementation::estSentinel][CJobGroupImplementation::estSentinel] = {
+        {CJobGroupImplementation::eevExploring, CJobGroupImplementation::eevExplored,
+         CJobGroupImplementation::eevSentinel},
+        {CJobGroupImplementation::eevSentinel, CJobGroupImplementation::eevImplementing,
+         CJobGroupImplementation::eevImplemented},
+        {CJobGroupImplementation::eevSentinel, CJobGroupImplementation::eevSentinel,
+         CJobGroupImplementation::eevSentinel},
 };
 
 //---------------------------------------------------------------------------
@@ -57,8 +61,7 @@ const CJobGroupImplementation::EEvent rgeev4[CJobGroupImplementation::estSentine
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::CJobGroupImplementation()
-{
+CJobGroupImplementation::CJobGroupImplementation() {
 }
 
 //---------------------------------------------------------------------------
@@ -69,8 +72,7 @@ CJobGroupImplementation::CJobGroupImplementation()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::~CJobGroupImplementation()
-{
+CJobGroupImplementation::~CJobGroupImplementation() {
 }
 
 //---------------------------------------------------------------------------
@@ -81,8 +83,7 @@ CJobGroupImplementation::~CJobGroupImplementation()
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void CJobGroupImplementation::Init(CGroup* pgroup)
-{
+void CJobGroupImplementation::Init(CGroup *pgroup) {
 	CJobGroup::Init(pgroup);
 	m_jsm.Init(rgeev4);
 	// set job actions
@@ -101,16 +102,13 @@ void CJobGroupImplementation::Init(CGroup* pgroup)
 //		the function returns true if it could schedule any new jobs
 //
 //---------------------------------------------------------------------------
-bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext* psc)
-{
-	auto pgexprLast = m_pgexprLastScheduled;
+bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext *psc) {
+	auto pgexprLast = m_last_scheduled_expr;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
-	while (m_pgroup->m_group_exprs.end() != itr)
-	{
-		CGroupExpression* pgexpr = *itr;
-		if (!pgexpr->FTransitioned(CGroupExpression::estImplemented) && !pgexpr->ContainsCircularDependencies())
-		{
+	while (m_pgroup->m_group_exprs.end() != itr) {
+		CGroupExpression *pgexpr = *itr;
+		if (!pgexpr->FTransitioned(CGroupExpression::estImplemented) && !pgexpr->ContainsCircularDependencies()) {
 			CJobGroupExpressionImplementation::ScheduleJob(psc, pgexpr, this);
 			pgexprLast = itr;
 		}
@@ -120,9 +118,9 @@ bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext* psc)
 			++itr;
 		}
 	}
-	bool fNewJobs = (m_pgexprLastScheduled != pgexprLast);
+	bool fNewJobs = (m_last_scheduled_expr != pgexprLast);
 	// set last scheduled expression
-	m_pgexprLastScheduled = pgexprLast;
+	m_last_scheduled_expr = pgexprLast;
 	return fNewJobs;
 }
 
@@ -134,27 +132,23 @@ bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext* psc)
 //		Start group implementation
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation(CSchedulerContext* psc, CJob* pjOwner)
-{
+CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation(CSchedulerContext *psc,
+                                                                                 CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupImplementation* pjgi = PjConvert(pjOwner);
-	CGroup* pgroup = pjgi->m_pgroup;
-	if (!pgroup->FExplored())
-	{
+	CJobGroupImplementation *pjgi = PjConvert(pjOwner);
+	CGroup *pgroup = pjgi->m_pgroup;
+	if (!pgroup->FExplored()) {
 		// schedule a child exploration job
 		CJobGroupExploration::ScheduleJob(psc, pgroup, pjgi);
 		return eevExploring;
-	}
-	else
-	{
+	} else {
 		// move group to implementation state
 		{
 			CGroupProxy gp(pgroup);
 			gp.SetState(CGroup::estImplementing);
 		}
 		// if this is the root, release exploration jobs
-		if (psc->m_engine->FRoot(pgroup))
-		{
+		if (psc->m_engine->FRoot(pgroup)) {
 			psc->m_job_factory->Truncate(EjtGroupExploration);
 			psc->m_job_factory->Truncate(EjtGroupExpressionExploration);
 		}
@@ -170,25 +164,20 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation
 //		Implement child group expressions
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(CSchedulerContext* psc, CJob* pjOwner)
-{
+CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(CSchedulerContext *psc, CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupImplementation* pjgi = PjConvert(pjOwner);
-	if (pjgi->FScheduleGroupExpressions(psc))
-	{
+	CJobGroupImplementation *pjgi = PjConvert(pjOwner);
+	if (pjgi->FScheduleGroupExpressions(psc)) {
 		// implementation is in progress
 		return eevImplementing;
-	}
-	else
-	{
+	} else {
 		// move group to implemented state
 		{
 			CGroupProxy gp(pjgi->m_pgroup);
 			gp.SetState(CGroup::estImplemented);
 		}
 		// if this is the root, complete implementation phase
-		if (psc->m_engine->FRoot(pjgi->m_pgroup))
-		{
+		if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
 			psc->m_engine->FinalizeImplementation();
 		}
 		return eevImplemented;
@@ -203,8 +192,7 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(C
 //		Main job function
 //
 //---------------------------------------------------------------------------
-bool CJobGroupImplementation::FExecute(CSchedulerContext* psc)
-{
+bool CJobGroupImplementation::FExecute(CSchedulerContext *psc) {
 	return m_jsm.FRun(psc, this);
 }
 
@@ -216,11 +204,10 @@ bool CJobGroupImplementation::FExecute(CSchedulerContext* psc)
 //		Schedule a new group implementation job
 //
 //---------------------------------------------------------------------------
-void CJobGroupImplementation::ScheduleJob(CSchedulerContext* psc, CGroup* pgroup, CJob* pjParent)
-{
-	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtGroupImplementation);
+void CJobGroupImplementation::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent) {
+	CJob *pj = psc->m_job_factory->CreateJob(CJob::EjtGroupImplementation);
 	// initialize job
-	CJobGroupImplementation* pjgi = PjConvert(pj);
+	CJobGroupImplementation *pjgi = PjConvert(pj);
 	pjgi->Init(pgroup);
 	psc->m_scheduler->Add(pjgi, pjParent);
 }

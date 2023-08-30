@@ -62,9 +62,11 @@ public:
 	CKeyCollection *DeriveKeyCollection(CExpressionHandle &exprhdl) override;
 
 	// Transformations: it outputs the candidate set of xforms
-	virtual CXform_set *PxfsCandidates() const {
+	virtual CXform_set *XformCandidates() const {
 		return nullptr;
 	}
+
+	void CloneORCAInfo(LogicalOperator *op);
 
 	// ---------------------------- DuckDB -------------------------------------
 

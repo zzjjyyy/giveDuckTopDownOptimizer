@@ -83,7 +83,7 @@ bool SContextLink::operator==(const SContextLink &pclink2) const {
 //
 //---------------------------------------------------------------------------
 CGroup::CGroup(bool fScalar)
-    : m_id(GPOPT_INVALID_GROUP_ID), m_is_calar(fScalar), m_derived_properties(nullptr), m_scalar_expr(nullptr),
+    : m_id(GPOPT_INVALID_GROUP_ID), m_is_scalar(fScalar), m_derived_properties(nullptr), m_scalar_expr(nullptr),
       m_is_scalar_expr_exact(false), m_dummy_cost_context(nullptr), m_group_for_duplicate_groups(nullptr),
       m_num_exprs(0), m_num_opt_contexts(0), m_estate(estUnexplored), m_max_opt_level(EolLow),
       m_has_new_logical_operators(false) {
@@ -397,7 +397,7 @@ bool CGroup::FMatchNonScalarGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckd
 	for (ULONG i = 0; i < arity; i++) {
 		CGroup *pgroupFst = pdrgpgroupFst[i];
 		CGroup *pgroupSnd = pdrgpgroupSnd[i];
-		if (pgroupFst->m_is_calar) {
+		if (pgroupFst->m_is_scalar) {
 			// skip scalar groups
 			continue;
 		}
@@ -556,7 +556,7 @@ void CGroup::RecursiveBuildTreeMap(
 			for (ULONG ul = 0; ul < arity; ul++) {
 				CGroup *pgroupChild = (*pgexprCurrent)[ul];
 				COptimizationContext *pocChild = nullptr;
-				if (!pgroupChild->m_is_calar) {
+				if (!pgroupChild->m_is_scalar) {
 					pocChild = pdrgpoc[ul];
 				}
 				pgroupChild->BuildTreeMap(pocChild, pccCurrent, ul, ptmap);

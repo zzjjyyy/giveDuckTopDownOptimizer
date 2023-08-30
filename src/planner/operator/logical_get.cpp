@@ -209,13 +209,13 @@ ULONG LogicalGet::HashValue() const {
 
 //---------------------------------------------------------------------------
 //	@function:
-//		LogicalGet::PxfsCandidates
+//		LogicalGet::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set *LogicalGet::PxfsCandidates() const {
+CXform_set *LogicalGet::XformCandidates() const {
 	CXform_set *xform_set = new CXform_set();
 	(void)xform_set->set(CXform::ExfGet2TableScan);
 	return xform_set;

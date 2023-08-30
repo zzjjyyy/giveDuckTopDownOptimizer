@@ -19,13 +19,13 @@ vector<idx_t> LogicalDummyScan::GetTableIndex() const {
 
 //---------------------------------------------------------------------------
 //	@function:
-//		LogicalDummyScan::PxfsCandidates
+//		LogicalDummyScan::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set *LogicalDummyScan::PxfsCandidates() const {
+CXform_set *LogicalDummyScan::XformCandidates() const {
 	CXform_set *xform_set = new CXform_set();
 	(void)xform_set->set(CXform::ExfDummyScanImplementation);
 	return xform_set;

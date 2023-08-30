@@ -105,13 +105,13 @@ Operator* LogicalFilter::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operato
 
 //---------------------------------------------------------------------------
 //	@function:
-//		LogicalFilter::PxfsCandidates
+//		LogicalFilter::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set * LogicalFilter::PxfsCandidates() const
+CXform_set * LogicalFilter::XformCandidates() const
 {
 	CXform_set * xform_set = new CXform_set();
 	(void) xform_set->set(CXform::ExfSelect2Apply);

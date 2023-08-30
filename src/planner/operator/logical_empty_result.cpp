@@ -61,7 +61,7 @@ CKeyCollection* LogicalEmptyResult::DeriveKeyCollection(CExpressionHandle &exprh
 // Transformations
 //-------------------------------------------------------------------------------------
 // candidate set of xforms
-CXform_set * LogicalEmptyResult::PxfsCandidates() const
+CXform_set * LogicalEmptyResult::XformCandidates() const
 {
 	CXform_set * xform_set = new CXform_set();
 	return xform_set;

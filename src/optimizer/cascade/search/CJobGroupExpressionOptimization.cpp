@@ -235,7 +235,7 @@ void CJobGroupExpressionOptimization::DerivePrevChildProps(CSchedulerContext *sc
 	ULONG prev_child_index = m_plan_properties_handler->UlPreviousOptimizedChildIndex(m_children_index);
 	// retrieve plan properties of the optimal implementation of previous child group
 	CGroup *child = (*m_group_expression)[prev_child_index];
-	if (child->m_is_calar) {
+	if (child->m_is_scalar) {
 		// exit if previous child is a scalar group
 		return;
 	}
@@ -300,7 +300,7 @@ void CJobGroupExpressionOptimization::ComputeCurrentChildRequirements(CScheduler
 //---------------------------------------------------------------------------
 void CJobGroupExpressionOptimization::ScheduleChildGroupsJobs(CSchedulerContext *psc) {
 	CGroup *pgroupChild = (*m_group_expression)[m_children_index];
-	if (pgroupChild->m_is_calar) {
+	if (pgroupChild->m_is_scalar) {
 		if (!m_plan_properties_handler->FNextChildIndex(&m_children_index)) {
 			// child group optimization is complete
 			SetChildrenScheduled();

@@ -370,7 +370,7 @@ duckdb::vector<COptimizationContext *> CEngine::ChildrenOptimizationContext(CExp
 	const ULONG arity = exprhdl.Arity();
 	for (ULONG ul = 0; ul < arity; ul++) {
 		CGroup *pgroup_child = (*exprhdl.Pgexpr())[ul];
-		if (!pgroup_child->m_is_calar) {
+		if (!pgroup_child->m_is_scalar) {
 			COptimizationContext *poc = pgroup_child->PocLookupBest(m_search_strategy.size(), exprhdl.Prpp(ul));
 			pdrgpoc.emplace_back(poc);
 		}
@@ -632,8 +632,7 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationCont
 	// unnecessary or prohibited over the group expression and given the current
 	// optimization context (required properties)
 	// get order enforcing type
-	COrderProperty::EPropEnforcingType epet_order =
-	    prpp->m_sort_order->Epet(exprhdl, pop_physical, f_order_reqd);
+	COrderProperty::EPropEnforcingType epet_order = prpp->m_sort_order->Epet(exprhdl, pop_physical, f_order_reqd);
 	// Skip adding enforcers entirely if any property determines it to be
 	// 'prohibited'. In this way, a property may veto out the creation of an
 	// enforcer for the current group expression and optimization context.

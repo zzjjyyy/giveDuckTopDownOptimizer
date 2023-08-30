@@ -443,4 +443,26 @@ CPropConstraint *LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionH
 	Expression *pcnstr_new = new BoundConjunctionExpression(ExpressionType::CONJUNCTION_AND);
 	return new CPropConstraint(pdrgpcrs, pcnstr_new);
 }
+
+void LogicalOperator::CloneORCAInfo(LogicalOperator *op) {
+	op->m_derived_property_relation = m_derived_property_relation;
+	op->m_derived_property_plan = m_derived_property_plan;
+	op->m_required_plan_property = m_required_plan_property;
+	if (nullptr != estimated_props) {
+		op->estimated_props = estimated_props->Copy();
+	}
+	op->types = types;
+	op->estimated_cardinality = estimated_cardinality;
+	for (auto &child : expressions) {
+		op->expressions.push_back(child->Copy());
+	}
+	op->has_estimated_cardinality = has_estimated_cardinality;
+	op->logical_type = logical_type;
+	op->physical_type = physical_type;
+	for (auto &child : children) {
+		op->AddChild(child->Copy());
+	}
+	op->m_group_expression = m_group_expression;
+	op->m_cost = m_cost;
+}
 } // namespace duckdb
