@@ -283,6 +283,7 @@ unique_ptr<LogicalOperator> Binder::CreatePlan(BoundJoinRef &ref) {
 			{
 				auto child = unique_ptr_cast<Operator, LogicalOperator>(std::move(filter.children[0]));
 				PlanSubqueries(expr, child);
+				filter.children[0] = std::move(child);
 			}
 		}
 	}
@@ -300,7 +301,9 @@ unique_ptr<LogicalOperator> Binder::CreatePlan(BoundJoinRef &ref) {
 		{
 			auto left_child = unique_ptr_cast<Operator, LogicalOperator>(std::move(comp_join.children[0]));
 			PlanSubqueries(comp_join.conditions[i].left, left_child);
+			comp_join.children[0] = std::move(left_child);
 			auto right_child = unique_ptr_cast<Operator, LogicalOperator>(std::move(comp_join.children[1]));
+			comp_join.children[1] = std::move(right_child);
 			PlanSubqueries(comp_join.conditions[i].right, right_child);
 		}
 		break;

@@ -259,27 +259,20 @@ CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *poc, ULONG 
 	if (FCostContextExists(poc, optimization_contexts)) {
 		return nullptr;
 	}
-	CCostContext *pcc = new CCostContext(poc, optimization_request_num, this);
-	bool fValid = true;
+	CCostContext* pcc = new CCostContext(poc, optimization_request_num, this);
 	// computing cost
 	pcc->SetState(CCostContext::estCosting);
 	if (!fPruned) {
 		pcc->SetChildContexts(optimization_contexts);
-		fValid = pcc->IsValid();
-		if (fValid) {
-			double cost = CostCompute(pcc);
-			pcc->SetCost(cost);
-		}
-	} else {
+		double cost = CostCompute(pcc);
+		pcc->SetCost(cost);
+	}
+	else {
 		pcc->SetPruned();
 		pcc->SetCost(cost_lower_bound);
 	}
 	pcc->SetState(CCostContext::estCosted);
-	if (fValid) {
-		return CostContextInsertBest(pcc);
-	}
-	// invalid cost context
-	return nullptr;
+	return CostContextInsertBest(pcc);
 }
 
 //---------------------------------------------------------------------------
@@ -564,8 +557,10 @@ bool CGroupExpression::Matches(const CGroupExpression *group_expr) const {
 //---------------------------------------------------------------------------
 ULONG CGroupExpression::HashValue(Operator *pop, duckdb::vector<CGroup *> groups) {
 	ULONG ulHash = Operator::HashValue(pop);
+	// ULONG ulHash = pop->HashValue();
 	ULONG arity = groups.size();
-	for (ULONG i = 0; i < arity; i++) {
+	for (ULONG i = 0; i < arity; i++)
+	{
 		ulHash = CombineHashes(ulHash, groups[i]->HashValue());
 	}
 	return ulHash;

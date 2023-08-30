@@ -11,6 +11,7 @@ BoundReferenceExpression::BoundReferenceExpression(string alias, LogicalType typ
     : Expression(ExpressionType::BOUND_REF, ExpressionClass::BOUND_REF, std::move(type)), index(index) {
 	this->alias = std::move(alias);
 }
+
 BoundReferenceExpression::BoundReferenceExpression(LogicalType type, idx_t index)
     : BoundReferenceExpression(string(), std::move(type), index) {
 }
