@@ -80,7 +80,7 @@ void CJobQueue::NotifyCompleted(CSchedulerContext* psc)
 	{
 		CJob*  pj = m_listjQueued.RemoveHead();
 		// check if job execution has completed
-		if (1 == pj->UlpDecrRefs())
+		if (1 == pj->DecrRefs())
 		{
 			// update job as completed
 			psc->m_scheduler->CompleteQueued(pj);

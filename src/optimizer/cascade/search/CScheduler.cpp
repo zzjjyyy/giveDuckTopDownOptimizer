@@ -179,7 +179,7 @@ void CScheduler::PreExecute(CJob *pj) {
 //---------------------------------------------------------------------------
 bool CScheduler::FExecute(CJob *pj, CSchedulerContext *psc) {
 	bool is_completed = true;
-	CJobQueue *job_queue = pj->Pjq();
+	CJobQueue *job_queue = pj->JobQueue();
 	// check if job is associated to a job queue
 	if (nullptr == job_queue) {
 		is_completed = pj->FExecute(psc);
@@ -193,7 +193,7 @@ bool CScheduler::FExecute(CJob *pj, CSchedulerContext *psc) {
 				job_queue->NotifyCompleted(psc);
 			} else {
 				// task is suspended
-				(void)pj->UlpDecrRefs();
+				(void)pj->DecrRefs();
 			}
 			break;
 		case CJobQueue::EjqrQueued:
@@ -217,7 +217,7 @@ bool CScheduler::FExecute(CJob *pj, CSchedulerContext *psc) {
 //---------------------------------------------------------------------------
 CScheduler::EJobResult CScheduler::JobPostExecute(CJob *pj, bool is_completed) {
 	// decrement job ref counter
-	ULONG_PTR ulRefs = pj->UlpDecrRefs();
+	ULONG_PTR ulRefs = pj->DecrRefs();
 	// decrement number of running jobs
 	m_num_running--;
 	// check if job completed
@@ -307,7 +307,7 @@ void CScheduler::CompleteQueued(CJob *pj) {
 //
 //---------------------------------------------------------------------------
 void CScheduler::ResumeParent(CJob *pj) {
-	CJob *pjParent = pj->PjParent();
+	CJob *pjParent = pj->PJobParent();
 	if (nullptr != pjParent) {
 		// notify parent job
 		if (pj->FResumeParent()) {

@@ -99,7 +99,7 @@ CJob* CJobFactory::CreateJob(CJob::EJobType job_type)
 //---------------------------------------------------------------------------
 void CJobFactory::Release(CJob*job)
 {
-	switch (job->Ejt())
+	switch (job->JobType())
 	{
 		case CJob::EjtTest:
 			break;
