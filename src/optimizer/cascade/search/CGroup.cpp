@@ -6,18 +6,19 @@
 //		Implementation of Memo groups; database agnostic
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CGroup.h"
+
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/task/CWorker.h"
 #include "duckdb/optimizer/cascade/base/CDrvdProp.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtRelational.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropRelational.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/operators/CExpressionHandle.h"
 #include "duckdb/optimizer/cascade/operators/Operator.h"
 #include "duckdb/optimizer/cascade/search/CGroupProxy.h"
 #include "duckdb/optimizer/cascade/search/CJobGroup.h"
-#include "duckdb/optimizer/cascade/base/CUtils.h"
+#include "duckdb/optimizer/cascade/task/CWorker.h"
 
 using namespace gpopt;
 
@@ -163,10 +164,10 @@ void CGroup::UpdateBestCost(COptimizationContext* poc, CCostContext* pcc)
 //		Lookup a given context in contexts hash table
 //
 //---------------------------------------------------------------------------
-COptimizationContext* CGroup::PocLookup(CReqdPropPlan* prpp, ULONG ulSearchStageIndex)
+COptimizationContext* CGroup::PocLookup(CRequiredPropPlan * prpp, ULONG ulSearchStageIndex)
 {
 	duckdb::vector<ColumnBinding> v;
-	COptimizationContext* poc = new COptimizationContext(this, prpp, new CReqdPropRelational(v), ulSearchStageIndex);
+	COptimizationContext* poc = new COptimizationContext(this, prpp, new CRequiredPropRelational(v), ulSearchStageIndex);
 	COptimizationContext* pocFound = nullptr;
 	{
 		auto itr = m_sht.find(poc->HashValue());
@@ -184,7 +185,7 @@ COptimizationContext* CGroup::PocLookup(CReqdPropPlan* prpp, ULONG ulSearchStage
 //		properties
 //
 //---------------------------------------------------------------------------
-COptimizationContext* CGroup::PocLookupBest(ULONG ulSearchStages, CReqdPropPlan* prpp)
+COptimizationContext* CGroup::PocLookupBest(ULONG ulSearchStages, CRequiredPropPlan * prpp)
 {
 	COptimizationContext* pocBest = nullptr;
 	CCostContext* pccBest= nullptr;
@@ -347,9 +348,9 @@ void CGroup::Insert(CGroupExpression* pgexpr)
 	{
 		m_fHasNewLogicalOperators = true;
 	}
-	if (pgexpr->Eol() > m_eolMax)
+	if (pgexpr->OptimizationLevel() > m_eolMax)
 	{
-		m_eolMax = pgexpr->Eol();
+		m_eolMax = pgexpr->OptimizationLevel();
 	}
 }
 
@@ -568,7 +569,7 @@ void CGroup::CreateDummyCostContext()
 		pgexprFirst = *(gp.PgexprFirst());
 	}
 	duckdb::vector<ColumnBinding> v;
-	COptimizationContext* poc = new COptimizationContext(this, CReqdPropPlan::PrppEmpty(), new CReqdPropRelational(v), 0);
+	COptimizationContext* poc = new COptimizationContext(this, CRequiredPropPlan::PrppEmpty(), new CRequiredPropRelational(v), 0);
 	m_pccDummy = new CCostContext(poc, 0, pgexprFirst);
 	m_pccDummy->SetState(CCostContext::estCosting);
 	m_pccDummy->SetCost(0.0);
@@ -589,7 +590,7 @@ void CGroup::CreateDummyCostContext()
 //---------------------------------------------------------------------------
 void CGroup::RecursiveBuildTreeMap(COptimizationContext* poc, CCostContext* pccParent, CGroupExpression* pgexprCurrent, ULONG child_index, CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> *ptmap)
 {
-	duckdb::vector<CCostContext*> pdrgpcc = pgexprCurrent->PdrgpccLookupAll(poc);
+	duckdb::vector<CCostContext*> pdrgpcc = pgexprCurrent->LookupAllMatchedCostContexts(poc);
 	const ULONG ulCCSize = pdrgpcc.size();
 	if (0 == ulCCSize)
 	{
@@ -605,7 +606,7 @@ void CGroup::RecursiveBuildTreeMap(COptimizationContext* poc, CCostContext* pccP
 			// link parent cost context to child cost context
 			ptmap->Insert(pccParent, child_index, pccCurrent);
 		}
-		duckdb::vector<COptimizationContext*> pdrgpoc = pccCurrent->m_pdrgpoc;
+		duckdb::vector<COptimizationContext*> pdrgpoc = pccCurrent->m_optimization_contexts;
 		if (0 != pdrgpoc.size())
 		{
 			// process children recursively
@@ -787,7 +788,7 @@ void CGroup::ResetGroupJobQueues()
 //		in current group, and satisfying the given required properties
 //
 //---------------------------------------------------------------------------
-double CGroup::CostLowerBound(CReqdPropPlan* prppInput)
+double CGroup::CostLowerBound(CRequiredPropPlan * prppInput)
 {
 	auto iter = m_pcostmap.find(prppInput);
 	double pcostLowerBound = GPOPT_INFINITE_COST;
@@ -827,6 +828,6 @@ double CGroup::CostLowerBound(CReqdPropPlan* prppInput)
 			pgexprCurrent = *itr;
 		}
 	}
-	m_pcostmap.insert(map<CReqdPropPlan*, double>::value_type(prppInput, costLowerBound));
+	m_pcostmap.insert(map<CRequiredPropPlan *, double>::value_type(prppInput, costLowerBound));
 	return costLowerBound;
 }

@@ -21,7 +21,7 @@ using namespace gpos;
 
 // fwd declaration
 class COrderSpec;
-class CReqdPropPlan;
+class CRequiredPropPlan;
 class CDrvdPropPlan;
 
 //---------------------------------------------------------------------------
@@ -82,7 +82,7 @@ public:
 	virtual ULONG Equals(const CDrvdPropPlan* pdpplan) const;
 
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CReqdPropPlan* prpp) const override;
+	virtual BOOL FSatisfies(const CRequiredPropPlan * prpp) const override;
 };	// class CDrvdPropPlan
 }  // namespace gpopt
 #endif

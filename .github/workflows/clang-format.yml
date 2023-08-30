@@ -1,0 +1,25 @@
+name: Clang Format
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  cpp-formatting-check:
+    name: Cpp Formatting Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get changed files
+        id: getfile
+        run: |
+          echo "::set-output name=files::$(git diff --name-only --diff-filter=d origin/master | grep -E '\.(cpp|h)$' | xargs)"
+      - name: Run clang-format style check for changed C/C++ programs
+        run: |
+          clang-format -i ${{ steps.getfile.outputs.files }}
+          git diff --exit-code # This will produce an error if any files were changed, thus indicating they weren't formatted properly
+        if: steps.getfile.outputs.files != ''

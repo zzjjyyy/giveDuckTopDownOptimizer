@@ -53,7 +53,7 @@ public:
 	CDrvdProp* PdpCreate() override;
 
 	// create required properties container
-	CReqdProp* PrpCreate() const override;
+	CRequiredProperty * PrpCreate() const override;
 
 	// match function
 	bool Matches(Operator* op) override;

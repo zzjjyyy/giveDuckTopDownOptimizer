@@ -191,9 +191,9 @@ ULONG PhysicalTableScan::HashValue() const
 //		Return the enforcing type for order property based on this operator
 //
 //---------------------------------------------------------------------------
-CEnfdOrder::EPropEnforcingType PhysicalTableScan::EpetOrder(CExpressionHandle &exprhdl,
+COrderProperty::EPropEnforcingType PhysicalTableScan::EpetOrder(CExpressionHandle &exprhdl,
                                                             vector<BoundOrderByNode> &peo) const {
-	return CEnfdOrder::EpetRequired;
+	return COrderProperty::EpetRequired;
 }
 
 //---------------------------------------------------------------------------

@@ -15,8 +15,9 @@
 #define GPOPT_CPartialPlan_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CReqdProp.h"
+#include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
 #include "duckdb/optimizer/cascade/cost/ICostModel.h"
+
 #include <memory>
 
 namespace gpopt
@@ -45,7 +46,7 @@ public:
 	CGroupExpression* m_pgexpr;
 
 	// required plan properties of root operator
-	CReqdPropPlan* m_prpp;
+	CRequiredPropPlan * m_prpp;
 
 	// cost context of known child plan -- can be null if no child plans are known
 	CCostContext* m_pccChild;
@@ -55,7 +56,7 @@ public:
 
 public:
 	// ctor
-	CPartialPlan(CGroupExpression* pgexpr, CReqdPropPlan* prpp, CCostContext* pccChild, ULONG child_index);
+	CPartialPlan(CGroupExpression* pgexpr, CRequiredPropPlan * prpp, CCostContext* pccChild, ULONG child_index);
 	
 	// no copy ctor
 	CPartialPlan(const CPartialPlan &) = delete;

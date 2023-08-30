@@ -34,7 +34,7 @@ CDrvdProp *CPattern::PdpCreate() {
 //		expression has to take care of this on a higher level
 //
 //---------------------------------------------------------------------------
-CReqdProp *CPattern::PrpCreate() const {
+CRequiredProperty *CPattern::PrpCreate() const {
 	return nullptr;
 }
 

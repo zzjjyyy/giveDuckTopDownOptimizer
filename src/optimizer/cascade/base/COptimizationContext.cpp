@@ -6,15 +6,16 @@
 //		Implementation of optimization context
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
-#include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CEnfdOrder.h"
-#include "duckdb/optimizer/cascade/base/COrderSpec.h"
-#include "duckdb/optimizer/cascade/search/CGroupExpression.h"
-#include "duckdb/optimizer/cascade/base/CUtils.h"
-#include "duckdb/execution/operator/order/physical_order.hpp"
+
 #include "duckdb/execution/operator/join/physical_nested_loop_join.hpp"
-#include "duckdb/optimizer/cascade/base/CReqdPropRelational.h"
+#include "duckdb/execution/operator/order/physical_order.hpp"
+#include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/COrderProperty.h"
+#include "duckdb/optimizer/cascade/base/COrderSpec.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CUtils.h"
+#include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 
 namespace gpopt
 {
@@ -80,8 +81,8 @@ bool COptimizationContext::Matches(const COptimizationContext* poc) const
 	{
 		return false;
 	}
-	CReqdPropPlan* prppFst = this->m_prpp;
-	CReqdPropPlan* prppSnd = poc->m_prpp;
+	CRequiredPropPlan * prppFst = this->m_prpp;
+	CRequiredPropPlan * prppSnd = poc->m_prpp;
 	// make sure we are not comparing to invalid context
 	if (NULL == prppFst || NULL == prppSnd)
 	{
@@ -162,7 +163,7 @@ bool COptimizationContext::FEqualContextIds(duckdb::vector<COptimizationContext*
 //---------------------------------------------------------------------------
 bool COptimizationContext::FOptimizeSort(CGroupExpression* pgexprParent, CGroupExpression* pgexprSort, COptimizationContext* poc, ULONG ulSearchStages)
 {
-	return poc->m_prpp->m_peo->FCompatible(((PhysicalOrder*)pgexprSort->m_pop.get())->Pos());
+	return poc->m_prpp->m_required_sort_order->FCompatible(((PhysicalOrder*)pgexprSort->m_pop.get())->Pos());
 }
 
 //---------------------------------------------------------------------------
@@ -176,7 +177,7 @@ bool COptimizationContext::FOptimizeSort(CGroupExpression* pgexprParent, CGroupE
 bool COptimizationContext::FOptimizeAgg(CGroupExpression* pgexprParent, CGroupExpression* pgexprAgg, COptimizationContext* poc, ULONG ulSearchStages)
 {
 	// otherwise, we need to avoid optimizing node unless it is a multi-stage agg
-	// COptimizationContext* pocFound = pgexprAgg->m_pgroup->PocLookupBest(ulSearchStages, poc->m_prpp);
+	// COptimizationContext* pocFound = pgexprAgg->m_group->PocLookupBest(ulSearchStages, poc->m_required_plan_property);
 	// if (NULL != pocFound && pocFound->FHasMultiStageAggPlan())
 	// {
 	//  	// context already has a multi-stage agg plan, optimize child only if it is also a multi-stage agg
@@ -201,7 +202,7 @@ bool COptimizationContext::FOptimizeNLJoin(CGroupExpression* pgexprParent, CGrou
 	duckdb::vector<ColumnBinding> pcrs;
 	duckdb::vector<ColumnBinding> pcrsOuterChild = CDrvdPropRelational::GetRelationalProperties((*pgexprJoin)[0]->m_pdp)->GetOutputColumns();
 	pcrs.insert(pcrsOuterChild.begin(), pcrsOuterChild.end(), pcrs.end());
-	bool fIncluded = CUtils::ContainsAll(pcrs, poc->m_prpp->m_pcrs);
+	bool fIncluded = CUtils::ContainsAll(pcrs, poc->m_prpp->m_required_cols);
 	return fIncluded;
 }
 }

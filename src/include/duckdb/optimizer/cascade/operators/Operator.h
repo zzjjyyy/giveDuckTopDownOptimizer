@@ -12,7 +12,7 @@
 #include "duckdb/optimizer/cascade/base/CDrvdProp.h"
 #include "duckdb/optimizer/cascade/base/CFunctionalDependency.h"
 #include "duckdb/optimizer/cascade/base/CKeyCollection.h"
-#include "duckdb/optimizer/cascade/base/CReqdProp.h"
+#include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
 #include "duckdb/optimizer/join_order/estimated_properties.hpp"
 #include "duckdb/planner/expression.hpp"
 
@@ -56,7 +56,7 @@ public:
 	//! derived properties of the carried plan
 	CDrvdPropPlan *m_derived_property_plan;
 	//! required plan properties
-	CReqdPropPlan *m_required_plan_property;
+	CRequiredPropPlan *m_required_plan_property;
 	double m_cost;
 
 	// --------------------------- DuckDB ----------------------
@@ -112,9 +112,9 @@ public:
 
 	duckdb::vector<CFunctionalDependency *> DeriveFunctionalDependencies(CExpressionHandle &expression_handle);
 
-	CReqdPropPlan *PrppCompute(CReqdPropPlan *required_properties_input);
+	CRequiredPropPlan *PrppCompute(CRequiredPropPlan *required_properties_input);
 
-	CReqdPropPlan *PrppDecorate(CReqdPropPlan *required_properties_input);
+	CRequiredPropPlan *PrppDecorate(CRequiredPropPlan *required_properties_input);
 
 	CDrvdProp *PdpDerive(CDrvdPropCtxtPlan *pdpctxtL = nullptr);
 
@@ -173,7 +173,7 @@ public:
 		return false;
 	};
 	//! create container for required properties
-	virtual CReqdProp *PrpCreate() const {
+	virtual CRequiredProperty *PrpCreate() const {
 		return nullptr;
 	};
 	//! match function, abstract to enforce an implementation for each new operator

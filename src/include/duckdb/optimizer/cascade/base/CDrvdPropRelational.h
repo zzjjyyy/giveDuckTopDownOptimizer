@@ -22,7 +22,7 @@ namespace gpopt
 {
 // fwd declaration
 class CExpressionHandle;
-class CReqdPropPlan;
+class CRequiredPropPlan;
 class CKeyCollection;
 class CPropConstraint;
 class CPartInfo;
@@ -182,7 +182,7 @@ public:
 	static CDrvdPropRelational* GetRelationalProperties(CDrvdProp* pdp);
 
 	// check for satisfying required plan properties
-	bool FSatisfies(const CReqdPropPlan *prpp) const override;
+	bool FSatisfies(const CRequiredPropPlan *prpp) const override;
 };	// class CDrvdPropRelational
 }  // namespace gpopt
 #endif

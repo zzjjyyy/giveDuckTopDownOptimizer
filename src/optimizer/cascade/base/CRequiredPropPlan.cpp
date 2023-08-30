@@ -1,18 +1,19 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CReqdPropPlan.cpp
+//		CRequiredPropPlan.cpp
 //
 //	@doc:
 //		Required plan properties;
 //---------------------------------------------------------------------------
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
-#include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/common/CPrintablePointer.h"
-#include "duckdb/optimizer/cascade/search/CGroupExpression.h"
-#include "duckdb/optimizer/cascade/operators/CExpressionHandle.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+
 #include "duckdb/execution/physical_operator.hpp"
-#include "duckdb/optimizer/cascade/base/CUtils.h"
+#include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CUtils.h"
+#include "duckdb/optimizer/cascade/common/CPrintablePointer.h"
+#include "duckdb/optimizer/cascade/operators/CExpressionHandle.h"
+#include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 
 namespace gpopt
 {
@@ -20,80 +21,80 @@ using namespace duckdb;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::CReqdPropPlan
+//		CRequiredPropPlan::CRequiredPropPlan
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CReqdPropPlan::CReqdPropPlan(duckdb::vector<ColumnBinding> pcrs, CEnfdOrder* peo)
-	: m_pcrs(pcrs), m_peo(peo)
+CRequiredPropPlan::CRequiredPropPlan(duckdb::vector<ColumnBinding> pcrs, COrderProperty * peo)
+	: m_required_cols(pcrs), m_required_sort_order(peo)
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::~CReqdPropPlan
+//		CRequiredPropPlan::CRequiredPropertyPlanertyPlan
 //
 //	@doc:
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CReqdPropPlan::~CReqdPropPlan()
+CRequiredPropPlan::~CRequiredPropPlan()
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::ComputeReqdCols
+//		CRequiredPropPlan::ComputeReqdCols
 //
 //	@doc:
 //		Compute required columns
 //
 //---------------------------------------------------------------------------
-void CReqdPropPlan::ComputeReqdCols(CExpressionHandle &exprhdl, CReqdProp* prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt)
+void CRequiredPropPlan::ComputeReqdCols(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt)
 {
-	CReqdPropPlan* prppInput = CReqdPropPlan::Prpp(prpInput);
+	CRequiredPropPlan * prppInput = CRequiredPropPlan::Prpp(prpInput);
 	PhysicalOperator* popPhysical = (PhysicalOperator*)exprhdl.Pop();
-	m_pcrs = popPhysical->PcrsRequired(exprhdl, prppInput->m_pcrs, child_index, pdrgpdpCtxt, 0);
+	m_required_cols = popPhysical->PcrsRequired(exprhdl, prppInput->m_required_cols, child_index, pdrgpdpCtxt, 0);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::Compute
+//		CRequiredPropPlan::Compute
 //
 //	@doc:
 //		Compute required props
 //
 //---------------------------------------------------------------------------
-void CReqdPropPlan::Compute(CExpressionHandle &exprhdl, CReqdProp* prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq)
+void CRequiredPropPlan::Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq)
 {
-	CReqdPropPlan* prppInput = CReqdPropPlan::Prpp(prpInput);
+	CRequiredPropPlan * prppInput = CRequiredPropPlan::Prpp(prpInput);
 	PhysicalOperator* popPhysical = (PhysicalOperator*)exprhdl.Pop();
 	ComputeReqdCols(exprhdl, prpInput, child_index, pdrgpdpCtxt);
-	m_peo = new CEnfdOrder(popPhysical->PosRequired(exprhdl, prppInput->m_peo->m_pos, child_index, pdrgpdpCtxt, ulOptReq), popPhysical->Eom(prppInput, child_index, pdrgpdpCtxt, ulOptReq));
+	m_required_sort_order = new COrderProperty(popPhysical->PosRequired(exprhdl, prppInput->m_required_sort_order->m_pos, child_index, pdrgpdpCtxt, ulOptReq), popPhysical->Eom(prppInput, child_index, pdrgpdpCtxt, ulOptReq));
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::Equals
+//		CRequiredPropPlan::Equals
 //
 //	@doc:
 //		Check if expression attached to handle provides required columns
 //		by all plan properties
 //
 //---------------------------------------------------------------------------
-bool CReqdPropPlan::FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG ulOptReq) const
+bool CRequiredPropPlan::FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG ulOptReq) const
 {
 	// check if operator provides required columns
-	if (!((PhysicalOperator*)exprhdl.Pop())->FProvidesReqdCols(exprhdl, m_pcrs, ulOptReq))
+	if (!((PhysicalOperator*)exprhdl.Pop())->FProvidesReqdCols(exprhdl, m_required_cols, ulOptReq))
 	{
 		return false;
 	}
 	duckdb::vector<ColumnBinding> pcrsOutput = exprhdl.DeriveOutputColumns();
 	// check if property spec members use columns from operator output
 	bool fProvidesReqdCols = true;
-	COrderSpec* pps = m_peo->m_pos;
+	COrderSpec* pps = m_required_sort_order->m_pos;
 	if (NULL == pps)
 	{
 		return fProvidesReqdCols;
@@ -117,45 +118,46 @@ bool CReqdPropPlan::FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG ulOptReq
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::Equals
+//		CRequiredPropPlan::Equals
 //
 //	@doc:
 //		Equality function
 //
 //---------------------------------------------------------------------------
-bool CReqdPropPlan::Equals(CReqdPropPlan* prpp) const
+bool CRequiredPropPlan::Equals(CRequiredPropPlan * prpp) const
 {
-	return CUtils::Equals(m_pcrs, prpp->m_pcrs) && m_peo->Matches(prpp->m_peo);
+	return CUtils::Equals(m_required_cols, prpp->m_required_cols) &&
+	       m_required_sort_order->Matches(prpp->m_required_sort_order);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::HashValue
+//		CRequiredPropPlan::HashValue
 //
 //	@doc:
 //		Compute hash value using required columns and required sort order
 //
 //---------------------------------------------------------------------------
-ULONG CReqdPropPlan::HashValue() const
+ULONG CRequiredPropPlan::HashValue() const
 {
 	ULONG ulHash = 0;
-	for(ULONG m = 0; m < m_pcrs.size(); m++)
+	for(ULONG m = 0; m < m_required_cols.size(); m++)
 	{
-		ulHash = gpos::CombineHashes(ulHash, gpos::HashValue(&m_pcrs[m]));
+		ulHash = gpos::CombineHashes(ulHash, gpos::HashValue(&m_required_cols[m]));
 	}
-	ulHash = gpos::CombineHashes(ulHash, m_peo->HashValue());
+	ulHash = gpos::CombineHashes(ulHash, m_required_sort_order->HashValue());
 	return ulHash;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::FSatisfied
+//		CRequiredPropPlan::FSatisfied
 //
 //	@doc:
 //		Check if plan properties are satisfied by the given derived properties
 //
 //---------------------------------------------------------------------------
-bool CReqdPropPlan::FSatisfied(CDrvdPropRelational* pdprel, CDrvdPropPlan* pdpplan) const
+bool CRequiredPropPlan::FSatisfied(CDrvdPropRelational* pdprel, CDrvdPropPlan* pdpplan) const
 {
 	// first, check satisfiability of relational properties
 	if (!pdprel->FSatisfies(this))
@@ -168,13 +170,13 @@ bool CReqdPropPlan::FSatisfied(CDrvdPropRelational* pdprel, CDrvdPropPlan* pdppl
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::FCompatible
+//		CRequiredPropPlan::FCompatible
 //
 //	@doc:
 //		Check if plan properties are compatible with the given derived properties
 //
 //---------------------------------------------------------------------------
-bool CReqdPropPlan::FCompatible(CExpressionHandle &exprhdl, PhysicalOperator* popPhysical, CDrvdPropRelational* pdprel, CDrvdPropPlan* pdpplan) const
+bool CRequiredPropPlan::FCompatible(CExpressionHandle &exprhdl, PhysicalOperator* popPhysical, CDrvdPropRelational* pdprel, CDrvdPropPlan* pdpplan) const
 {
 	// first, check satisfiability of relational properties, including required columns
 	if (!pdprel->FSatisfies(this))
@@ -186,31 +188,31 @@ bool CReqdPropPlan::FCompatible(CExpressionHandle &exprhdl, PhysicalOperator* po
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::PrppEmpty
+//		CRequiredPropPlan::PrppEmpty
 //
 //	@doc:
 //		Generate empty required properties
 //
 //---------------------------------------------------------------------------
-CReqdPropPlan* CReqdPropPlan::PrppEmpty()
+CRequiredPropPlan *CRequiredPropPlan::PrppEmpty()
 {
 	duckdb::vector<ColumnBinding> pcrs;
 	COrderSpec* pos = new COrderSpec();
-	CEnfdOrder* peo = new CEnfdOrder(pos, CEnfdOrder::EomSatisfy);
-	return new CReqdPropPlan(pcrs, peo);
+	COrderProperty * peo = new COrderProperty(pos, COrderProperty::EomSatisfy);
+	return new CRequiredPropPlan(pcrs, peo);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::UlHashForCostBounding
+//		CRequiredPropPlan::UlHashForCostBounding
 //
 //	@doc:
 //		Hash function used for cost bounding
 //
 //---------------------------------------------------------------------------
-ULONG CReqdPropPlan::UlHashForCostBounding(CReqdPropPlan* prpp)
+ULONG CRequiredPropPlan::UlHashForCostBounding(CRequiredPropPlan * prpp)
 {
-	duckdb::vector<ColumnBinding> v = prpp->m_pcrs;
+	duckdb::vector<ColumnBinding> v = prpp->m_required_cols;
 	ULONG ulHash = 0;
 	for(size_t m = 0; m < v.size(); m++)
 	{
@@ -221,14 +223,14 @@ ULONG CReqdPropPlan::UlHashForCostBounding(CReqdPropPlan* prpp)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropPlan::FEqualForCostBounding
+//		CRequiredPropPlan::FEqualForCostBounding
 //
 //	@doc:
 //		Equality function used for cost bounding
 //
 //---------------------------------------------------------------------------
-bool CReqdPropPlan::FEqualForCostBounding(CReqdPropPlan* prppFst, CReqdPropPlan* prppSnd)
+bool CRequiredPropPlan::FEqualForCostBounding(CRequiredPropPlan * prppFst, CRequiredPropPlan * prppSnd)
 {
-	return CUtils::Equals(prppFst->m_pcrs, prppSnd->m_pcrs);
+	return CUtils::Equals(prppFst->m_required_cols, prppSnd->m_required_cols);
 }
 }

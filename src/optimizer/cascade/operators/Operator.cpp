@@ -11,6 +11,7 @@
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/planner/operator/logical_get.hpp"
+
 #include <cstdlib>
 
 namespace gpopt {
@@ -80,7 +81,7 @@ bool Operator::FMatchPattern(CGroupExpression *group_expression) {
 	return false;
 }
 
-CReqdPropPlan *Operator::PrppCompute(CReqdPropPlan *required_properties_input) {
+CRequiredPropPlan *Operator::PrppCompute(CRequiredPropPlan *required_properties_input) {
 	// derive plan properties
 	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
 	(void)PdpDerive(pdpctxtplan);
@@ -119,7 +120,7 @@ CDrvdProp *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 	return Pdp(ept);
 }
 
-CReqdPropPlan *Operator::PrppDecorate(CReqdPropPlan *required_properties_input) {
+CRequiredPropPlan *Operator::PrppDecorate(CRequiredPropPlan *required_properties_input) {
 	return m_required_plan_property;
 }
 
@@ -147,7 +148,7 @@ duckdb::unique_ptr<Operator> Operator::CopyWithNewChildren(CGroupExpression *gro
 }
 
 void Operator::CE() {
-	if(this->has_estimated_cardinality) {
+	if (this->has_estimated_cardinality) {
 		return;
 	}
 	this->has_estimated_cardinality = true;

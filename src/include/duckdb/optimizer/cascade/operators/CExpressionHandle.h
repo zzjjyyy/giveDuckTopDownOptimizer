@@ -13,9 +13,9 @@
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CDrvdProp.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
-#include "duckdb/optimizer/cascade/base/CReqdProp.h"
-#include "duckdb/planner/logical_operator.hpp"
+#include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
+#include "duckdb/planner/logical_operator.hpp"
 
 namespace gpopt
 {
@@ -61,10 +61,10 @@ private:
 
 	// required properties of attached expr/gexpr;
 	// set during required property computation
-	CReqdProp* m_prp;
+	CRequiredProperty * m_prp;
 
 	// array of children's required properties
-	duckdb::vector<CReqdProp*> m_pdrgprp;
+	duckdb::vector<CRequiredProperty *> m_pdrgprp;
 
 public:
 	// return an array of stats objects starting from the first stats object referenced by child
@@ -116,26 +116,26 @@ public:
 	// void DeriveCostContextStats();
 
 	// stats derivation using given properties and context
-	// void DeriveStats(CReqdPropRelational* prprel, IStatisticsArray* stats_ctxt);
+	// void DeriveStats(CRequiredPropRelational* prprel, IStatisticsArray* stats_ctxt);
 
 	// derive the properties of the plan carried by attached cost context,
 	// using default CDrvdPropCtxtPlan
 	void DerivePlanPropsForCostContext();
 
 	// initialize required properties container
-	void InitReqdProps(CReqdProp* prpInput);
+	void InitReqdProps(CRequiredProperty * prpInput);
 
 	// compute required properties of the n-th child
 	void ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq);
 
 	// copy required properties of the n-th child
-	void CopyChildReqdProps(ULONG child_index, CReqdProp* prp);
+	void CopyChildReqdProps(ULONG child_index, CRequiredProperty * prp);
 
 	// compute required columns of the n-th child
 	void ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt);
 
 	// required properties computation of all children
-	void ComputeReqdProps(CReqdProp* prpInput, ULONG ulOptReq);
+	void ComputeReqdProps(CRequiredProperty * prpInput, ULONG ulOptReq);
 
 	// derived relational props of n-th child
 	CDrvdPropRelational* GetRelationalProperties(ULONG child_index) const;
@@ -159,10 +159,10 @@ public:
 	bool FScalarChild(ULONG child_index) const;
 
 	// required relational props of n-th child
-	CReqdPropRelational* GetReqdRelationalProps(ULONG child_index) const;
+	CRequiredPropRelational * GetReqdRelationalProps(ULONG child_index) const;
 
 	// required plan props of n-th child
-	CReqdPropPlan* Prpp(ULONG child_index) const;
+	CRequiredPropPlan * Prpp(ULONG child_index) const;
 
 	// arity function
 	ULONG Arity(int x = 0) const;

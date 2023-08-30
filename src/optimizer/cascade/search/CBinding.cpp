@@ -102,7 +102,7 @@ Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPatter
 	// specifically which will generate equivalent scalar operators in the same group.
 	// so, if a scalar op been extracted once, there is no need to explore
 	// all the child bindings, as the scalar properites will remain the same.
-	if (NULL != pexprLast && pgexpr->m_pgroup->m_fScalar) {
+	if (NULL != pexprLast && pgexpr->m_group->m_fScalar) {
 		return NULL;
 	}
 	duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr;

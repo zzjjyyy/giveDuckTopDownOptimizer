@@ -113,7 +113,7 @@ public:
 	CGroup* PgroupInsert(CGroup* pgroupTarget, CGroupExpression* pgexpr);
 
 	// extract a plan that delivers the given required properties
-	duckdb::unique_ptr<Operator> PexprExtractPlan(CGroup* pgroupRoot, CReqdPropPlan* prppInput, ULONG ulSearchStages);
+	duckdb::unique_ptr<Operator> PexprExtractPlan(CGroup* pgroupRoot, CRequiredPropPlan * prppInput, ULONG ulSearchStages);
 
 	// merge duplicate groups
 	void GroupMerge();

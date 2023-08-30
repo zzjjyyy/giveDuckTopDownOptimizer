@@ -9,7 +9,7 @@
 
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CKeyCollection.h"
-#include "duckdb/optimizer/cascade/base/CReqdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
 #include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/operators/CExpressionHandle.h"
 #include "duckdb/optimizer/cascade/task/CWorker.h"
@@ -74,12 +74,12 @@ void CDrvdPropRelational::Derive(CExpressionHandle &exprhdl, CDrvdPropCtxt *pdpc
 //		Check for satisfying required properties
 //
 //---------------------------------------------------------------------------
-bool CDrvdPropRelational::FSatisfies(const CReqdPropPlan *prpp) const {
+bool CDrvdPropRelational::FSatisfies(const CRequiredPropPlan *prpp) const {
 	auto v1 = GetOutputColumns();
-	duckdb::vector<ColumnBinding> v(v1.size() + prpp->m_pcrs.size());
-	auto itr = set_difference(v1.begin(), v1.end(), prpp->m_pcrs.begin(), prpp->m_pcrs.end(), v.begin());
+	duckdb::vector<ColumnBinding> v(v1.size() + prpp->m_required_cols.size());
+	auto itr = set_difference(v1.begin(), v1.end(), prpp->m_required_cols.begin(), prpp->m_required_cols.end(), v.begin());
 	v.resize(itr - v.begin());
-	return (v1.size() == prpp->m_pcrs.size() + v.size());
+	return (v1.size() == prpp->m_required_cols.size() + v.size());
 }
 
 //---------------------------------------------------------------------------

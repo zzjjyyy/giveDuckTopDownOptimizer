@@ -5,10 +5,9 @@
 //	@doc:
 //		Required relational properties;
 //---------------------------------------------------------------------------
-#include "duckdb/optimizer/cascade/base/CReqdPropRelational.h"
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
-
+#include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
 #include "duckdb/optimizer/cascade/engine/CEngine.h"
 #include "duckdb/optimizer/cascade/operators/CExpressionHandle.h"
 
@@ -16,25 +15,25 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::CReqdPropRelational
+//		CRequiredPropRelational::CRequiredPropRelational
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CReqdPropRelational::CReqdPropRelational()
+CRequiredPropRelational::CRequiredPropRelational()
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::CReqdPropRelational
+//		CRequiredPropRelational::CRequiredPropRelational
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CReqdPropRelational::CReqdPropRelational(duckdb::vector<ColumnBinding> pcrs)
+CRequiredPropRelational::CRequiredPropRelational(duckdb::vector<ColumnBinding> pcrs)
 {
 	for(auto &child : pcrs)
 	{
@@ -44,69 +43,69 @@ CReqdPropRelational::CReqdPropRelational(duckdb::vector<ColumnBinding> pcrs)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::~CReqdPropRelational
+//		CRequiredPropRelational::CRequiredPropRelationalonal
 //
 //	@doc:
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CReqdPropRelational::~CReqdPropRelational()
+CRequiredPropRelational::~CRequiredPropRelational()
 {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::Compute
+//		CRequiredPropRelational::Compute
 //
 //	@doc:
 //		Compute required props
 //
 //---------------------------------------------------------------------------
-void CReqdPropRelational::Compute(CExpressionHandle &exprhdl, CReqdProp* prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq)
+void CRequiredPropRelational::Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq)
 {
-	// CReqdPropRelational* prprelInput = CReqdPropRelational::GetReqdRelationalProps(prpInput);
+	// CRequiredPropRelational* prprelInput = CRequiredPropRelational::GetReqdRelationalProps(prpInput);
 	m_pcrsStat = ((LogicalOperator*)exprhdl.Pop())->GetColumnBindings();
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::GetReqdRelationalProps
+//		CRequiredPropRelational::GetReqdRelationalProps
 //
 //	@doc:
 //		Short hand for conversion
 //
 //---------------------------------------------------------------------------
-CReqdPropRelational* CReqdPropRelational::GetReqdRelationalProps(CReqdProp* prp)
+CRequiredPropRelational *CRequiredPropRelational::GetReqdRelationalProps(CRequiredProperty * prp)
 {
-	return (CReqdPropRelational*)prp;
+	return (CRequiredPropRelational *)prp;
 }
 
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::PrprelDifference
+//		CRequiredPropRelational::PrprelDifference
 //
 //	@doc:
 //		Return difference from given properties
 //
 //---------------------------------------------------------------------------
-CReqdPropRelational* CReqdPropRelational::PrprelDifference(CReqdPropRelational* prprel)
+CRequiredPropRelational *CRequiredPropRelational::PrprelDifference(CRequiredPropRelational * prprel)
 {
 	duckdb::vector<ColumnBinding> pcrs;
 	duckdb::vector<ColumnBinding> v2 = prprel->PcrsStat();
 	std::set_difference(m_pcrsStat.begin(), m_pcrsStat.end(), v2.begin(), v2.end(), pcrs.begin());
-	return new CReqdPropRelational(pcrs);
+	return new CRequiredPropRelational(pcrs);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CReqdPropRelational::IsEmpty
+//		CRequiredPropRelational::IsEmpty
 //
 //	@doc:
 //		Return true if property container is empty
 //
 //---------------------------------------------------------------------------
-bool CReqdPropRelational::IsEmpty() const
+bool CRequiredPropRelational::IsEmpty() const
 {
 	return m_pcrsStat.size() == 0;
 }
