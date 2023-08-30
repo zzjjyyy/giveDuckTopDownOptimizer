@@ -146,7 +146,7 @@ void CExpressionHandle::DerivePlanPropsForCostContext() {
 	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
 	// CopyStats();
 	// create/derive local properties
-	m_pdpplan = m_pgexpr->m_pop->PdpCreate();
+	m_pdpplan = m_pgexpr->m_operator->PdpCreate();
 	m_pdpplan->Derive(*this, pdpctxtplan);
 	delete pdpctxtplan;
 }
@@ -454,7 +454,7 @@ Operator *CExpressionHandle::Pop() const {
 		return m_pop;
 	}
 	if (nullptr != m_pgexpr) {
-		return m_pgexpr->m_pop.get();
+		return m_pgexpr->m_operator.get();
 	}
 	return nullptr;
 }
@@ -474,7 +474,7 @@ Operator *CExpressionHandle::Pop(ULONG child_index) const {
 	if (nullptr != m_pcc) {
 		COptimizationContext *pocChild = m_pcc->m_optimization_contexts[child_index];
 		CCostContext *pccChild = pocChild->m_pccBest;
-		return pccChild->m_group_expression->m_pop.get();
+		return pccChild->m_group_expression->m_operator.get();
 	}
 	return nullptr;
 }
@@ -499,7 +499,7 @@ Operator *CExpressionHandle::PopGrandchild(ULONG child_index, ULONG grandchild_i
 			if (grandchildContext) {
 				*grandchildContext = pccgrandchild;
 			}
-			return pccgrandchild->m_group_expression->m_pop.get();
+			return pccgrandchild->m_group_expression->m_operator.get();
 		}
 	}
 	return nullptr;
@@ -732,7 +732,7 @@ duckdb::vector<ColumnBinding> CExpressionHandle::DeriveOutputColumns(ULONG child
 		return m_pop->children[child_index]->GetColumnBindings();
 	}
 	else if (nullptr != m_pgexpr) {
-		return m_pgexpr->m_pop->children[child_index]->GetColumnBindings();
+		return m_pgexpr->m_operator->children[child_index]->GetColumnBindings();
 	}
 	return GetRelationalProperties(child_index)->GetOutputColumns();
 }

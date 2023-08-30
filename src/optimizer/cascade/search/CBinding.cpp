@@ -70,12 +70,12 @@ Operator *CBinding::PexprExpandPattern(Operator *pexprPattern, ULONG ulPos, ULON
 //
 //---------------------------------------------------------------------------
 Operator *CBinding::PexprFinalize(CGroupExpression *pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr) {
-	pgexpr->m_pop->children.clear();
+	pgexpr->m_operator->children.clear();
 	for (auto &child : pdrgpexpr) {
-		pgexpr->m_pop->AddChild(std::move(child));
+		pgexpr->m_operator->AddChild(std::move(child));
 	}
-	pgexpr->m_pop->m_cost = GPOPT_INVALID_COST;
-	return pgexpr->m_pop.get();
+	pgexpr->m_operator->m_cost = GPOPT_INVALID_COST;
+	return pgexpr->m_operator.get();
 }
 
 //---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPatter
 	}
 	if (pexprPattern->FPattern() && ((CPattern *)pexprPattern)->FLeaf()) {
 		// return immediately; no deep extraction for leaf patterns
-		return pgexpr->m_pop.get();
+		return pgexpr->m_operator.get();
 	}
 	// for a scalar operator, there is always only one group expression in it's
 	// group. scalar operators are required to derive the scalar properties only

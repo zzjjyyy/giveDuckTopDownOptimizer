@@ -57,11 +57,11 @@ Operator *LogicalProjection::SelfRehydrate(CCostContext *pcc, duckdb::vector<Ope
 	CGroupExpression *pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
-	for (auto &child : pgexpr->m_pop.get()->expressions) {
+	for (auto &child : pgexpr->m_operator.get()->expressions) {
 		v.push_back(child->Copy());
 	}
 	LogicalProjection *pexpr =
-	    new LogicalProjection(((LogicalProjection *)pgexpr->m_pop.get())->table_index, std::move(v));
+	    new LogicalProjection(((LogicalProjection *)pgexpr->m_operator.get())->table_index, std::move(v));
 	for (auto &child : pdrgpexpr) {
 		pexpr->AddChild(child->Copy());
 	}

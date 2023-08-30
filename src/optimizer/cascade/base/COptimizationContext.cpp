@@ -115,11 +115,11 @@ bool COptimizationContext::FEqualForStats(const COptimizationContext *pocLeft, c
 //---------------------------------------------------------------------------
 bool COptimizationContext::FOptimize(CGroupExpression* pgexprParent, CGroupExpression* pgexprChild, COptimizationContext* pocChild, ULONG ulSearchStages)
 {
-	if (PhysicalOperatorType::ORDER_BY == pgexprChild->m_pop->physical_type)
+	if (PhysicalOperatorType::ORDER_BY == pgexprChild->m_operator->physical_type)
 	{
 		return FOptimizeSort(pgexprParent, pgexprChild, pocChild, ulSearchStages);
 	}
-	if (PhysicalOperatorType::NESTED_LOOP_JOIN == pgexprChild->m_pop->physical_type)
+	if (PhysicalOperatorType::NESTED_LOOP_JOIN == pgexprChild->m_operator->physical_type)
 	{
 		return FOptimizeNLJoin(pgexprParent, pgexprChild, pocChild, ulSearchStages);
 	}
@@ -163,7 +163,7 @@ bool COptimizationContext::FEqualContextIds(duckdb::vector<COptimizationContext*
 //---------------------------------------------------------------------------
 bool COptimizationContext::FOptimizeSort(CGroupExpression* pgexprParent, CGroupExpression* pgexprSort, COptimizationContext* poc, ULONG ulSearchStages)
 {
-	return poc->m_prpp->m_required_sort_order->FCompatible(((PhysicalOrder*)pgexprSort->m_pop.get())->Pos());
+	return poc->m_prpp->m_required_sort_order->FCompatible(((PhysicalOrder*)pgexprSort->m_operator.get())->Pos());
 }
 
 //---------------------------------------------------------------------------

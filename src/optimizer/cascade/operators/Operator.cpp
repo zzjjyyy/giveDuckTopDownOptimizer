@@ -72,8 +72,8 @@ bool Operator::FMatchPattern(CGroupExpression *group_expression) {
 		return true;
 	} else {
 		// match operator id and arity
-		if ((this->logical_type == group_expression->m_pop->logical_type ||
-		     this->physical_type == group_expression->m_pop->physical_type) &&
+		if ((this->logical_type == group_expression->m_operator->logical_type ||
+		     this->physical_type == group_expression->m_operator->physical_type) &&
 		    this->Arity() == group_expression->Arity()) {
 			return true;
 		}
@@ -181,7 +181,7 @@ CDrvdProp::EPropType Operator::Ept() const {
 Operator *Operator::PexprRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdrgpexpr,
                                    CDrvdPropCtxtPlan *pdpctxtplan) {
 	CGroupExpression *group_expression = cost_context->m_group_expression;
-	return group_expression->m_pop->SelfRehydrate(cost_context, pdrgpexpr, pdpctxtplan);
+	return group_expression->m_operator->SelfRehydrate(cost_context, pdrgpexpr, pdpctxtplan);
 }
 
 void Operator::ResolveOperatorTypes() {

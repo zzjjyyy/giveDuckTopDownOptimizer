@@ -136,7 +136,7 @@ bool CJobGroupOptimization::FScheduleGroupExpressions(CSchedulerContext* psc)
 		// optimization level
 		if (psc->m_peng->FOptimizeChild(m_pgexprOrigin, pgexpr, m_poc, EolCurrent()))
 		{
-			const ULONG ulOptRequests = ((PhysicalOperator*)pgexpr->m_pop.get())->UlOptRequests();
+			const ULONG ulOptRequests = ((PhysicalOperator*)pgexpr->m_operator.get())->UlOptRequests();
 			for (ULONG ul = 0; ul < ulOptRequests; ul++)
 			{
 				// schedule an optimization job for each request

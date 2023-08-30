@@ -91,11 +91,11 @@ Operator* PhysicalProjection::SelfRehydrate(CCostContext* pcc, duckdb::vector<Op
 	CGroupExpression* pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	duckdb::vector<unique_ptr<Expression>> v;
-    for(auto &child : ((PhysicalProjection*)pgexpr->m_pop.get())->select_list)
+    for(auto &child : ((PhysicalProjection*)pgexpr->m_operator.get())->select_list)
     {
         v.push_back(child->Copy());
     }
-	PhysicalProjection* pexpr = new PhysicalProjection(((PhysicalProjection*)pgexpr->m_pop.get())->types, std::move(v), ((PhysicalProjection*)pgexpr->m_pop.get())->estimated_cardinality);
+	PhysicalProjection* pexpr = new PhysicalProjection(((PhysicalProjection*)pgexpr->m_operator.get())->types, std::move(v), ((PhysicalProjection*)pgexpr->m_operator.get())->estimated_cardinality);
 	for(auto &child : pdrgpexpr)
 	{
 		pexpr->AddChild(child->Copy());

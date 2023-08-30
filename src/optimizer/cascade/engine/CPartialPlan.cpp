@@ -65,7 +65,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 			// we have reached a child with a known plan,
 			// we have perfect costing information about this child
 			// use provided child cost context to collect accurate costing info
-			double dRowsChild = pgroupChild->m_listGExprs.front()->m_pop->estimated_cardinality;
+			double dRowsChild = pgroupChild->m_listGExprs.front()->m_operator->estimated_cardinality;
 			pci->SetChildRows(ulIndex, dRowsChild);
 			// double dWidthChild = child_stats->Width(prppChild->m_required_cols).Get();
 			// pci->SetChildWidth(ulIndex, dWidthChild);
@@ -77,7 +77,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 		}
 		// otherwise, we do not know child plan yet,
 		// we assume lower bounds on child row estimate and cost
-		double dRowsChild = pgroupChild->m_listGExprs.front()->m_pop->estimated_cardinality;
+		double dRowsChild = pgroupChild->m_listGExprs.front()->m_operator->estimated_cardinality;
 		pci->SetChildRows(ulIndex, dRowsChild);
 		// pci->SetChildRebinds(ulIndex, child_stats->NumRebinds().Get());
 		// double dWidthChild = child_stats->Width(prppChild->m_required_cols).Get();
@@ -113,7 +113,7 @@ double CPartialPlan::CostCompute()
 		// compute required columns of the n-th child
 		exprhdl.ComputeChildReqdCols(ul, pdrgpdp);
 	}
-	Operator* pop = m_pgexpr->m_pop.get();
+	Operator* pop = m_pgexpr->m_operator.get();
 	// extract rows from stats
 	double rows = pop->estimated_cardinality;
 	// extract width from stats

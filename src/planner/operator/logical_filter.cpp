@@ -93,7 +93,7 @@ Operator* LogicalFilter::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operato
 	CGroupExpression* pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	LogicalFilter* pexpr = new LogicalFilter();
-	pexpr->expressions = std::move(pgexpr->m_pop->expressions);
+	pexpr->expressions = std::move(pgexpr->m_operator->expressions);
 	for(auto &child : pdrgpexpr)
 	{
 		pexpr->AddChild(child->Copy());

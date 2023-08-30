@@ -30,14 +30,6 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 class CGroupExpression {
 public:
-	// states of a group expression
-	enum EState { estUnexplored, estExploring, estExplored, estImplementing, estImplemented, estSentinel };
-	// circular dependency state
-	enum ECircularDependency { ecdDefault, ecdCircularDependency, ecdSentinel };
-	// type definition of cost context hash table
-	typedef unordered_map<ULONG, CCostContext *> CostContextMap;
-
-public:
 	// dummy ctor; used for creating invalid gexpr
 	CGroupExpression()
 	    : m_id(GPOPT_INVALID_GEXPR_ID), m_xform_id_origin(CXform::ExfInvalid), m_intermediate(false),
@@ -48,12 +40,20 @@ public:
 	CGroupExpression(const CGroupExpression &) = delete;
 	virtual ~CGroupExpression();
 
+	// states of a group expression
+	enum EState { estUnexplored, estExploring, estExplored, estImplementing, estImplemented, estSentinel };
+	// circular dependency state
+	enum ECircularDependency { ecdDefault, ecdCircularDependency, ecdSentinel };
+	// type definition of cost context hash table
+	typedef unordered_map<ULONG, CCostContext *> CostContextMap;
+
+public:
 	// expression id
 	ULONG m_id;
 	// duplicate group expression
 	CGroupExpression *m_duplicate_group_expr;
 	// operator class
-	duckdb::unique_ptr<Operator> m_pop;
+	duckdb::unique_ptr<Operator> m_operator;
 	// array of child groups
 	duckdb::vector<CGroup *> m_child_groups;
 	// sorted array of children groups for faster comparison
@@ -157,7 +157,7 @@ public:
 	bool FMatchNonScalarChildren(CGroupExpression *group_expr) const;
 	// hash function
 	ULONG HashValue() const {
-		return HashValue(m_pop.get(), m_child_groups);
+		return HashValue(m_operator.get(), m_child_groups);
 	}
 	// static hash function for operator and group references
 	static ULONG HashValue(Operator *pop, duckdb::vector<CGroup *> groups);

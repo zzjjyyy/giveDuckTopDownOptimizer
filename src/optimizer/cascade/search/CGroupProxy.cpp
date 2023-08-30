@@ -106,7 +106,7 @@ list<CGroupExpression*>::iterator CGroupProxy::PgexprFirst()
 list<CGroupExpression*>::iterator CGroupProxy::PgexprSkip(list<CGroupExpression*>::iterator pgexprStart, bool fSkipLogical)
 {
 	auto iter = pgexprStart;
-	while (m_pgroup->m_listGExprs.end() != iter && fSkipLogical == (*iter)->m_pop->FLogical())
+	while (m_pgroup->m_listGExprs.end() != iter && fSkipLogical == (*iter)->m_operator->FLogical())
 	{
 		++iter;
 	}

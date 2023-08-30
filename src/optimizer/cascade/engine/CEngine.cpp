@@ -79,7 +79,7 @@ CEngine::~CEngine() {
 //
 //---------------------------------------------------------------------------
 void CEngine::InitLogicalExpression(duckdb::unique_ptr<Operator> expr) {
-	CGroup *group_root = GroupInsert(nullptr, std::move(expr), CXform::ExfInvalid, NULL, false);
+	CGroup *group_root = GroupInsert(nullptr, std::move(expr), CXform::ExfInvalid, nullptr, false);
 	m_memo_table->SetRoot(group_root);
 }
 
@@ -94,7 +94,7 @@ void CEngine::InitLogicalExpression(duckdb::unique_ptr<Operator> expr) {
 void CEngine::Init(CQueryContext *query_context, duckdb::vector<CSearchStage *> search_strategy) {
 	m_search_strategy = search_strategy;
 	if (search_strategy.empty()) {
-		m_search_strategy = CSearchStage::PdrgpssDefault();
+		m_search_strategy = CSearchStage::DefaultStrategy();
 	}
 	m_query_context = query_context;
 	InitLogicalExpression(std::move(m_query_context->m_expr));
@@ -164,7 +164,7 @@ CGroup *CEngine::GroupInsert(CGroup *group_target, duckdb::unique_ptr<Operator> 
 	    new CGroupExpression(std::move(expr), group_children, xform_id_origin, group_expr_origin, f_intermediate);
 
 	// find the group that contains created group expression
-	CGroup *group_container = m_memo_table->PgroupInsert(group_target, group_expr);
+	CGroup *group_container = m_memo_table->GroupInsert(group_target, group_expr);
 	if (nullptr == group_expr->m_group) {
 		// insertion failed, release created group expression
 		delete group_expr;
@@ -347,13 +347,13 @@ bool CEngine::FSafeToPrune(CGroupExpression *pgexpr, CRequiredPropPlan *prpp, CC
 //---------------------------------------------------------------------------
 MemoTreeMap *CEngine::MemoToMap() {
 	COptimizerConfig *optimizer_config = COptCtxt::PoctxtFromTLS()->m_optimizer_config;
-	if (nullptr == m_memo_table->Pmemotmap()) {
+	if (nullptr == m_memo_table->TreeMap()) {
 		duckdb::vector<ColumnBinding> v;
 		COptimizationContext *poc = new COptimizationContext(PgroupRoot(), m_query_context->m_required_plan_property,
 		                                                     new CRequiredPropRelational(v), 0);
 		m_memo_table->BuildTreeMap(poc);
 	}
-	return m_memo_table->Pmemotmap();
+	return m_memo_table->TreeMap();
 }
 
 //---------------------------------------------------------------------------
@@ -449,7 +449,7 @@ void CEngine::FinalizeSearchStage() {
 //---------------------------------------------------------------------------
 void CEngine::Optimize() {
 	COptimizerConfig *optimizer_config = COptCtxt::PoctxtFromTLS()->m_optimizer_config;
-	const ULONG ulJobs = std::min((ULONG)GPOPT_JOBS_CAP, (ULONG)(m_memo_table->UlpGroups() * GPOPT_JOBS_PER_GROUP));
+	const ULONG ulJobs = std::min((ULONG)GPOPT_JOBS_CAP, (ULONG)(m_memo_table->NumGroups() * GPOPT_JOBS_PER_GROUP));
 	CJobFactory job_factory(ulJobs);
 	CScheduler scheduler(ulJobs);
 	CSchedulerContext scheduler_context;
@@ -466,8 +466,8 @@ void CEngine::Optimize() {
 		// run optimization job
 		CScheduler::Run(&scheduler_context);
 		// extract best plan found at the end of current search stage
-		auto expr_plan = m_memo_table->PexprExtractPlan(
-		    m_memo_table->PgroupRoot(), m_query_context->m_required_plan_property, m_search_strategy.size());
+		auto expr_plan = m_memo_table->ExtractPlan(m_memo_table->GroupRoot(), m_query_context->m_required_plan_property,
+		                                           m_search_strategy.size());
 		CurrentSearchStage()->SetBestExpr(expr_plan.release());
 		FinalizeSearchStage();
 	}
@@ -521,8 +521,8 @@ Operator *CEngine::ExprExtractPlan() {
 		pexpr = PexprUnrank(0);
 	} else {
 		pexpr = m_memo_table
-		            ->PexprExtractPlan(m_memo_table->PgroupRoot(), m_query_context->m_required_plan_property,
-		                               m_search_strategy.size())
+		            ->ExtractPlan(m_memo_table->GroupRoot(), m_query_context->m_required_plan_property,
+		                          m_search_strategy.size())
 		            .get();
 	}
 	return pexpr;
@@ -624,7 +624,7 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationCont
 	CExpressionHandle exprhdl;
 	exprhdl.Attach(pcc);
 	exprhdl.DerivePlanPropsForCostContext();
-	PhysicalOperator *pop_physical = (PhysicalOperator *)(pcc->m_group_expression->m_pop.get());
+	PhysicalOperator *pop_physical = (PhysicalOperator *)(pcc->m_group_expression->m_operator.get());
 	CRequiredPropPlan *prpp = poc->m_prpp;
 	// Determine if any property enforcement is disable or unnecessary
 	bool f_order_reqd = !prpp->m_required_sort_order->m_pos->IsEmpty();

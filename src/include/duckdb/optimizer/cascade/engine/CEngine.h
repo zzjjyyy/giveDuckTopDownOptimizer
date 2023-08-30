@@ -100,7 +100,7 @@ public:
 	void Init(CQueryContext *query_context, duckdb::vector<CSearchStage *> search_strategy);
 	// accessor of memo's root group
 	CGroup *PgroupRoot() const {
-		return m_memo_table->PgroupRoot();
+		return m_memo_table->GroupRoot();
 	}
 	// check if a group is the root one
 	bool FRoot(CGroup *pgroup) const {

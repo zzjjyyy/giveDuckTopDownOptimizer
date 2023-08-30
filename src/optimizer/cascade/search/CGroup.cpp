@@ -344,7 +344,7 @@ ULONG CGroup::HashValue() const
 void CGroup::Insert(CGroupExpression* pgexpr)
 {
 	m_listGExprs.emplace_back(pgexpr);
-	if (pgexpr->m_pop->FLogical())
+	if (pgexpr->m_operator->FLogical())
 	{
 		m_fHasNewLogicalOperators = true;
 	}
@@ -657,7 +657,7 @@ void CGroup::BuildTreeMap(COptimizationContext* poc, CCostContext* pccParent, UL
 	}
 	while (m_listGExprs.end() != itr)
 	{
-		if (pgexprCurrent->m_pop->FPhysical())
+		if (pgexprCurrent->m_operator->FPhysical())
 		{
 			// create links recursively
 			RecursiveBuildTreeMap(poc, pccParent, pgexprCurrent, child_index, ptmap);
@@ -813,7 +813,7 @@ double CGroup::CostLowerBound(CRequiredPropPlan * prppInput)
 		// the same group that contains it,
 		// since an enforcer must reside on top of another operator from the same
 		// group, it cannot produce a better cost lower-bound and can be skipped here
-		if (!CUtils::FEnforcer(pgexprCurrent->m_pop.get()))
+		if (!CUtils::FEnforcer(pgexprCurrent->m_operator.get()))
 		{
 			double costLowerBoundGExpr = pgexprCurrent->CostLowerBound(prppInput, nullptr, gpos::ulong_max);
 			if (costLowerBoundGExpr < costLowerBound)

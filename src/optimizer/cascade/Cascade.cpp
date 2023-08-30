@@ -69,7 +69,7 @@ duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<Logica
 	CAutoOptCtxt optimizer_context(expr_evaluator, optimizer_config);
 
 	// init query context, it describes the requirements of the query output.
-	duckdb::vector<ULONG *> output_column_ids(1, 0);
+	duckdb::vector<ULONG *> output_column_ids(1, nullptr);
 	duckdb::vector<std::string> output_column_names(1, "A");
 	CQueryContext *query_context =
 	    CQueryContext::QueryContextGenerate(std::move(plan), output_column_ids, output_column_names, true);
@@ -82,7 +82,7 @@ duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<Logica
 	// optimize
 	engine.Optimize();
 	duckdb::unique_ptr<PhysicalOperator> physical_plan =
-	    duckdb::unique_ptr<PhysicalOperator>((PhysicalOperator *)engine.PreviousSearchStage()->m_pexprBest.release());
+	    duckdb::unique_ptr<PhysicalOperator>((PhysicalOperator *)engine.PreviousSearchStage()->m_best_expr.release());
 
 	/* I comment here */
 	// CExpression* physical_plan = engine.ExprExtractPlan();

@@ -39,11 +39,11 @@ const CGroupExpression CGroupExpression::M_INVALID_GROUP_EXPR;
 //---------------------------------------------------------------------------
 CGroupExpression::CGroupExpression(duckdb::unique_ptr<Operator> op, duckdb::vector<CGroup *> groups,
                                    CXform::EXformId xform_id, CGroupExpression *group_expr_origin, bool fIntermediate)
-    : m_id(GPOPT_INVALID_GEXPR_ID), m_duplicate_group_expr(nullptr), m_pop(std::move(op)), m_child_groups(groups),
+    : m_id(GPOPT_INVALID_GEXPR_ID), m_duplicate_group_expr(nullptr), m_operator(std::move(op)), m_child_groups(groups),
       m_group(nullptr), m_xform_id_origin(xform_id), m_group_expr_origin(group_expr_origin),
       m_intermediate(fIntermediate), m_estate(estUnexplored), m_eol(EolLow), m_circular_dependency(ecdDefault) {
 	// store sorted array of children for faster comparison
-	if (1 < groups.size() && !m_pop->FInputOrderSensitive()) {
+	if (1 < groups.size() && !m_operator->FInputOrderSensitive()) {
 		m_child_groups_sorted.insert(m_child_groups_sorted.end(), groups.begin(), groups.end());
 		sort(m_child_groups_sorted.begin(), m_child_groups_sorted.end(), CUtils::PtrCmp);
 	}
@@ -101,7 +101,7 @@ void CGroupExpression::Init(CGroup *pgroup, ULONG id) {
 //---------------------------------------------------------------------------
 void CGroupExpression::SetOptimizationLevel() {
 	/* I commenet here */
-	if (m_pop->physical_type == PhysicalOperatorType::HASH_JOIN) {
+	if (m_operator->physical_type == PhysicalOperatorType::HASH_JOIN) {
 		// optimize hash join first to minimize plan cost quickly
 		m_eol = EolHigh;
 	}
@@ -259,20 +259,27 @@ CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *poc, ULONG 
 	if (FCostContextExists(poc, optimization_contexts)) {
 		return nullptr;
 	}
-	CCostContext* pcc = new CCostContext(poc, optimization_request_num, this);
+	CCostContext *pcc = new CCostContext(poc, optimization_request_num, this);
+	bool is_valid = true;
 	// computing cost
 	pcc->SetState(CCostContext::estCosting);
 	if (!fPruned) {
 		pcc->SetChildContexts(optimization_contexts);
-		double cost = CostCompute(pcc);
-		pcc->SetCost(cost);
-	}
-	else {
+		is_valid = pcc->IsValid();
+		if (is_valid) {
+			double cost = CostCompute(pcc);
+			pcc->SetCost(cost);
+		}
+	} else {
 		pcc->SetPruned();
 		pcc->SetCost(cost_lower_bound);
 	}
 	pcc->SetState(CCostContext::estCosted);
-	return CostContextInsertBest(pcc);
+	if (is_valid) {
+		return CostContextInsertBest(pcc);
+	}
+	// invalid cost context
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -351,7 +358,7 @@ double CGroupExpression::CostCompute(CCostContext *pcc) const {
 //
 //---------------------------------------------------------------------------
 bool CGroupExpression::FTransitioned(EState estate) const {
-	return !m_pop->FLogical() || (estate == estExplored && FExplored()) || (estate == estImplemented && FImplemented());
+	return !m_operator->FLogical() || (estate == estExplored && FExplored()) || (estate == estImplemented && FImplemented());
 }
 
 //---------------------------------------------------------------------------
@@ -523,22 +530,22 @@ bool CGroupExpression::FMatchNonScalarChildren(CGroupExpression *group_expr) con
 //---------------------------------------------------------------------------
 bool CGroupExpression::Matches(const CGroupExpression *group_expr) const {
 	// make sure we are not comparing to invalid group expression
-	if (nullptr == this->m_pop || nullptr == group_expr->m_pop) {
-		return nullptr == this->m_pop && nullptr == group_expr->m_pop;
+	if (nullptr == this->m_operator || nullptr == group_expr->m_operator) {
+		return nullptr == this->m_operator && nullptr == group_expr->m_operator;
 	}
 	// have same arity
 	if (Arity() != group_expr->Arity()) {
 		return false;
 	}
 	// match operators
-	if (!m_pop->Matches(group_expr->m_pop.get())) {
+	if (!m_operator->Matches(group_expr->m_operator.get())) {
 		return false;
 	}
 	// compare inputs
 	if (0 == Arity()) {
 		return true;
 	} else {
-		if (1 == Arity() || m_pop->FInputOrderSensitive()) {
+		if (1 == Arity() || m_operator->FInputOrderSensitive()) {
 			return CGroup::FMatchGroups(m_child_groups, group_expr->m_child_groups);
 		} else {
 			return CGroup::FMatchGroups(m_child_groups_sorted, group_expr->m_child_groups_sorted);
@@ -559,8 +566,7 @@ ULONG CGroupExpression::HashValue(Operator *pop, duckdb::vector<CGroup *> groups
 	ULONG ulHash = Operator::HashValue(pop);
 	// ULONG ulHash = pop->HashValue();
 	ULONG arity = groups.size();
-	for (ULONG i = 0; i < arity; i++)
-	{
+	for (ULONG i = 0; i < arity; i++) {
 		ulHash = CombineHashes(ulHash, groups[i]->HashValue());
 	}
 	return ulHash;

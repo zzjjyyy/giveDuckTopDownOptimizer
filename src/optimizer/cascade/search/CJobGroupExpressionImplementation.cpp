@@ -111,7 +111,7 @@ void CJobGroupExpressionImplementation::Init(CGroupExpression* pgexpr)
 void CJobGroupExpressionImplementation::ScheduleApplicableTransformations(CSchedulerContext* psc)
 {
 	// get all applicable xforms
-	CXform_set * xform_set = ((LogicalOperator*)m_pgexpr->m_pop.get())->PxfsCandidates();
+	CXform_set * xform_set = ((LogicalOperator*)m_pgexpr->m_operator.get())->PxfsCandidates();
 	// intersect them with required xforms and schedule jobs
 	*xform_set &= *(CXformFactory::XformFactory()->XformImplementation());
 	*xform_set &= *(psc->m_peng->CurrentStageXforms());

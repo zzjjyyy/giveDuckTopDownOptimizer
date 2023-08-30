@@ -253,16 +253,16 @@ bool CCostContext::FBetterThan(CCostContext* pcc) const
 //---------------------------------------------------------------------------
 double CCostContext::CostCompute(duckdb::vector<double> pdrgpcostChildren)
 {
-	if(!this->m_group_expression->m_pop->has_estimated_cardinality) {
-		this->m_group_expression->m_pop->CE();
+	if(!this->m_group_expression->m_operator->has_estimated_cardinality) {
+		this->m_group_expression->m_operator->CE();
 	}
 	if(m_optimization_contexts.size() == 0) {
-		return static_cast<double>(this->m_group_expression->m_pop->estimated_cardinality);
+		return static_cast<double>(this->m_group_expression->m_operator->estimated_cardinality);
 	} 
 	else if(m_optimization_contexts.size() == 1) {
-		return pdrgpcostChildren[0] + this->m_group_expression->m_pop->estimated_cardinality;
+		return pdrgpcostChildren[0] + this->m_group_expression->m_operator->estimated_cardinality;
 	}
 	else {
-		return pdrgpcostChildren[0] + 1.2 * pdrgpcostChildren[1] + this->m_group_expression->m_pop->estimated_cardinality;
+		return pdrgpcostChildren[0] + 1.2 * pdrgpcostChildren[1] + this->m_group_expression->m_operator->estimated_cardinality;
 	} 
 }
