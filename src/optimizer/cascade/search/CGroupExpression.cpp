@@ -228,7 +228,7 @@ CCostContext *CGroupExpression::CostContextInsertBest(CCostContext *pcc) {
 		// insert new context
 		pccKept = CostContextInsert(pcc);
 		if (nullptr != pccExisting) {
-			if (pccExisting == poc->m_pccBest) {
+			if (pccExisting == poc->m_best_cost_context) {
 				// change best cost context of the corresponding optimization context
 				poc->SetBest(pcc);
 			}
@@ -343,7 +343,7 @@ double CGroupExpression::CostCompute(CCostContext *pcc) const {
 	const ULONG length = pdrgpoc.size();
 	for (ULONG ul = 0; ul < length; ul++) {
 		COptimizationContext *pocChild = pdrgpoc[ul];
-		pdrgpcostChildren.emplace_back(pocChild->m_pccBest->m_cost);
+		pdrgpcostChildren.emplace_back(pocChild->m_best_cost_context->m_cost);
 	}
 	double cost = pcc->CostCompute(pdrgpcostChildren);
 	return cost;
@@ -613,9 +613,9 @@ bool CGroupExpression::ContainsCircularDependencies() {
 	duckdb::vector<CGroup *> child_groups = m_child_groups;
 	for (ULONG ul = 0; ul < child_groups.size(); ul++) {
 		CGroup *child_group = child_groups[ul];
-		if (child_group->m_fScalar)
+		if (child_group->m_is_calar)
 			continue;
-		CGroup *child_duplicate_group = child_group->m_pgroupDuplicate;
+		CGroup *child_duplicate_group = child_group->m_group_for_duplicate_groups;
 		if (child_duplicate_group != nullptr) {
 			ULONG child_duplicate_group_id = child_duplicate_group->m_id;
 			ULONG current_group_id = m_group->m_id;

@@ -88,7 +88,7 @@ void CJobGroupExploration::Init(CGroup* pgroup)
 	// set job actions
 	m_jsm.SetAction(estInitialized, EevtStartExploration);
 	m_jsm.SetAction(estExploringChildren, EevtExploreChildren);
-	SetJobQueue(&pgroup->m_jqExploration);
+	SetJobQueue(&pgroup->m_explore_job_queue);
 	CJob::SetInit();
 }
 
@@ -106,7 +106,7 @@ bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext* psc)
 	auto pgexprLast = m_pgexprLastScheduled;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
-	while (m_pgroup->m_listGExprs.end() != itr)
+	while (m_pgroup->m_group_exprs.end() != itr)
 	{
 		CGroupExpression* pgexpr = *itr;
 		if (!pgexpr->FTransitioned(CGroupExpression::estExplored))
@@ -172,9 +172,9 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedule
 			gp.SetState(CGroup::estExplored);
 		}
 		// if this is the root, complete exploration phase
-		if (psc->m_peng->FRoot(pjge->m_pgroup))
+		if (psc->m_engine->FRoot(pjge->m_pgroup))
 		{
-			psc->m_peng->FinalizeExploration();
+			psc->m_engine->FinalizeExploration();
 		}
 		return eevExplored;
 	}
@@ -203,9 +203,9 @@ bool CJobGroupExploration::FExecute(CSchedulerContext* psc)
 //---------------------------------------------------------------------------
 void CJobGroupExploration::ScheduleJob(CSchedulerContext* psc, CGroup* pgroup, CJob* pjParent)
 {
-	CJob* pj = psc->m_pjf->PjCreate(CJob::EjtGroupExploration);
+	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExploration);
 	// initialize job
 	CJobGroupExploration* pjge = PjConvert(pj);
 	pjge->Init(pgroup);
-	psc->m_psched->Add(pjge, pjParent);
+	psc->m_scheduler->Add(pjge, pjParent);
 }

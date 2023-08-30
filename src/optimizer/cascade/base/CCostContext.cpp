@@ -34,7 +34,7 @@ CCostContext::CCostContext(COptimizationContext* poc, ULONG ulOptReq, CGroupExpr
 {
 	if(m_group_expression != nullptr)
 	{
-		CGroupExpression* pgexprForStats = m_group_expression->m_group->PgexprBestPromise(m_group_expression);
+		CGroupExpression* pgexprForStats = m_group_expression->m_group->BestPromiseGroupExpr(m_group_expression);
 		if (nullptr != pgexprForStats)
 		{
 			m_group_expr_for_stats = pgexprForStats;
@@ -117,11 +117,11 @@ bool CCostContext::operator==(const CCostContext &cc) const
 bool CCostContext::IsValid()
 {
 	// obtain relational properties from group
-	CDrvdPropRelational* pdprel = CDrvdPropRelational::GetRelationalProperties(m_group_expression->m_group->m_pdp);
+	CDrvdPropRelational* pdprel = CDrvdPropRelational::GetRelationalProperties(m_group_expression->m_group->m_derived_properties);
 	// derive plan properties
 	DerivePlanProps();
 	// checking for required properties satisfaction
-	bool fValid = m_poc->m_prpp->FSatisfied(pdprel, m_derived_prop_plan);
+	bool fValid = m_poc->m_required_plan_properties->FSatisfied(pdprel, m_derived_prop_plan);
 	return fValid;
 }
 
@@ -146,15 +146,15 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext* pccFst, CCostContext*
 	// to have more reliable statistics on this side
 	*pfTiesResolved = false;
 	*ppccPrefered = nullptr;
-	double dRowsOuterFst = pccFst->m_optimization_contexts[0]->m_pccBest->m_cost;
-	double dRowsInnerFst = pccFst->m_optimization_contexts[1]->m_pccBest->m_cost;
+	double dRowsOuterFst = pccFst->m_optimization_contexts[0]->m_best_cost_context->m_cost;
+	double dRowsInnerFst = pccFst->m_optimization_contexts[1]->m_best_cost_context->m_cost;
 	if (dRowsOuterFst != dRowsInnerFst)
 	{
 		// two children of first plan have different row estimates
 		return;
 	}
-	double dRowsOuterSnd = pccSnd->m_optimization_contexts[0]->m_pccBest->m_cost;
-	double dRowsInnerSnd = pccSnd->m_optimization_contexts[1]->m_pccBest->m_cost;
+	double dRowsOuterSnd = pccSnd->m_optimization_contexts[0]->m_best_cost_context->m_cost;
+	double dRowsInnerSnd = pccSnd->m_optimization_contexts[1]->m_best_cost_context->m_cost;
 	if (dRowsOuterSnd != dRowsInnerSnd)
 	{
 		// two children of second plan have different row estimates
@@ -167,8 +167,8 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext* pccFst, CCostContext*
 	}
 	// both plans have equal estimated rows for both children, break tie based on join depth
 	*pfTiesResolved = true;
-	ULONG ulOuterJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->m_group_expression)[0]->m_pdp)->GetJoinDepth();
-	ULONG ulInnerJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->m_group_expression)[1]->m_pdp)->GetJoinDepth();
+	ULONG ulOuterJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->m_group_expression)[0]->m_derived_properties)->GetJoinDepth();
+	ULONG ulInnerJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->m_group_expression)[1]->m_derived_properties)->GetJoinDepth();
 	if (ulInnerJoinDepthFst < ulOuterJoinDepthFst)
 	{
 		*ppccPrefered = pccFst;

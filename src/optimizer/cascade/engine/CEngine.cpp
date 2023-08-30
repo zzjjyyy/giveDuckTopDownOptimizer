@@ -112,7 +112,7 @@ void CEngine::AddEnforcers(CGroupExpression *group_expr,
                            duckdb::vector<duckdb::unique_ptr<Operator>> group_expr_enforcers) {
 	for (ULONG ul = 0; ul < group_expr_enforcers.size(); ul++) {
 		// assemble an expression rooted by the enforcer operator
-		CGroup *pgroup =
+		CGroup *group =
 		    GroupInsert(group_expr->m_group, std::move(group_expr_enforcers[ul]), CXform::ExfInvalid, nullptr, false);
 	}
 }
@@ -203,8 +203,8 @@ void CEngine::InsertXformResult(CGroup *pgroup_origin, CXformResult *pxfres, CXf
 //
 //---------------------------------------------------------------------------
 bool CEngine::FPossibleDuplicateGroups(CGroup *group_left, CGroup *group_right) {
-	CDrvdPropRelational *pdprel_fst = CDrvdPropRelational::GetRelationalProperties(group_left->m_pdp);
-	CDrvdPropRelational *pdprel_snd = CDrvdPropRelational::GetRelationalProperties(group_right->m_pdp);
+	CDrvdPropRelational *pdprel_fst = CDrvdPropRelational::GetRelationalProperties(group_left->m_derived_properties);
+	CDrvdPropRelational *pdprel_snd = CDrvdPropRelational::GetRelationalProperties(group_right->m_derived_properties);
 	// right now we only check the output columns, but we may possibly need to
 	// check other properties as well
 	duckdb::vector<ColumnBinding> v1 = pdprel_fst->GetOutputColumns();
@@ -222,7 +222,7 @@ bool CEngine::FPossibleDuplicateGroups(CGroup *group_left, CGroup *group_right) 
 //---------------------------------------------------------------------------
 void CEngine::DeriveStats() {
 	// derive stats on root group
-	CEngine::DeriveStats(PgroupRoot(), nullptr);
+	CEngine::DeriveStats(GroupRoot(), nullptr);
 }
 
 //---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ void CEngine::DeriveStats(CGroup *pgroup, CRequiredPropRelational *prprel) {
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CEngine::PgexprFirst
+//		CEngine::FirstGroupExpr
 //
 //	@doc:
 //		Return the first group expression in a given group
@@ -323,12 +323,12 @@ bool CEngine::FSafeToPrune(CGroupExpression *pgexpr, CRequiredPropPlan *prpp, CC
 	// check if container group has a plan for given properties
 	CGroup *pgroup = pgexpr->m_group;
 	COptimizationContext *poc_group = pgroup->PocLookupBest(m_current_search_stage, prpp);
-	if (nullptr != poc_group && nullptr != poc_group->m_pccBest) {
+	if (nullptr != poc_group && nullptr != poc_group->m_best_cost_context) {
 		// compute a cost lower bound for the equivalent plan rooted by given group
 		// expression
 		double cost_lower_bound = pgexpr->CostLowerBound(prpp, pcc_child, child_index);
 		*pcost_lower_bound = cost_lower_bound;
-		if (cost_lower_bound > poc_group->m_pccBest->m_cost) {
+		if (cost_lower_bound > poc_group->m_best_cost_context->m_cost) {
 			// group expression cannot deliver a better plan for given properties and
 			// can be safely pruned
 			return true;
@@ -349,7 +349,7 @@ MemoTreeMap *CEngine::MemoToMap() {
 	COptimizerConfig *optimizer_config = COptCtxt::PoctxtFromTLS()->m_optimizer_config;
 	if (nullptr == m_memo_table->TreeMap()) {
 		duckdb::vector<ColumnBinding> v;
-		COptimizationContext *poc = new COptimizationContext(PgroupRoot(), m_query_context->m_required_plan_property,
+		COptimizationContext *poc = new COptimizationContext(GroupRoot(), m_query_context->m_required_plan_property,
 		                                                     new CRequiredPropRelational(v), 0);
 		m_memo_table->BuildTreeMap(poc);
 	}
@@ -370,7 +370,7 @@ duckdb::vector<COptimizationContext *> CEngine::ChildrenOptimizationContext(CExp
 	const ULONG arity = exprhdl.Arity();
 	for (ULONG ul = 0; ul < arity; ul++) {
 		CGroup *pgroup_child = (*exprhdl.Pgexpr())[ul];
-		if (!pgroup_child->m_fScalar) {
+		if (!pgroup_child->m_is_calar) {
 			COptimizationContext *poc = pgroup_child->PocLookupBest(m_search_strategy.size(), exprhdl.Prpp(ul));
 			pdrgpoc.emplace_back(poc);
 		}
@@ -387,7 +387,7 @@ duckdb::vector<COptimizationContext *> CEngine::ChildrenOptimizationContext(CExp
 //
 //---------------------------------------------------------------------------
 void CEngine::ScheduleMainJob(CSchedulerContext *scheduler_context, COptimizationContext *optimization_context) {
-	CJobGroupOptimization::ScheduleJob(scheduler_context, PgroupRoot(), NULL, optimization_context, NULL);
+	CJobGroupOptimization::ScheduleJob(scheduler_context, GroupRoot(), nullptr, optimization_context, nullptr);
 }
 
 //---------------------------------------------------------------------------
@@ -449,17 +449,19 @@ void CEngine::FinalizeSearchStage() {
 //---------------------------------------------------------------------------
 void CEngine::Optimize() {
 	COptimizerConfig *optimizer_config = COptCtxt::PoctxtFromTLS()->m_optimizer_config;
-	const ULONG ulJobs = std::min((ULONG)GPOPT_JOBS_CAP, (ULONG)(m_memo_table->NumGroups() * GPOPT_JOBS_PER_GROUP));
-	CJobFactory job_factory(ulJobs);
-	CScheduler scheduler(ulJobs);
+	const ULONG num_jobs = std::min((ULONG)GPOPT_JOBS_CAP, (ULONG)(m_memo_table->NumGroups() * GPOPT_JOBS_PER_GROUP));
+	CJobFactory job_factory(num_jobs);
+	CScheduler scheduler(num_jobs);
 	CSchedulerContext scheduler_context;
 	scheduler_context.Init(&job_factory, &scheduler, this);
+
 	const ULONG num_stages = m_search_strategy.size();
 	for (ULONG ul = 0; !FSearchTerminated() && ul < num_stages; ul++) {
 		CurrentSearchStage()->RestartTimer();
+
 		// optimize root group
 		duckdb::vector<ColumnBinding> v;
-		COptimizationContext *poc = new COptimizationContext(PgroupRoot(), m_query_context->m_required_plan_property,
+		COptimizationContext *poc = new COptimizationContext(GroupRoot(), m_query_context->m_required_plan_property,
 		                                                     new CRequiredPropRelational(v), m_current_search_stage);
 		// schedule main optimization job
 		ScheduleMainJob(&scheduler_context, poc);
@@ -471,7 +473,6 @@ void CEngine::Optimize() {
 		CurrentSearchStage()->SetBestExpr(expr_plan.release());
 		FinalizeSearchStage();
 	}
-	CMemo *memo = this->m_memo_table;
 	return;
 }
 
@@ -625,7 +626,7 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationCont
 	exprhdl.Attach(pcc);
 	exprhdl.DerivePlanPropsForCostContext();
 	PhysicalOperator *pop_physical = (PhysicalOperator *)(pcc->m_group_expression->m_operator.get());
-	CRequiredPropPlan *prpp = poc->m_prpp;
+	CRequiredPropPlan *prpp = poc->m_required_plan_properties;
 	// Determine if any property enforcement is disable or unnecessary
 	bool f_order_reqd = !prpp->m_required_sort_order->m_pos->IsEmpty();
 	// Determine if adding an enforcer to the group is required, optional,
@@ -684,7 +685,7 @@ bool CEngine::FValidCTEAndPartitionProperties(CExpressionHandle &exprhdl, CRequi
 bool CEngine::FChildrenOptimized(duckdb::vector<COptimizationContext *> optimization_contexts) {
 	const ULONG length = optimization_contexts.size();
 	for (ULONG ul = 0; ul < length; ul++) {
-		if (nullptr == optimization_contexts[ul]->PgexprBest()) {
+		if (nullptr == optimization_contexts[ul]->BestExpression()) {
 			return false;
 		}
 	}
@@ -752,6 +753,6 @@ bool CEngine::FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPropPlan 
 }
 
 duckdb::vector<ULONG_PTR *> CEngine::GetNumberOfBindings() {
-	return m_Xform_binding_num;
+	return m_xform_binding_num;
 }
 } // namespace gpopt

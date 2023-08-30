@@ -12,13 +12,11 @@
 #include "duckdb/optimizer/cascade/search/CJobGroup.h"
 #include "duckdb/optimizer/cascade/search/CJobStateMachine.h"
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace gpos;
 
 // prototypes
 class COptimizationContext;
-
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -32,20 +30,13 @@ class COptimizationContext;
 //		plan properties
 //
 //---------------------------------------------------------------------------
-class CJobGroupOptimization : public CJobGroup
-{
+class CJobGroupOptimization : public CJobGroup {
 public:
 	// transition events of group optimization
-	enum EEvent
-	{
-		eevImplementing, eevImplemented, eevOptimizing, eevOptimizedCurrentLevel, eevOptimized, eevSentinel
-	};
+	enum EEvent { eevImplementing, eevImplemented, eevOptimizing, eevOptimizedCurrentLevel, eevOptimized, eevSentinel };
 
 	// states of group optimization job
-	enum EState
-	{
-		estInitialized = 0, estOptimizingChildren, estDampingOptimizationLevel, estCompleted, estSentinel
-	};
+	enum EState { estInitialized = 0, estOptimizingChildren, estDampingOptimizationLevel, estCompleted, estSentinel };
 
 private:
 	// shorthand for job state machine
@@ -55,22 +46,22 @@ private:
 	JSM m_jsm;
 
 	// group expression that triggered group optimization
-	CGroupExpression* m_pgexprOrigin;
+	CGroupExpression *m_pgexprOrigin;
 
 	// optimization context of the job
-	COptimizationContext* m_poc;
+	COptimizationContext *m_poc;
 
 	// current optimization level of group expressions
 	EOptimizationLevel m_eolCurrent;
 
 	// start optimization action
-	static EEvent EevtStartOptimization(CSchedulerContext* psc, CJob* pj);
+	static EEvent EevtStartOptimization(CSchedulerContext *psc, CJob *pj);
 
 	// optimized child group expressions action
-	static EEvent EevtOptimizeChildren(CSchedulerContext* psc, CJob* pj);
+	static EEvent EevtOptimizeChildren(CSchedulerContext *psc, CJob *pj);
 
 	// complete optimization action
-	static EEvent EevtCompleteOptimization(CSchedulerContext* psc, CJob* pj);
+	static EEvent EevtCompleteOptimization(CSchedulerContext *psc, CJob *pj);
 
 public:
 	// ctor
@@ -83,40 +74,37 @@ public:
 	virtual ~CJobGroupOptimization();
 
 	// initialize job
-	void Init(CGroup* pgroup, CGroupExpression* pgexprOrigin, COptimizationContext* poc);
+	void Init(CGroup *pgroup, CGroupExpression *pgexprOrigin, COptimizationContext *poc);
 
 	// current optimization level accessor
-	EOptimizationLevel EolCurrent() const
-	{
+	EOptimizationLevel EolCurrent() const {
 		return m_eolCurrent;
 	}
 
 	// damp optimization level of member group expressions
-	void DampOptimizationLevel()
-	{
+	void DampOptimizationLevel() {
 		m_eolCurrent = CEngine::DampOptimizationLevel(m_eolCurrent);
 	}
 
 	// get first unscheduled expression
-	virtual list<CGroupExpression*>::iterator PgexprFirstUnsched() override
-	{
+	virtual list<CGroupExpression *>::iterator PgexprFirstUnsched() override {
 		return CJobGroup::PgexprFirstUnschedNonLogical();
 	}
 
 	// schedule optimization jobs for of all new group expressions
-	virtual bool FScheduleGroupExpressions(CSchedulerContext* psc) override;
+	virtual bool FScheduleGroupExpressions(CSchedulerContext *psc) override;
 
 	// schedule a new group optimization job
-	static void ScheduleJob(CSchedulerContext* psc, CGroup* pgroup, CGroupExpression* pgexprOrigin, COptimizationContext* poc, CJob* pjParent);
+	static void ScheduleJob(CSchedulerContext *scheduler_context, CGroup *group, CGroupExpression *group_expr_origin,
+	                        COptimizationContext *opt_context, CJob *parent_job);
 
 	// job's function
-	virtual bool FExecute(CSchedulerContext* psc) override;
+	virtual bool FExecute(CSchedulerContext *psc) override;
 
 	// conversion function
-	static CJobGroupOptimization* PjConvert(CJob* pj)
-	{
-		return dynamic_cast<CJobGroupOptimization*>(pj);
+	static CJobGroupOptimization *ConvertJob(CJob *pj) {
+		return dynamic_cast<CJobGroupOptimization *>(pj);
 	}
-};	// class CJobGroupOptimization
-}  // namespace gpopt
+}; // class CJobGroupOptimization
+} // namespace gpopt
 #endif

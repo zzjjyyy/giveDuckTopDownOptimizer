@@ -97,7 +97,7 @@ CJobTransformation::EEvent CJobTransformation::EevtTransform(CSchedulerContext* 
 	ULONG ulElapsedTime = 0;
 	ULONG ulNumberOfBindings = 0;
 	pgexpr->Transform(pxform, pxfres, &ulElapsedTime, &ulNumberOfBindings);
-	psc->m_peng->InsertXformResult(pgexpr->m_group, pxfres, pxform->ID(), pgexpr, ulElapsedTime, ulNumberOfBindings);
+	psc->m_engine->InsertXformResult(pgexpr->m_group, pxfres, pxform->ID(), pgexpr, ulElapsedTime, ulNumberOfBindings);
 	return eevCompleted;
 }
 
@@ -124,9 +124,9 @@ bool CJobTransformation::FExecute(CSchedulerContext* psc)
 //---------------------------------------------------------------------------
 void CJobTransformation::ScheduleJob(CSchedulerContext* psc, CGroupExpression* pgexpr, CXform* pxform, CJob* pjParent)
 {
-	CJob* pj = psc->m_pjf->PjCreate(CJob::EjtTransformation);
+	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtTransformation);
 	// initialize job
 	CJobTransformation* pjt = PjConvert(pj);
 	pjt->Init(pgexpr, pxform);
-	psc->m_psched->Add(pjt, pjParent);
+	psc->m_scheduler->Add(pjt, pjParent);
 }

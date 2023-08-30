@@ -54,7 +54,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CGroup* pgroupChild = (*m_pgexpr)[ul];
-		if (pgroupChild->m_fScalar)
+		if (pgroupChild->m_is_calar)
 		{
 			// skip scalar children
 			continue;
@@ -65,7 +65,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 			// we have reached a child with a known plan,
 			// we have perfect costing information about this child
 			// use provided child cost context to collect accurate costing info
-			double dRowsChild = pgroupChild->m_listGExprs.front()->m_operator->estimated_cardinality;
+			double dRowsChild = pgroupChild->m_group_exprs.front()->m_operator->estimated_cardinality;
 			pci->SetChildRows(ulIndex, dRowsChild);
 			// double dWidthChild = child_stats->Width(prppChild->m_required_cols).Get();
 			// pci->SetChildWidth(ulIndex, dWidthChild);
@@ -77,7 +77,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 		}
 		// otherwise, we do not know child plan yet,
 		// we assume lower bounds on child row estimate and cost
-		double dRowsChild = pgroupChild->m_listGExprs.front()->m_operator->estimated_cardinality;
+		double dRowsChild = pgroupChild->m_group_exprs.front()->m_operator->estimated_cardinality;
 		pci->SetChildRows(ulIndex, dRowsChild);
 		// pci->SetChildRebinds(ulIndex, child_stats->NumRebinds().Get());
 		// double dWidthChild = child_stats->Width(prppChild->m_required_cols).Get();

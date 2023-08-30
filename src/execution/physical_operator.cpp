@@ -278,7 +278,7 @@ COrderProperty::EPropEnforcingType PhysicalOperator::EpetOrder(CExpressionHandle
 			CGroup* gp = pgexpr->m_child_groups[0];
 			for (auto iter = gp->m_sht.begin(); iter != gp->m_sht.end(); iter++) {
 				auto op_ctxt = iter->second;
-				if(CUtils::ContainsAll(op_ctxt->m_prpp->m_required_sort_order->m_pos->m_pdrgpoe, v)) {
+				if(CUtils::ContainsAll(op_ctxt->m_required_plan_properties->m_required_sort_order->m_pos->m_pdrgpoe, v)) {
 					return COrderProperty::EPropEnforcingType::EpetOptional;
 				}
 			}

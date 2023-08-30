@@ -134,8 +134,8 @@ public:
 		// during optimization, the operator returns the duplicate group;
 		// in exploration and implementation the group may contain
 		// group expressions that have not been processed yet;
-		if (0 == pgroup->m_ulGExprs) {
-			return pgroup->m_pgroupDuplicate;
+		if (0 == pgroup->m_num_exprs) {
+			return pgroup->m_group_for_duplicate_groups;
 		}
 		return pgroup;
 	};

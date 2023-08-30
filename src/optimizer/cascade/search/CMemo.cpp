@@ -163,7 +163,7 @@ CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
 	}
 	// if a new scalar group is added, we materialize a scalar expression
 	// for statistics derivation purposes
-	if (is_new && group_target->m_fScalar) {
+	if (is_new && group_target->m_is_calar) {
 		group_target->CreateDummyCostContext();
 	}
 	return group_container;
@@ -182,7 +182,7 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan 
 	CGroupExpression *best_group_expr;
 	COptimizationContext *opt_context;
 	double cost = GPOPT_INVALID_COST;
-	if (root->m_fScalar) {
+	if (root->m_is_calar) {
 		// If the group has scalar expression, this group is called scalar group.
 		// It has one and only one group expression, so the expression is also picked
 		// up as the best expression for that group.
@@ -196,9 +196,9 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan 
 		// for the given required plan properties, and then retrieve the best group
 		// expression under the optimization context.
 		opt_context = root->PocLookupBest(search_stage, required_property);
-		best_group_expr = root->PgexprBest(opt_context);
+		best_group_expr = root->BestExpression(opt_context);
 		if (nullptr != best_group_expr) {
-			cost = opt_context->m_pccBest->m_cost;
+			cost = opt_context->m_best_cost_context->m_cost;
 		}
 	}
 	if (nullptr == best_group_expr) {
@@ -223,13 +223,13 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan 
 		// because CJobGroupExpressionOptimization does not create optimization context
 		// for that group. Besides, the scalar expression doesn't have plan properties.
 		// In this case, the child_required_property is left to be NULL.
-		if (!child_group->m_fScalar) {
-			if (root->m_fScalar) {
+		if (!child_group->m_is_calar) {
+			if (root->m_is_calar) {
 				// In very rare case, Orca may generate the plan that a group is a scalar
 				// group, but it has non-scalar sub groups. i.e.:
-				// Group 7 ():  --> root->m_fScalar == true
+				// Group 7 ():  --> root->m_is_calar == true
 				//   0: CScalarSubquery["?column?" (19)] [ 6 ]
-				// Group 6 (#GExprs: 2): --> child_group->m_fScalar == false
+				// Group 6 (#GExprs: 2): --> child_group->m_is_calar == false
 				//   0: CLogicalProject [ 2 5 ]
 				//   1: CPhysicalComputeScalar [ 2 5 ]
 				// In the above case, because group 7 has scalar expression, Orca skipped
@@ -238,8 +238,8 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan 
 				// Orca doesn't support this feature yet, so falls back to planner.
 				assert(false);
 			}
-			COptimizationContext *child_opt_context = opt_context->m_pccBest->m_optimization_contexts[i];
-			child_required_property = child_opt_context->m_prpp;
+			COptimizationContext *child_opt_context = opt_context->m_best_cost_context->m_optimization_contexts[i];
+			child_required_property = child_opt_context->m_required_plan_properties;
 		}
 		duckdb::unique_ptr<Operator> child_expr = ExtractPlan(child_group, child_required_property, search_stage);
 		children_expr.emplace_back(std::move(child_expr));
@@ -327,8 +327,8 @@ bool CMemo::FRehash() {
 		// check if we need also to mark duplicate groups
 		CGroup *pgroupFound = pgexprFound->m_group;
 		if (pgroupFound != pgroup) {
-			CGroup *pgroupDup = pgroup->m_pgroupDuplicate;
-			CGroup *pgroupFoundDup = pgroupFound->m_pgroupDuplicate;
+			CGroup *pgroupDup = pgroup->m_group_for_duplicate_groups;
+			CGroup *pgroupFoundDup = pgroupFound->m_group_for_duplicate_groups;
 			if ((nullptr == pgroupDup && nullptr == pgroupFoundDup) || (pgroupDup != pgroupFoundDup)) {
 				MarkDuplicates(pgroup, pgroupFound);
 				fNewDupGroups = true;
@@ -358,7 +358,7 @@ void CMemo::GroupMerge() {
 		}
 		// check if root has been merged
 		if (m_root->FDuplicateGroup()) {
-			m_root = m_root->m_pgroupDuplicate;
+			m_root = m_root->m_group_for_duplicate_groups;
 		}
 		has_dup_groups = FRehash();
 	}
@@ -471,7 +471,7 @@ ULONG CMemo::NumExprs() {
 	auto itr = m_groups_list.begin();
 	while (m_groups_list.end() != itr) {
 		CGroup *pgroup = *itr;
-		ulGExprs += pgroup->m_ulGExprs;
+		ulGExprs += pgroup->m_num_exprs;
 		++itr;
 	}
 	return ulGExprs;

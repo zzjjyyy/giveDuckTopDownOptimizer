@@ -50,7 +50,7 @@ CGroupProxy::~CGroupProxy()
 //---------------------------------------------------------------------------
 void CGroupProxy::Insert(CGroupExpression* pgexpr)
 {
-	pgexpr->Init(m_pgroup, m_pgroup->m_ulGExprs++);
+	pgexpr->Init(m_pgroup, m_pgroup->m_num_exprs++);
 	m_pgroup->Insert(pgexpr);
 }
 
@@ -82,7 +82,7 @@ void CGroupProxy::InitProperties(CDrvdProp* pdp)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGroupProxy::PgexprFirst
+//		CGroupProxy::FirstGroupExpr
 //
 //	@doc:
 //		Retrieve first group expression iterator;
@@ -90,7 +90,7 @@ void CGroupProxy::InitProperties(CDrvdProp* pdp)
 //---------------------------------------------------------------------------
 list<CGroupExpression*>::iterator CGroupProxy::PgexprFirst()
 {
-	return m_pgroup->PgexprFirst();
+	return m_pgroup->FirstGroupExpr();
 }
 
 //---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ list<CGroupExpression*>::iterator CGroupProxy::PgexprFirst()
 list<CGroupExpression*>::iterator CGroupProxy::PgexprSkip(list<CGroupExpression*>::iterator pgexprStart, bool fSkipLogical)
 {
 	auto iter = pgexprStart;
-	while (m_pgroup->m_listGExprs.end() != iter && fSkipLogical == (*iter)->m_operator->FLogical())
+	while (m_pgroup->m_group_exprs.end() != iter && fSkipLogical == (*iter)->m_operator->FLogical())
 	{
 		++iter;
 	}

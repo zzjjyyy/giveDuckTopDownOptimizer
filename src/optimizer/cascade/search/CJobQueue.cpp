@@ -83,9 +83,9 @@ void CJobQueue::NotifyCompleted(CSchedulerContext* psc)
 		if (1 == pj->UlpDecrRefs())
 		{
 			// update job as completed
-			psc->m_psched->CompleteQueued(pj);
+			psc->m_scheduler->CompleteQueued(pj);
 			// recycle job
-			psc->m_pjf->Release(pj);
+			psc->m_job_factory->Release(pj);
 		}
 	}
 }

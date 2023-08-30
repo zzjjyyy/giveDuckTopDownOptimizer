@@ -5,15 +5,13 @@
 //	@doc:
 //		Container for objects associated with scheduling context of a job
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CSchedulerContext_H
-#define GPOPT_CSchedulerContext_H
+#pragma once
 
 #include "duckdb/optimizer/cascade/base.h"
 
 #define GPOPT_SCHED_CTXT_MEM_POOL_SIZE (64 * 1024 * 1024)
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace gpos;
 
 // prototypes
@@ -29,33 +27,23 @@ class CEngine;
 //		Scheduling context
 //
 //---------------------------------------------------------------------------
-class CSchedulerContext
-{
+class CSchedulerContext {
 public:
-	// job factory
-	CJobFactory* m_pjf;
-
-	// scheduler
-	CScheduler* m_psched;
-
-	// optimization engine
-	CEngine* m_peng;
-
-	// flag indicating if context has been initialized
-	bool m_fInit;
-
-public:
-	// ctor
 	CSchedulerContext();
-
-	// no copy ctor
 	CSchedulerContext(const CSchedulerContext &) = delete;
-
-	// dtor
 	~CSchedulerContext();
 
+	// job factory
+	CJobFactory *m_job_factory;
+	// scheduler
+	CScheduler *m_scheduler;
+	// optimization engine
+	CEngine *m_engine;
+	// flag indicating if context has been initialized
+	bool m_initialized;
+
+public:
 	// initialization
-	void Init(CJobFactory* pjf, CScheduler* psched, CEngine* peng);
-};	// class CSchedulerContext
-}  // namespace gpopt
-#endif
+	void Init(CJobFactory *job_factory, CScheduler *scheduler, CEngine *engine);
+}; // class CSchedulerContext
+} // namespace gpopt

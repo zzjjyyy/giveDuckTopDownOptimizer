@@ -132,7 +132,7 @@ void CJobGroupExpressionExploration::ScheduleApplicableTransformations(CSchedule
 	CXform_set * xform_set = ((LogicalOperator*)m_pgexpr->m_operator.get())->PxfsCandidates();
 	// intersect them with required xforms and schedule jobs
 	*xform_set &= *(CXformFactory::XformFactory()->XformExploration());
-	*xform_set &= *(psc->m_peng->CurrentStageXforms());
+	*xform_set &= *(psc->m_engine->CurrentStageXforms());
 	ScheduleTransformations(psc, xform_set);
 	xform_set->reset();
 	SetXformsScheduled();
@@ -242,10 +242,10 @@ bool CJobGroupExpressionExploration::FExecute(CSchedulerContext* psc)
 //---------------------------------------------------------------------------
 void CJobGroupExpressionExploration::ScheduleJob(CSchedulerContext* psc, CGroupExpression* pgexpr, CJob* pjParent)
 {
-	CJob* pj = psc->m_pjf->PjCreate(CJob::EjtGroupExpressionExploration);
+	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExpressionExploration);
 	// initialize job
 	CJobGroupExpressionExploration* pjege = PjConvert(pj);
 	pjege->Init(pgexpr);
-	psc->m_psched->Add(pjege, pjParent);
+	psc->m_scheduler->Add(pjege, pjParent);
 }
 }

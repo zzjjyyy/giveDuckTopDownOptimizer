@@ -200,15 +200,15 @@ void CJobGroupExpressionOptimization::InitChildGroupsOptimization(CSchedulerCont
 		m_ulChildIndex = m_pexprhdlPlan->UlFirstOptimizedChildIndex();
 	}
 	m_pexprhdlPlan->DeriveProps(NULL);
-	m_pexprhdlPlan->InitReqdProps(m_poc->m_prpp);
+	m_pexprhdlPlan->InitReqdProps(m_poc->m_required_plan_properties);
 	// initialize required relational properties computation
 	m_pexprhdlRel = new CExpressionHandle();
-	CGroupExpression* pgexprForStats = m_pgexpr->m_group->PgexprBestPromise(m_pgexpr);
+	CGroupExpression* pgexprForStats = m_pgexpr->m_group->BestPromiseGroupExpr(m_pgexpr);
 	if (NULL != pgexprForStats)
 	{
 		m_pexprhdlRel->Attach(pgexprForStats);
 		m_pexprhdlRel->DeriveProps(NULL);
-		m_pexprhdlRel->ComputeReqdProps((CRequiredProperty *)m_poc->m_prprel, 0);
+		m_pexprhdlRel->ComputeReqdProps((CRequiredProperty *)m_poc->m_required_relational_properties, 0);
 	}
 }
 
@@ -227,13 +227,13 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtIni
 	CExpressionHandle exprhdl;
 	exprhdl.Attach(pjgeo->m_pgexpr);
 	exprhdl.DeriveProps(NULL);
-	if (!psc->m_peng->FCheckRequiredProps(exprhdl, pjgeo->m_poc->m_prpp, pjgeo->m_ulOptReq))
+	if (!psc->m_engine->FCheckRequiredProps(exprhdl, pjgeo->m_poc->m_required_plan_properties, pjgeo->m_ulOptReq))
 	{
 		return eevFinalized;
 	}
 	// check if job can be early terminated without optimizing any child
 	double costLowerBound = GPOPT_INVALID_COST;
-	if (psc->m_peng->FSafeToPrune(pjgeo->m_pgexpr, pjgeo->m_poc->m_prpp, NULL, gpos::ulong_max, &costLowerBound))
+	if (psc->m_engine->FSafeToPrune(pjgeo->m_pgexpr, pjgeo->m_poc->m_required_plan_properties, NULL, gpos::ulong_max, &costLowerBound))
 	{
 		duckdb::vector<COptimizationContext*> v;
 		(void) pjgeo->m_pgexpr->PccComputeCost(pjgeo->m_poc, pjgeo->m_ulOptReq, v, true, costLowerBound);
@@ -257,13 +257,13 @@ void CJobGroupExpressionOptimization::DerivePrevChildProps(CSchedulerContext* ps
 	ULONG ulPrevChildIndex = m_pexprhdlPlan->UlPreviousOptimizedChildIndex(m_ulChildIndex);
 	// retrieve plan properties of the optimal implementation of previous child group
 	CGroup* pgroupChild = (*m_pgexpr)[ulPrevChildIndex];
-	if (pgroupChild->m_fScalar)
+	if (pgroupChild->m_is_calar)
 	{
 		// exit if previous child is a scalar group
 		return;
 	}
-	COptimizationContext* pocChild = pgroupChild->PocLookupBest(psc->m_peng->PreviousSearchStageIdx(), m_pexprhdlPlan->Prpp(ulPrevChildIndex));
-	CCostContext* pccChildBest = pocChild->m_pccBest;
+	COptimizationContext* pocChild = pgroupChild->PocLookupBest(psc->m_engine->PreviousSearchStageIdx(), m_pexprhdlPlan->Prpp(ulPrevChildIndex));
+	CCostContext* pccChildBest = pocChild->m_best_cost_context;
 	if (NULL == pccChildBest)
 	{
 		// failed to optimize child
@@ -272,7 +272,7 @@ void CJobGroupExpressionOptimization::DerivePrevChildProps(CSchedulerContext* ps
 	}
 	// check if job can be early terminated after previous children have been optimized
 	double costLowerBound = GPOPT_INVALID_COST;
-	if (psc->m_peng->FSafeToPrune(m_pgexpr, m_poc->m_prpp, pccChildBest, ulPrevChildIndex, &costLowerBound))
+	if (psc->m_engine->FSafeToPrune(m_pgexpr, m_poc->m_required_plan_properties, pccChildBest, ulPrevChildIndex, &costLowerBound))
 	{
 		duckdb::vector<COptimizationContext*> v;
 		// failed to optimize child due to cost bounding
@@ -326,7 +326,7 @@ void CJobGroupExpressionOptimization::ComputeCurrentChildRequirements(CScheduler
 void CJobGroupExpressionOptimization::ScheduleChildGroupsJobs(CSchedulerContext* psc)
 {
 	CGroup* pgroupChild = (*m_pgexpr)[m_ulChildIndex];
-	if (pgroupChild->m_fScalar)
+	if (pgroupChild->m_is_calar)
 	{
 		if (!m_pexprhdlPlan->FNextChildIndex(&m_ulChildIndex))
 		{
@@ -344,7 +344,7 @@ void CJobGroupExpressionOptimization::ScheduleChildGroupsJobs(CSchedulerContext*
 	CRequiredPropRelational * prprel = new CRequiredPropRelational(); // m_pexprhdlRel->GetReqdRelationalProps(m_ulChildIndex);
 	// schedule optimization job for current child group
 	COptimizationContext* pocChild = new COptimizationContext(pgroupChild, m_pexprhdlPlan->Prpp(m_ulChildIndex), prprel,
-	                                                          psc->m_peng->CurrentSearchStageIdx());
+	                                                          psc->m_engine->CurrentSearchStageIdx());
 	if (pgroupChild == m_pgexpr->m_group && pocChild->Matches(m_poc))
 	{
 		// this is to prevent deadlocks, child context cannot be the same as parent context
@@ -399,10 +399,10 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtAdd
 	// get a job pointer
 	CJobGroupExpressionOptimization* pjgeo = PjConvert(pjOwner);
 	// build child contexts array
-	pjgeo->m_pdrgpoc = psc->m_peng->ChildrenOptimizationContext(*pjgeo->m_pexprhdlPlan);
+	pjgeo->m_pdrgpoc = psc->m_engine->ChildrenOptimizationContext(*pjgeo->m_pexprhdlPlan);
 	// enforce physical properties
 	BOOL fCheckEnfdProps =
-	    psc->m_peng->FCheckEnforceableProps(pjgeo->m_pgexpr, pjgeo->m_poc, pjgeo->m_ulOptReq, pjgeo->m_pdrgpoc);
+	    psc->m_engine->FCheckEnforceableProps(pjgeo->m_pgexpr, pjgeo->m_poc, pjgeo->m_ulOptReq, pjgeo->m_pdrgpoc);
 	if (fCheckEnfdProps)
 	{
 		// No new enforcers group expressions were added because they were either
@@ -486,9 +486,9 @@ BOOL CJobGroupExpressionOptimization::FExecute(CSchedulerContext* psc)
 //---------------------------------------------------------------------------
 void CJobGroupExpressionOptimization::ScheduleJob(CSchedulerContext* psc, CGroupExpression* pgexpr, COptimizationContext* poc, ULONG ulOptReq, CJob* pjParent)
 {
-	CJob* pj = psc->m_pjf->PjCreate(CJob::EjtGroupExpressionOptimization);
+	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExpressionOptimization);
 	// initialize job
 	CJobGroupExpressionOptimization* pjgeo = PjConvert(pj);
 	pjgeo->Init(pgexpr, poc, ulOptReq);
-	psc->m_psched->Add(pjgeo, pjParent);
+	psc->m_scheduler->Add(pjgeo, pjParent);
 }

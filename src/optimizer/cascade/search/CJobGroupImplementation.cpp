@@ -88,7 +88,7 @@ void CJobGroupImplementation::Init(CGroup* pgroup)
 	// set job actions
 	m_jsm.SetAction(estInitialized, EevtStartImplementation);
 	m_jsm.SetAction(estImplementingChildren, EevtImplementChildren);
-	SetJobQueue(&pgroup->m_jqImplementation);
+	SetJobQueue(&pgroup->m_impl_job_queue);
 	CJob::SetInit();
 }
 
@@ -106,7 +106,7 @@ bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext* psc)
 	auto pgexprLast = m_pgexprLastScheduled;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
-	while (m_pgroup->m_listGExprs.end() != itr)
+	while (m_pgroup->m_group_exprs.end() != itr)
 	{
 		CGroupExpression* pgexpr = *itr;
 		if (!pgexpr->FTransitioned(CGroupExpression::estImplemented) && !pgexpr->ContainsCircularDependencies())
@@ -153,10 +153,10 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation
 			gp.SetState(CGroup::estImplementing);
 		}
 		// if this is the root, release exploration jobs
-		if (psc->m_peng->FRoot(pgroup))
+		if (psc->m_engine->FRoot(pgroup))
 		{
-			psc->m_pjf->Truncate(EjtGroupExploration);
-			psc->m_pjf->Truncate(EjtGroupExpressionExploration);
+			psc->m_job_factory->Truncate(EjtGroupExploration);
+			psc->m_job_factory->Truncate(EjtGroupExpressionExploration);
 		}
 		return eevExplored;
 	}
@@ -187,9 +187,9 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(C
 			gp.SetState(CGroup::estImplemented);
 		}
 		// if this is the root, complete implementation phase
-		if (psc->m_peng->FRoot(pjgi->m_pgroup))
+		if (psc->m_engine->FRoot(pjgi->m_pgroup))
 		{
-			psc->m_peng->FinalizeImplementation();
+			psc->m_engine->FinalizeImplementation();
 		}
 		return eevImplemented;
 	}
@@ -218,9 +218,9 @@ bool CJobGroupImplementation::FExecute(CSchedulerContext* psc)
 //---------------------------------------------------------------------------
 void CJobGroupImplementation::ScheduleJob(CSchedulerContext* psc, CGroup* pgroup, CJob* pjParent)
 {
-	CJob* pj = psc->m_pjf->PjCreate(CJob::EjtGroupImplementation);
+	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtGroupImplementation);
 	// initialize job
 	CJobGroupImplementation* pjgi = PjConvert(pj);
 	pjgi->Init(pgroup);
-	psc->m_psched->Add(pjgi, pjParent);
+	psc->m_scheduler->Add(pjgi, pjParent);
 }
