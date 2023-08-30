@@ -129,7 +129,7 @@ void CJobGroupExpressionExploration::Init(CGroupExpression* pgexpr)
 void CJobGroupExpressionExploration::ScheduleApplicableTransformations(CSchedulerContext* psc)
 {
 	// get all applicable xforms
-	CXform_set * xform_set = ((LogicalOperator*)m_pgexpr->m_operator.get())->PxfsCandidates();
+	CXform_set * xform_set = ((LogicalOperator*)m_group_expression->m_operator.get())->PxfsCandidates();
 	// intersect them with required xforms and schedule jobs
 	*xform_set &= *(CXformFactory::XformFactory()->XformExploration());
 	*xform_set &= *(psc->m_engine->CurrentStageXforms());
@@ -148,10 +148,10 @@ void CJobGroupExpressionExploration::ScheduleApplicableTransformations(CSchedule
 //---------------------------------------------------------------------------
 void CJobGroupExpressionExploration::ScheduleChildGroupsJobs(CSchedulerContext* psc)
 {
-	ULONG arity = m_pgexpr->Arity();
+	ULONG arity = m_group_expression->Arity();
 	for (ULONG i = 0; i < arity; i++)
 	{
-		CJobGroupExploration::ScheduleJob(psc, (*(m_pgexpr))[i], this);
+		CJobGroupExploration::ScheduleJob(psc, (*(m_group_expression))[i], this);
 	}
 	SetChildrenScheduled();
 }
@@ -170,7 +170,7 @@ CJobGroupExpressionExploration::EEvent CJobGroupExpressionExploration::EevtExplo
 	CJobGroupExpressionExploration* pjgee = PjConvert(pjOwner);
 	if (!pjgee->FChildrenScheduled())
 	{
-		pjgee->m_pgexpr->SetState(CGroupExpression::estExploring);
+		pjgee->m_group_expression->SetState(CGroupExpression::estExploring);
 		pjgee->ScheduleChildGroupsJobs(psc);
 		return eevExploringChildren;
 	}
@@ -215,7 +215,7 @@ CJobGroupExpressionExploration::EEvent CJobGroupExpressionExploration::EevtFinal
 {
 	// get a job pointer
 	CJobGroupExpressionExploration* pjgee = PjConvert(pjOwner);
-	pjgee->m_pgexpr->SetState(CGroupExpression::estExplored);
+	pjgee->m_group_expression->SetState(CGroupExpression::estExplored);
 	return eevFinalized;
 }
 

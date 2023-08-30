@@ -25,9 +25,9 @@
 //---------------------------------------------------------------------------
 void gpopt::CJobGroupExpression::Init(CGroupExpression* pgexpr)
 {
-	m_fChildrenScheduled = false;
-	m_fXformsScheduled = false;
-	m_pgexpr = pgexpr;
+	m_children_scheduled = false;
+	m_xforms_scheduled = false;
+	m_group_expression = pgexpr;
 }
 
 
@@ -47,7 +47,7 @@ void gpopt::CJobGroupExpression::ScheduleTransformations(CSchedulerContext* psc,
 		if (xform_set->test(i))
 		{
 			CXform* pxform = CXformFactory::XformFactory()->Xform(static_cast<CXform::EXformId>(i));
-			CJobTransformation::ScheduleJob(psc, m_pgexpr, pxform, this);
+			CJobTransformation::ScheduleJob(psc, m_group_expression, pxform, this);
 		}
 	}
 }

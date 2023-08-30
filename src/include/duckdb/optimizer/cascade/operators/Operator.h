@@ -9,7 +9,7 @@
 
 #include "duckdb/common/enums/physical_operator_type.hpp"
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CFunctionalDependency.h"
 #include "duckdb/optimizer/cascade/base/CKeyCollection.h"
 #include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
@@ -22,8 +22,8 @@ using namespace gpos;
 class Operator;
 class CCostContext;
 class CGroupExpression;
-class CDrvdPropPlan;
-class CDrvdPropRelational;
+class CDerivedPropPlan;
+class CDerivedPropRelation;
 class CDrvdPropCtxtPlan;
 class CPropConstraint;
 
@@ -52,9 +52,9 @@ public:
 	// --------------------------- ORCA ------------------------
 	CGroupExpression *m_group_expression;
 	//! derived relational properties
-	CDrvdPropRelational *m_derived_property_relation;
+	CDerivedPropRelation *m_derived_property_relation;
 	//! derived properties of the carried plan
-	CDrvdPropPlan *m_derived_property_plan;
+	CDerivedPropPlan *m_derived_property_plan;
 	//! required plan properties
 	CRequiredPropPlan *m_required_plan_property;
 	double m_cost;
@@ -97,7 +97,7 @@ public:
 	static Operator *PexprRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdrgpexpr,
 	                                CDrvdPropCtxtPlan *pdpctxtplan);
 	// get the suitable derived property type based on operator
-	CDrvdProp::EPropType Ept() const;
+	CDerivedProperty::EPropType Ept() const;
 
 	ULONG Arity(int x = 0) const {
 		if (x == 0) {
@@ -108,7 +108,7 @@ public:
 		return children.size();
 	}
 	// get expression's derived property given its type
-	CDrvdProp *Pdp(const CDrvdProp::EPropType ept) const;
+	CDerivedProperty *Pdp(const CDerivedProperty::EPropType ept) const;
 
 	duckdb::vector<CFunctionalDependency *> DeriveFunctionalDependencies(CExpressionHandle &expression_handle);
 
@@ -116,7 +116,7 @@ public:
 
 	CRequiredPropPlan *PrppDecorate(CRequiredPropPlan *required_properties_input);
 
-	CDrvdProp *PdpDerive(CDrvdPropCtxtPlan *pdpctxtL = nullptr);
+	CDerivedProperty *PdpDerive(CDrvdPropCtxtPlan *pdpctxtL = nullptr);
 
 	bool FMatchPattern(CGroupExpression *group_expression);
 	// hash function
@@ -146,7 +146,7 @@ public:
 		return nullptr;
 	}
 	//! create container for derived properties
-	virtual CDrvdProp *PdpCreate() {
+	virtual CDerivedProperty *PdpCreate() {
 		return nullptr;
 	}
 	//! is operator logical?

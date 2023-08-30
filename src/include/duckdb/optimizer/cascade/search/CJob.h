@@ -62,7 +62,7 @@ class CSchedulerContext;
 //		Each job defines two enumerations: EState to define the different
 //		states during job execution and EEvent to define the different events
 //		that cause moving from one state to another. These two enumerations are
-//		used to define job state machine m_jsm, which is an object of
+//		used to define job state machine m_job_state_machine, which is an object of
 //		CJobStateMachine class. Note that the states, events and state machines
 //		are job-specific. This is why each job class has its own definitions of
 //		the job states, events & state machine.

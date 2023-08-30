@@ -3,10 +3,10 @@ add_library_unity(
     OBJECT
     CAutoOptCtxt.cpp
     CCostContext.cpp
-    CDrvdProp.cpp
+        CDerivedProperty.cpp
     CDrvdPropCtxtPlan.cpp
-    CDrvdPropPlan.cpp
-    CDrvdPropRelational.cpp
+        CDerivedPropPlan.cpp
+        CDerivedPropRelation.cpp
         COrderProperty.cpp
     CFunctionalDependency.cpp
     CKeyCollection.cpp

@@ -8,7 +8,7 @@
 #include "duckdb/optimizer/cascade/search/CMemo.h"
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
@@ -69,7 +69,7 @@ void CMemo::SetRoot(CGroup *group) {
 //---------------------------------------------------------------------------
 void CMemo::Add(CGroup *group, Operator *expr_origin) {
 	// extract expression props
-	CDrvdProp *pdp = expr_origin->m_derived_property_relation;
+	CDerivedProperty *pdp = expr_origin->m_derived_property_relation;
 	ULONG id = m_id_counter++;
 	{
 		CGroupProxy gp(group);

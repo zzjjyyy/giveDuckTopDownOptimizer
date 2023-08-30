@@ -20,7 +20,7 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type) {
 	/* Operator fields */
 	logical_type = type;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_property_relation = new CDerivedPropRelation();
 	m_derived_property_plan = nullptr;
 	m_required_plan_property = nullptr;
 	m_cost = GPOPT_INVALID_COST;
@@ -33,7 +33,7 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type, vector<unique_ptr<Exp
 	logical_type = type;
 	has_estimated_cardinality = false;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_property_relation = new CDerivedPropRelation();
 	m_derived_property_plan = nullptr;
 	m_required_plan_property = nullptr;
 	m_cost = GPOPT_INVALID_COST;
@@ -343,8 +343,8 @@ unique_ptr<LogicalOperator> LogicalOperator::Copy(ClientContext &context) const 
 	return op_copy;
 }
 
-CDrvdProp *LogicalOperator::PdpCreate() {
-	return new CDrvdPropRelational();
+CDerivedProperty *LogicalOperator::PdpCreate() {
+	return new CDerivedPropRelation();
 }
 
 //---------------------------------------------------------------------------

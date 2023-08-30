@@ -249,34 +249,34 @@ CCostContext *CGroupExpression::CostContextInsertBest(CCostContext *pcc) {
 //		the function returns the cost context containing the computed cost
 //
 //---------------------------------------------------------------------------
-CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *poc, ULONG optimization_request_num,
-                                               duckdb::vector<COptimizationContext *> optimization_contexts,
-                                               bool fPruned, double cost_lower_bound) {
-	if (!fPruned && !FValidContext(poc, optimization_contexts)) {
+CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *opt_context, ULONG opt_request_num,
+                                               duckdb::vector<COptimizationContext *> opt_contexts, bool is_pruned,
+                                               double cost_lower_bound) {
+	if (!is_pruned && !FValidContext(opt_context, opt_contexts)) {
 		return nullptr;
 	}
 	// check if the same cost context is already created for current group expression
-	if (FCostContextExists(poc, optimization_contexts)) {
+	if (FCostContextExists(opt_context, opt_contexts)) {
 		return nullptr;
 	}
-	CCostContext *pcc = new CCostContext(poc, optimization_request_num, this);
+	CCostContext *cost_context = new CCostContext(opt_context, opt_request_num, this);
 	bool is_valid = true;
 	// computing cost
-	pcc->SetState(CCostContext::estCosting);
-	if (!fPruned) {
-		pcc->SetChildContexts(optimization_contexts);
-		is_valid = pcc->IsValid();
+	cost_context->SetState(CCostContext::estCosting);
+	if (!is_pruned) {
+		cost_context->SetChildContexts(opt_contexts);
+		is_valid = cost_context->IsValid();
 		if (is_valid) {
-			double cost = CostCompute(pcc);
-			pcc->SetCost(cost);
+			double cost = CostCompute(cost_context);
+			cost_context->SetCost(cost);
 		}
 	} else {
-		pcc->SetPruned();
-		pcc->SetCost(cost_lower_bound);
+		cost_context->SetPruned();
+		cost_context->SetCost(cost_lower_bound);
 	}
-	pcc->SetState(CCostContext::estCosted);
+	cost_context->SetState(CCostContext::estCosted);
 	if (is_valid) {
-		return CostContextInsertBest(pcc);
+		return CostContextInsertBest(cost_context);
 	}
 	// invalid cost context
 	return nullptr;
@@ -358,7 +358,8 @@ double CGroupExpression::CostCompute(CCostContext *pcc) const {
 //
 //---------------------------------------------------------------------------
 bool CGroupExpression::FTransitioned(EState estate) const {
-	return !m_operator->FLogical() || (estate == estExplored && FExplored()) || (estate == estImplemented && FImplemented());
+	return !m_operator->FLogical() || (estate == estExplored && FExplored()) ||
+	       (estate == estImplemented && FImplemented());
 }
 
 //---------------------------------------------------------------------------

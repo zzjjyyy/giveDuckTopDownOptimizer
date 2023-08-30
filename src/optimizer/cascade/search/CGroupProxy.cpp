@@ -6,8 +6,9 @@
 //		Implementation of proxy object for group access
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CGroupProxy.h"
+
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
 #include "duckdb/optimizer/cascade/search/CGroup.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
@@ -75,7 +76,7 @@ void CGroupProxy::MoveDuplicateGExpr(CGroupExpression* pgexpr)
 //		Initialize group's properties
 //
 //---------------------------------------------------------------------------
-void CGroupProxy::InitProperties(CDrvdProp* pdp)
+void CGroupProxy::InitProperties(CDerivedProperty * pdp)
 {
 	m_pgroup->InitProperties(pdp);
 }

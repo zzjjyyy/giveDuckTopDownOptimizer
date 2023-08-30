@@ -22,8 +22,7 @@ using namespace duckdb;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-COrderSpec::COrderSpec()
-{
+COrderSpec::COrderSpec() {
 }
 
 //---------------------------------------------------------------------------
@@ -34,8 +33,7 @@ COrderSpec::COrderSpec()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-COrderSpec::~COrderSpec()
-{
+COrderSpec::~COrderSpec() {
 }
 
 //---------------------------------------------------------------------------
@@ -46,9 +44,8 @@ COrderSpec::~COrderSpec()
 //		Append order expression;
 //
 //---------------------------------------------------------------------------
-void COrderSpec::Append(OrderType type, OrderByNullType null_order, Expression* expr)
-{
-	m_pdrgpoe.emplace_back(type, null_order, duckdb::unique_ptr<Expression>(expr));
+void COrderSpec::Append(OrderType type, OrderByNullType null_order, Expression *expr) {
+	orderby_node.emplace_back(type, null_order, duckdb::unique_ptr<Expression>(expr));
 }
 
 //---------------------------------------------------------------------------
@@ -59,9 +56,8 @@ void COrderSpec::Append(OrderType type, OrderByNullType null_order, Expression* 
 //		Check for equality between order specs
 //
 //---------------------------------------------------------------------------
-bool COrderSpec::Matches(COrderSpec* pos) const
-{
-	bool fMatch = m_pdrgpoe.size() == pos->m_pdrgpoe.size() && FSatisfies(pos);
+bool COrderSpec::Matches(COrderSpec *pos) const {
+	bool fMatch = orderby_node.size() == pos->orderby_node.size() && FSatisfies(pos);
 	return fMatch;
 }
 
@@ -73,13 +69,11 @@ bool COrderSpec::Matches(COrderSpec* pos) const
 //		Check if this order spec satisfies the given one
 //
 //---------------------------------------------------------------------------
-bool COrderSpec::FSatisfies(COrderSpec* pos) const
-{
-	const ULONG arity = pos->m_pdrgpoe.size();
-	bool fSatisfies = (m_pdrgpoe.size() >= arity);
-	for (ULONG ul = 0; fSatisfies && ul < arity; ul++)
-	{
-		fSatisfies = m_pdrgpoe[ul].Equals(pos->m_pdrgpoe[ul]);
+bool COrderSpec::FSatisfies(COrderSpec *pos) const {
+	const ULONG arity = pos->orderby_node.size();
+	bool fSatisfies = (orderby_node.size() >= arity);
+	for (ULONG ul = 0; fSatisfies && ul < arity; ul++) {
+		fSatisfies = orderby_node[ul].Equals(pos->orderby_node[ul]);
 	}
 	return fSatisfies;
 }
@@ -92,17 +86,15 @@ bool COrderSpec::FSatisfies(COrderSpec* pos) const
 //		Add required enforcers enforcers to dynamic array
 //
 //---------------------------------------------------------------------------
-void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan * prpp,
-								duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
-								duckdb::unique_ptr<Operator> pexpr)
-{
+void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp,
+                                 duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
+                                 duckdb::unique_ptr<Operator> pexpr) {
 	duckdb::vector<idx_t> projections;
-	for (idx_t i = 0; i < pexpr->types.size(); i++)
-	{
+	for (idx_t i = 0; i < pexpr->types.size(); i++) {
 		projections.push_back(i);
 	}
 	duckdb::vector<BoundOrderByNode> v_orders;
-	for(auto &child : prpp->m_required_sort_order->m_pos->m_pdrgpoe) {
+	for (auto &child : prpp->m_sort_order->m_sort_order->orderby_node) {
 		v_orders.emplace_back(child.Copy());
 	}
 	auto pexprSort = make_uniq<PhysicalOrder>(pexpr->types, std::move(v_orders), std::move(projections), 0);
@@ -118,13 +110,11 @@ void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan *
 //		Hash of components
 //
 //---------------------------------------------------------------------------
-ULONG COrderSpec::HashValue() const
-{
+ULONG COrderSpec::HashValue() const {
 	ULONG ulHash = 0;
-	ULONG arity = m_pdrgpoe.size();
-	for (ULONG ul = 0; ul < arity; ul++)
-	{
-		auto& poe = m_pdrgpoe[ul];
+	ULONG arity = orderby_node.size();
+	for (ULONG ul = 0; ul < arity; ul++) {
+		auto &poe = orderby_node[ul];
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashPtr<BoundOrderByNode>(&poe));
 	}
 	return ulHash;
@@ -138,16 +128,13 @@ ULONG COrderSpec::HashValue() const
 //		Return a copy of the order spec after excluding the given columns
 //
 //---------------------------------------------------------------------------
-COrderSpec* COrderSpec::PosExcludeColumns(duckdb::vector<ColumnBinding> pcrs)
-{
-	COrderSpec* pos = new COrderSpec();
-	const ULONG num_cols = m_pdrgpoe.size();
-	for (ULONG ul = 0; ul < num_cols; ul++)
-	{
-		auto& poe = m_pdrgpoe[ul];
-		ColumnBinding colref = ((BoundColumnRefExpression*)poe.expression.get())->binding;
-		if (std::find(pcrs.begin(), pcrs.end(), colref) != pcrs.end())
-		{
+COrderSpec *COrderSpec::PosExcludeColumns(duckdb::vector<ColumnBinding> pcrs) {
+	COrderSpec *pos = new COrderSpec();
+	const ULONG num_cols = orderby_node.size();
+	for (ULONG ul = 0; ul < num_cols; ul++) {
+		auto &poe = orderby_node[ul];
+		ColumnBinding colref = ((BoundColumnRefExpression *)poe.expression.get())->binding;
+		if (std::find(pcrs.begin(), pcrs.end(), colref) != pcrs.end()) {
 			continue;
 		}
 		pos->Append(poe.type, poe.null_order, poe.expression.get());
@@ -163,12 +150,10 @@ COrderSpec* COrderSpec::PosExcludeColumns(duckdb::vector<ColumnBinding> pcrs)
 //		Extract columns from order spec into the given column set
 //
 //---------------------------------------------------------------------------
-void COrderSpec::ExtractCols(duckdb::vector<ColumnBinding> pcrs) const
-{
-	const ULONG ulOrderExprs = m_pdrgpoe.size();
-	for (ULONG ul = 0; ul < ulOrderExprs; ul++)
-	{
-		ColumnBinding cell = ((BoundColumnRefExpression*)m_pdrgpoe[ul].expression.get())->binding;
+void COrderSpec::ExtractCols(duckdb::vector<ColumnBinding> pcrs) const {
+	const ULONG ulOrderExprs = orderby_node.size();
+	for (ULONG ul = 0; ul < ulOrderExprs; ul++) {
+		ColumnBinding cell = ((BoundColumnRefExpression *)orderby_node[ul].expression.get())->binding;
 		pcrs.emplace_back(cell.table_index, cell.column_index);
 	}
 }
@@ -181,8 +166,7 @@ void COrderSpec::ExtractCols(duckdb::vector<ColumnBinding> pcrs) const
 //		Extract colref set from order components
 //
 //---------------------------------------------------------------------------
-duckdb::vector<ColumnBinding> COrderSpec::PcrsUsed() const
-{
+duckdb::vector<ColumnBinding> COrderSpec::PcrsUsed() const {
 	duckdb::vector<ColumnBinding> pcrs;
 	ExtractCols(pcrs);
 	return pcrs;
@@ -196,13 +180,11 @@ duckdb::vector<ColumnBinding> COrderSpec::PcrsUsed() const
 //		Extract colref set from order specs in the given array
 //
 //---------------------------------------------------------------------------
-duckdb::vector<ColumnBinding> COrderSpec::GetColRefSet(duckdb::vector<COrderSpec*> pdrgpos)
-{
+duckdb::vector<ColumnBinding> COrderSpec::GetColRefSet(duckdb::vector<COrderSpec *> pdrgpos) {
 	duckdb::vector<ColumnBinding> pcrs;
 	const ULONG ulOrderSpecs = pdrgpos.size();
-	for (ULONG ulSpec = 0; ulSpec < ulOrderSpecs; ulSpec++)
-	{
-		COrderSpec* pos = pdrgpos[ulSpec];
+	for (ULONG ulSpec = 0; ulSpec < ulOrderSpecs; ulSpec++) {
+		COrderSpec *pos = pdrgpos[ulSpec];
 		pos->ExtractCols(pcrs);
 	}
 	return pcrs;
@@ -217,19 +199,17 @@ duckdb::vector<ColumnBinding> COrderSpec::GetColRefSet(duckdb::vector<COrderSpec
 //		passed columns
 //
 //---------------------------------------------------------------------------
-duckdb::vector<COrderSpec*> COrderSpec::PdrgposExclude(duckdb::vector<COrderSpec*> pdrgpos, duckdb::vector<ColumnBinding> pcrsToExclude)
-{
-	if (0 == pcrsToExclude.size())
-	{
+duckdb::vector<COrderSpec *> COrderSpec::PdrgposExclude(duckdb::vector<COrderSpec *> pdrgpos,
+                                                        duckdb::vector<ColumnBinding> pcrsToExclude) {
+	if (0 == pcrsToExclude.size()) {
 		// no columns to exclude
 		return pdrgpos;
 	}
-	duckdb::vector<COrderSpec*> pdrgposNew;
+	duckdb::vector<COrderSpec *> pdrgposNew;
 	const ULONG ulOrderSpecs = pdrgpos.size();
-	for (ULONG ulSpec = 0; ulSpec < ulOrderSpecs; ulSpec++)
-	{
-		COrderSpec* pos = pdrgpos[ulSpec];
-		COrderSpec* posNew = pos->PosExcludeColumns(pcrsToExclude);
+	for (ULONG ulSpec = 0; ulSpec < ulOrderSpecs; ulSpec++) {
+		COrderSpec *pos = pdrgpos[ulSpec];
+		COrderSpec *posNew = pos->PosExcludeColumns(pcrsToExclude);
 		pdrgposNew.push_back(posNew);
 	}
 	return pdrgposNew;
@@ -243,20 +223,16 @@ duckdb::vector<COrderSpec*> COrderSpec::PdrgposExclude(duckdb::vector<COrderSpec
 //		 Matching function over order spec arrays
 //
 //---------------------------------------------------------------------------
-bool COrderSpec::Equals(duckdb::vector<COrderSpec*> pdrgposFirst, duckdb::vector<COrderSpec*> pdrgposSecond)
-{
-	if (0 == pdrgposFirst.size() || 0 == pdrgposFirst.size())
-	{
+bool COrderSpec::Equals(duckdb::vector<COrderSpec *> pdrgposFirst, duckdb::vector<COrderSpec *> pdrgposSecond) {
+	if (0 == pdrgposFirst.size() || 0 == pdrgposFirst.size()) {
 		return (0 == pdrgposFirst.size() && 0 == pdrgposFirst.size());
 	}
-	if (pdrgposFirst.size() != pdrgposSecond.size())
-	{
+	if (pdrgposFirst.size() != pdrgposSecond.size()) {
 		return false;
 	}
 	const ULONG size = pdrgposFirst.size();
 	bool fMatch = true;
-	for (ULONG ul = 0; fMatch && ul < size; ul++)
-	{
+	for (ULONG ul = 0; fMatch && ul < size; ul++) {
 		fMatch = pdrgposFirst[ul]->Matches(pdrgposSecond[ul]);
 	}
 	return fMatch;
@@ -270,12 +246,10 @@ bool COrderSpec::Equals(duckdb::vector<COrderSpec*> pdrgposFirst, duckdb::vector
 //		 Combine hash values of a maximum number of entries
 //
 //---------------------------------------------------------------------------
-ULONG COrderSpec::HashValue(const duckdb::vector<COrderSpec*> pdrgpos, ULONG ulMaxSize)
-{
+ULONG COrderSpec::HashValue(const duckdb::vector<COrderSpec *> pdrgpos, ULONG ulMaxSize) {
 	ULONG size = std::min(ulMaxSize, (ULONG)pdrgpos.size());
 	ULONG ulHash = 0;
-	for (ULONG ul = 0; ul < size; ul++)
-	{
+	for (ULONG ul = 0; ul < size; ul++) {
 		ulHash = gpos::CombineHashes(ulHash, pdrgpos[ul]->HashValue());
 	}
 	return ulHash;

@@ -60,7 +60,7 @@ public:
 	}
 
 	// required properties computation function
-	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq) override;
+	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
 
 	// return difference from given properties
 	CRequiredPropRelational * PrprelDifference(CRequiredPropRelational * prprel);

@@ -36,7 +36,7 @@ public:
 public:
 	COrderProperty::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
 	
-	COrderSpec* PosRequired(CExpressionHandle &exprhdl, gpopt::COrderSpec* posRequired, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq) const override;
+	COrderSpec* PosRequired(CExpressionHandle &exprhdl, gpopt::COrderSpec* posRequired, ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) const override;
 	
 	bool FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired, ULONG ulOptReq) const override;
 	
@@ -52,7 +52,7 @@ public:
 
 	vector<ColumnBinding> GetColumnBindings() override;
 	
-	vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired, ULONG child_index, vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq) override;
+	vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired, ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
 	
 	CKeyCollection* DeriveKeyCollection(CExpressionHandle &exprhdl) override
 	{
@@ -133,7 +133,7 @@ public:
 		COrderSpec* result = new COrderSpec();
 		for(auto &child: orders)
 		{
-			result->m_pdrgpoe.emplace_back(child.Copy());
+			result->orderby_node.emplace_back(child.Copy());
 		}
 		return result;
 	}

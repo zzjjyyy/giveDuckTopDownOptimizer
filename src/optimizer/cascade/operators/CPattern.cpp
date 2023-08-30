@@ -21,7 +21,7 @@ using namespace duckdb;
 //		expression has to take care of this on a higher level
 //
 //---------------------------------------------------------------------------
-CDrvdProp *CPattern::PdpCreate() {
+CDerivedProperty *CPattern::PdpCreate() {
 	return nullptr;
 }
 

@@ -51,7 +51,7 @@ public:
 
 	ULONG HashValue() const override;
 
-	CDrvdProp *PdpCreate() override;
+	CDerivedProperty *PdpCreate() override;
 
 	static CKeyCollection *PkcDeriveKeysPassThru(CExpressionHandle &expression_handle, ULONG ulChild);
 

@@ -61,7 +61,7 @@ CRequiredPropRelational::~CRequiredPropRelational()
 //		Compute required props
 //
 //---------------------------------------------------------------------------
-void CRequiredPropRelational::Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq)
+void CRequiredPropRelational::Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq)
 {
 	// CRequiredPropRelational* prprelInput = CRequiredPropRelational::GetReqdRelationalProps(prpInput);
 	m_pcrsStat = ((LogicalOperator*)exprhdl.Pop())->GetColumnBindings();

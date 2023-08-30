@@ -85,7 +85,7 @@ public:
 	COrderProperty::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
 
 	COrderSpec* PosRequired(CExpressionHandle &exprhdl, gpopt::COrderSpec* posRequired,
-							ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt,
+							ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt,
 							ULONG ulOptReq) const override {
 		return nullptr;
 	}

@@ -36,7 +36,8 @@ namespace gpopt {
 //
 //---------------------------------------------------------------------------
 CExpressionHandle::CExpressionHandle()
-    : m_pop(nullptr), m_expr(nullptr), m_pgexpr(nullptr), m_pcc(nullptr), m_pdpplan(nullptr), m_prp(nullptr) {
+    : m_pop(nullptr), m_expr(nullptr), m_pgexpr(nullptr), m_pcc(nullptr), m_derived_prop_pplan(nullptr),
+      m_prp(nullptr) {
 }
 
 //---------------------------------------------------------------------------
@@ -112,7 +113,7 @@ void CExpressionHandle::Attach(CCostContext *pcc) {
 //		Recursive property derivation
 //
 //---------------------------------------------------------------------------
-void CExpressionHandle::DeriveProps(CDrvdPropCtxt *pdpctxt) {
+void CExpressionHandle::DeriveProps(CDerivedPropertyContext *pdpctxt) {
 	if (nullptr != m_pgexpr) {
 		return;
 	}
@@ -146,8 +147,8 @@ void CExpressionHandle::DerivePlanPropsForCostContext() {
 	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
 	// CopyStats();
 	// create/derive local properties
-	m_pdpplan = m_pgexpr->m_operator->PdpCreate();
-	m_pdpplan->Derive(*this, pdpctxtplan);
+	m_derived_prop_pplan = m_pgexpr->m_operator->PdpCreate();
+	m_derived_prop_pplan->Derive(*this, pdpctxtplan);
 	delete pdpctxtplan;
 }
 
@@ -182,7 +183,7 @@ void CExpressionHandle::InitReqdProps(CRequiredProperty *prpInput) {
 //
 //
 //---------------------------------------------------------------------------
-void CExpressionHandle::ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDrvdProp *> pdrgpdpCtxt,
+void CExpressionHandle::ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt,
                                               ULONG ulOptReq) {
 	// compute required properties based on child type
 	CRequiredProperty *prp = Pop()->PrpCreate();
@@ -211,7 +212,7 @@ void CExpressionHandle::CopyChildReqdProps(ULONG child_index, CRequiredProperty 
 //		Compute required columns of the n-th child
 //
 //---------------------------------------------------------------------------
-void CExpressionHandle::ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDrvdProp *> pdrgpdpCtxt) {
+void CExpressionHandle::ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt) {
 	CRequiredProperty *prp = Pop()->PrpCreate();
 	CRequiredPropPlan::Prpp(prp)->ComputeReqdCols(*this, m_prp, child_index, pdrgpdpCtxt);
 	// replace required properties of given child
@@ -231,7 +232,7 @@ void CExpressionHandle::ComputeReqdProps(CRequiredProperty *prpInput, ULONG ulOp
 	InitReqdProps(prpInput);
 	const ULONG arity = Arity();
 	for (ULONG ul = 0; ul < arity; ul++) {
-		duckdb::vector<CDrvdProp *> v;
+		duckdb::vector<CDerivedProperty *> v;
 		ComputeChildReqdProps(ul, v, ulOptReq);
 	}
 }
@@ -358,7 +359,7 @@ CExpressionHandle::UlNonScalarChildren() const {
 //		Retrieve derived relational props of n-th child; Assumes caller knows what properties to ask for;
 //
 //---------------------------------------------------------------------------
-CDrvdPropRelational *CExpressionHandle::GetRelationalProperties(ULONG child_index) const {
+CDerivedPropRelation *CExpressionHandle::GetRelationalProperties(ULONG child_index) const {
 	if (nullptr != Pop()) {
 		// handle is used for required property computation
 		if (Pop()->FPhysical()) {
@@ -366,10 +367,11 @@ CDrvdPropRelational *CExpressionHandle::GetRelationalProperties(ULONG child_inde
 			return Pop()->children[child_index]->m_derived_property_relation;
 		}
 		// return props after calling derivation function
-		return CDrvdPropRelational::GetRelationalProperties(Pop()->children[child_index]->PdpDerive());
+		return CDerivedPropRelation::GetRelationalProperties(Pop()->children[child_index]->PdpDerive());
 	}
 	// handle is used for deriving plan properties, get relational props from child group
-	CDrvdPropRelational *drvdProps = CDrvdPropRelational::GetRelationalProperties((*m_pgexpr)[child_index]->m_derived_properties);
+	CDerivedPropRelation *drvdProps =
+	    CDerivedPropRelation::GetRelationalProperties((*m_pgexpr)[child_index]->m_derived_properties);
 	return drvdProps;
 }
 
@@ -381,35 +383,36 @@ CDrvdPropRelational *CExpressionHandle::GetRelationalProperties(ULONG child_inde
 //		Retrieve relational properties of attached expr/gexpr;
 //
 //---------------------------------------------------------------------------
-CDrvdPropRelational *CExpressionHandle::GetRelationalProperties() const {
+CDerivedPropRelation *CExpressionHandle::GetRelationalProperties() const {
 	if (nullptr != Pop()) {
 		if (Pop()->FPhysical()) {
 			// relational props were copied from memo, return props directly
-			CDrvdPropRelational *drvdProps = Pop()->m_derived_property_relation;
+			CDerivedPropRelation *drvdProps = Pop()->m_derived_property_relation;
 			return drvdProps;
 		}
 		// return props after calling derivation function
-		return CDrvdPropRelational::GetRelationalProperties(Pop()->PdpDerive());
+		return CDerivedPropRelation::GetRelationalProperties(Pop()->PdpDerive());
 	}
 	// get relational props from group
-	CDrvdPropRelational *drvdProps = CDrvdPropRelational::GetRelationalProperties(m_pgexpr->m_group->m_derived_properties);
+	CDerivedPropRelation *drvdProps =
+	    CDerivedPropRelation::GetRelationalProperties(m_pgexpr->m_group->m_derived_properties);
 	return drvdProps;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CExpressionHandle::Pdpplan
+//		CExpressionHandle::DrvdPlanProperty
 //
 //	@doc:
 //		Retrieve derived plan props of n-th child;
 //		Assumes caller knows what properties to ask for;
 //
 //---------------------------------------------------------------------------
-CDrvdPropPlan *CExpressionHandle::Pdpplan(ULONG child_index) const {
+CDerivedPropPlan *CExpressionHandle::Pdpplan(ULONG child_index) const {
 	if (nullptr != m_pop) {
-		return CDrvdPropPlan::Pdpplan(m_pop->children[child_index]->Pdp(CDrvdProp::EptPlan));
+		return CDerivedPropPlan::DrvdPlanProperty(m_pop->children[child_index]->Pdp(CDerivedProperty::EptPlan));
 	}
-	CDrvdPropPlan *pdpplan = m_pcc->m_optimization_contexts[child_index]->m_best_cost_context->m_derived_prop_plan;
+	CDerivedPropPlan *pdpplan = m_pcc->m_optimization_contexts[child_index]->m_best_cost_context->m_derived_prop_plan;
 	return pdpplan;
 }
 
@@ -699,9 +702,9 @@ duckdb::vector<ColumnBinding> CExpressionHandle::PcrsUsedColumns() {
 	return cols;
 }
 
-CDrvdProp *CExpressionHandle::Pdp() const {
+CDerivedProperty *CExpressionHandle::DerivedProperty() const {
 	if (nullptr != m_pcc) {
-		return m_pdpplan;
+		return m_derived_prop_pplan;
 	}
 	if (nullptr != m_pop) {
 		return m_pop->Pdp(m_pop->Ept());
@@ -730,8 +733,7 @@ duckdb::vector<ColumnBinding> CExpressionHandle::DeriveOuterReferences() {
 duckdb::vector<ColumnBinding> CExpressionHandle::DeriveOutputColumns(ULONG child_index) {
 	if (nullptr != m_pop) {
 		return m_pop->children[child_index]->GetColumnBindings();
-	}
-	else if (nullptr != m_pgexpr) {
+	} else if (nullptr != m_pgexpr) {
 		return m_pgexpr->m_operator->children[child_index]->GetColumnBindings();
 	}
 	return GetRelationalProperties(child_index)->GetOutputColumns();

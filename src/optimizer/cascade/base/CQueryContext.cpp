@@ -26,7 +26,7 @@ CQueryContext::CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPropPla
                              bool derive_stats)
     : m_required_plan_property(property), m_required_output_cols(col_ids), m_derivation_stats(derive_stats) {
 	duckdb::vector<ColumnBinding> output_and_ordering_cols;
-	duckdb::vector<ColumnBinding> order_spec = property->m_required_sort_order->m_pos->PcrsUsed();
+	duckdb::vector<ColumnBinding> order_spec = property->m_sort_order->m_sort_order->PcrsUsed();
 	output_and_ordering_cols.insert(output_and_ordering_cols.end(), col_ids.begin(), col_ids.end());
 	output_and_ordering_cols.insert(output_and_ordering_cols.end(), order_spec.begin(), order_spec.end());
 	for (auto &child : col_names) {
@@ -86,7 +86,7 @@ CQueryContext *CQueryContext::QueryContextGenerate(duckdb::unique_ptr<Operator> 
 		duckdb::unique_ptr<LogicalOrder> logical_order = unique_ptr_cast<Operator, LogicalOrder>(std::move(expr));
 		// top level operator is an order by, copy order spec to query context
 		for (auto &child : logical_order->orders) {
-			pos->m_pdrgpoe.emplace_back(child.type, child.null_order, child.expression->Copy());
+			pos->orderby_node.emplace_back(child.type, child.null_order, child.expression->Copy());
 		}
 		expr = std::move(logical_order->children[0]);
 	}

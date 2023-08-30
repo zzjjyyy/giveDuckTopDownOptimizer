@@ -11,8 +11,8 @@
 #define GPOPT_CExpressionHandle_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/planner/logical_operator.hpp"
@@ -20,7 +20,7 @@
 namespace gpopt
 {
 // fwd declaration
-class CDrvdPropPlan;
+class CDerivedPropPlan;
 class CPropConstraint;
 class CCostContext;
 
@@ -57,7 +57,7 @@ private:
 	// derived plan properties of the gexpr attached by a CostContext under
 	// the default CDrvdPropCtxtPlan. See DerivePlanPropsForCostContext()
 	// NB: does NOT support on-demand property derivation
-	CDrvdProp* m_pdpplan;
+	CDerivedProperty *m_derived_prop_pplan;
 
 	// required properties of attached expr/gexpr;
 	// set during required property computation
@@ -107,7 +107,7 @@ public:
 
 public:
 	// recursive property derivation,
-	void DeriveProps(CDrvdPropCtxt* pdpctxt);
+	void DeriveProps(CDerivedPropertyContext * pdpctxt);
 
 	// recursive stats derivation
 	// void DeriveStats(IStatisticsArray* stats_ctxt, bool fComputeRootStats = true);
@@ -126,31 +126,31 @@ public:
 	void InitReqdProps(CRequiredProperty * prpInput);
 
 	// compute required properties of the n-th child
-	void ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq);
+	void ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq);
 
 	// copy required properties of the n-th child
 	void CopyChildReqdProps(ULONG child_index, CRequiredProperty * prp);
 
 	// compute required columns of the n-th child
-	void ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt);
+	void ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt);
 
 	// required properties computation of all children
 	void ComputeReqdProps(CRequiredProperty * prpInput, ULONG ulOptReq);
 
 	// derived relational props of n-th child
-	CDrvdPropRelational* GetRelationalProperties(ULONG child_index) const;
+	CDerivedPropRelation * GetRelationalProperties(ULONG child_index) const;
 
 	// derived stats of n-th child
 	// IStatistics* Pstats(ULONG child_index) const;
 
 	// derived plan props of n-th child
-	CDrvdPropPlan* Pdpplan(ULONG child_index) const;
+	CDerivedPropPlan * Pdpplan(ULONG child_index) const;
 
 	// derived properties of attached expr/gexpr
-	CDrvdProp* Pdp() const;
+	CDerivedProperty *DerivedProperty() const;
 
 	// derived relational properties of attached expr/gexpr
-	CDrvdPropRelational* GetRelationalProperties() const;
+	CDerivedPropRelation * GetRelationalProperties() const;
 
 	// stats of attached expr/gexpr
 	// IStatistics* Pstats();

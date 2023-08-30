@@ -89,8 +89,8 @@ CRequiredPropPlan *Operator::PrppCompute(CRequiredPropPlan *required_properties_
 	return m_required_plan_property;
 }
 
-CDrvdProp *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
-	const CDrvdProp::EPropType ept = Ept();
+CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
+	const CDerivedProperty::EPropType ept = Ept();
 	CExpressionHandle expression_handle;
 	expression_handle.Attach(this);
 	// see if suitable prop is already cached. This only applies to plan properties.
@@ -98,13 +98,13 @@ CDrvdProp *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 	if (nullptr == Pdp(ept)) {
 		const ULONG arity = Arity();
 		for (ULONG ul = 0; ul < arity; ul++) {
-			CDrvdProp *pdp = children[ul]->PdpDerive(pdpctxt);
+			CDerivedProperty *pdp = children[ul]->PdpDerive(pdpctxt);
 			// add child props to derivation context
-			CDrvdPropCtxt::AddDerivedProps(pdp, pdpctxt);
+			CDerivedPropertyContext::AddDerivedProps(pdp, pdpctxt);
 		}
 		switch (ept) {
-		case CDrvdProp::EptPlan:
-			m_derived_property_plan = new CDrvdPropPlan();
+		case CDerivedProperty::EptPlan:
+			m_derived_property_plan = new CDerivedPropPlan();
 			break;
 		default:
 			break;
@@ -156,26 +156,26 @@ void Operator::CE() {
 	return;
 }
 
-CDrvdProp *Operator::Pdp(const CDrvdProp::EPropType ept) const {
+CDerivedProperty *Operator::Pdp(const CDerivedProperty::EPropType ept) const {
 	switch (ept) {
-	case CDrvdProp::EptRelational:
-		return (CDrvdProp *)m_derived_property_relation;
-	case CDrvdProp::EptPlan:
-		return (CDrvdProp *)m_derived_property_plan;
+	case CDerivedProperty::EptRelational:
+		return (CDerivedProperty *)m_derived_property_relation;
+	case CDerivedProperty::EptPlan:
+		return (CDerivedProperty *)m_derived_property_plan;
 	default:
 		break;
 	}
 	return nullptr;
 }
 
-CDrvdProp::EPropType Operator::Ept() const {
+CDerivedProperty::EPropType Operator::Ept() const {
 	if (FLogical()) {
-		return CDrvdProp::EptRelational;
+		return CDerivedProperty::EptRelational;
 	}
 	if (FPhysical()) {
-		return CDrvdProp::EptPlan;
+		return CDerivedProperty::EptPlan;
 	}
-	return CDrvdProp::EptInvalid;
+	return CDerivedProperty::EptInvalid;
 }
 
 Operator *Operator::PexprRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdrgpexpr,

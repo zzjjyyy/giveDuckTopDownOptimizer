@@ -43,8 +43,8 @@ public:
 public:
 	// dummy ctor; used for creating invalid context
 	COptimizationContext()
-	    : m_id(GPOPT_INVALID_OPTCTXT_ID), m_group(NULL), m_required_plan_properties(NULL),
-	      m_required_relational_properties(NULL), m_search_stage(0), m_best_cost_context(NULL),
+	    : m_id(GPOPT_INVALID_OPTCTXT_ID), m_group(nullptr), m_required_plan_properties(nullptr),
+	      m_required_relational_properties(nullptr), m_search_stage(0), m_best_cost_context(nullptr),
 	      m_estate(estUnoptimized), m_has_multi_stage_agg_plan(false) {};
 
 	//---------------------------------------------------------------------------
@@ -54,9 +54,9 @@ public:
 	//	 IStatisticsArray* stats_ctxt: stats of previously optimized expressions
 	//---------------------------------------------------------------------------
 	COptimizationContext(CGroup *pgroup, CRequiredPropPlan *prpp, CRequiredPropRelational *prprel,
-	                     ULONG ulSearchStageIndex)
+	                     ULONG search_stage_index)
 	    : m_id(GPOPT_INVALID_OPTCTXT_ID), m_group(pgroup), m_required_plan_properties(prpp),
-	      m_required_relational_properties(prprel), m_search_stage(ulSearchStageIndex), m_best_cost_context(NULL),
+	      m_required_relational_properties(prprel), m_search_stage(search_stage_index), m_best_cost_context(nullptr),
 	      m_estate(estUnoptimized), m_has_multi_stage_agg_plan(false) {
 	}
 	COptimizationContext(const COptimizationContext &) = delete;

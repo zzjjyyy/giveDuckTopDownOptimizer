@@ -3,15 +3,15 @@
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/table/table_scan.hpp"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/planner/expression/bound_conjunction_expression.hpp"
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/transaction/transaction.hpp"
 
-#include <utility>
 #include <cstdlib>
+#include <utility>
 
 namespace duckdb {
 using namespace gpopt;

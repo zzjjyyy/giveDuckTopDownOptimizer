@@ -110,8 +110,8 @@ public:
 	// check if cost context already exists in group expression hash table
 	bool FCostContextExists(COptimizationContext *poc, duckdb::vector<COptimizationContext *> optimization_contexts);
 	// compute and store expression's cost under a given context
-	CCostContext *PccComputeCost(COptimizationContext *poc, ULONG optimization_request_num,
-	                             duckdb::vector<COptimizationContext *> optimization_contexts, bool fPruned,
+	CCostContext *PccComputeCost(COptimizationContext *opt_context, ULONG opt_request_num,
+	                             duckdb::vector<COptimizationContext *> opt_contexts, bool is_pruned,
 	                             double cost_lower_bound);
 	// compute a cost lower bound for plans, rooted by current group expression, and satisfying the given required
 	// properties

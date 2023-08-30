@@ -7,7 +7,7 @@
 #include "duckdb/function/function_serialization.hpp"
 #include "duckdb/function/table/table_scan.hpp"
 #include "duckdb/optimizer/cascade/base/CCostContext.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/storage/data_table.hpp"
 
 namespace duckdb {

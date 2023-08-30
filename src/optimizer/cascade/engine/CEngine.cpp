@@ -203,8 +203,8 @@ void CEngine::InsertXformResult(CGroup *pgroup_origin, CXformResult *pxfres, CXf
 //
 //---------------------------------------------------------------------------
 bool CEngine::FPossibleDuplicateGroups(CGroup *group_left, CGroup *group_right) {
-	CDrvdPropRelational *pdprel_fst = CDrvdPropRelational::GetRelationalProperties(group_left->m_derived_properties);
-	CDrvdPropRelational *pdprel_snd = CDrvdPropRelational::GetRelationalProperties(group_right->m_derived_properties);
+	CDerivedPropRelation *pdprel_fst = CDerivedPropRelation::GetRelationalProperties(group_left->m_derived_properties);
+	CDerivedPropRelation *pdprel_snd = CDerivedPropRelation::GetRelationalProperties(group_right->m_derived_properties);
 	// right now we only check the output columns, but we may possibly need to
 	// check other properties as well
 	duckdb::vector<ColumnBinding> v1 = pdprel_fst->GetOutputColumns();
@@ -458,7 +458,6 @@ void CEngine::Optimize() {
 	const ULONG num_stages = m_search_strategy.size();
 	for (ULONG ul = 0; !FSearchTerminated() && ul < num_stages; ul++) {
 		CurrentSearchStage()->RestartTimer();
-
 		// optimize root group
 		duckdb::vector<ColumnBinding> v;
 		COptimizationContext *poc = new COptimizationContext(GroupRoot(), m_query_context->m_required_plan_property,
@@ -628,13 +627,13 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationCont
 	PhysicalOperator *pop_physical = (PhysicalOperator *)(pcc->m_group_expression->m_operator.get());
 	CRequiredPropPlan *prpp = poc->m_required_plan_properties;
 	// Determine if any property enforcement is disable or unnecessary
-	bool f_order_reqd = !prpp->m_required_sort_order->m_pos->IsEmpty();
+	bool f_order_reqd = !prpp->m_sort_order->m_sort_order->IsEmpty();
 	// Determine if adding an enforcer to the group is required, optional,
 	// unnecessary or prohibited over the group expression and given the current
 	// optimization context (required properties)
 	// get order enforcing type
 	COrderProperty::EPropEnforcingType epet_order =
-	    prpp->m_required_sort_order->Epet(exprhdl, pop_physical, f_order_reqd);
+	    prpp->m_sort_order->Epet(exprhdl, pop_physical, f_order_reqd);
 	// Skip adding enforcers entirely if any property determines it to be
 	// 'prohibited'. In this way, a property may veto out the creation of an
 	// enforcer for the current group expression and optimization context.
@@ -650,7 +649,7 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationCont
 	// extract a leaf pattern from target group
 	CBinding binding;
 	Operator *pexpr = binding.PexprExtract(exprhdl.Pgexpr(), m_expr_enforcer_pattern.get(), nullptr);
-	prpp->m_required_sort_order->AppendEnforcers(prpp, pdrgpexpr_enforcers, pexpr->Copy(), epet_order, exprhdl);
+	prpp->m_sort_order->AppendEnforcers(prpp, pdrgpexpr_enforcers, pexpr->Copy(), epet_order, exprhdl);
 	if (!pdrgpexpr_enforcers.empty()) {
 		AddEnforcers(exprhdl.Pgexpr(), std::move(pdrgpexpr_enforcers));
 	}
@@ -745,7 +744,7 @@ bool CEngine::FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPropPlan 
 	// check if sort operator is passed an empty order spec;
 	// this check is required to avoid self-deadlocks, i.e.
 	// sort optimizing same group with the same optimization context;
-	bool f_order_reqd = !prpp->m_required_sort_order->m_pos->IsEmpty();
+	bool f_order_reqd = !prpp->m_sort_order->m_sort_order->IsEmpty();
 	if (!f_order_reqd && PhysicalOperatorType::ORDER_BY == pop_physical->physical_type) {
 		return false;
 	}

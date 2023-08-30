@@ -44,7 +44,7 @@ COrderProperty::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &e
 }
 
 COrderSpec *PhysicalOrder::PosRequired(CExpressionHandle &exprhdl, COrderSpec *pos_required, ULONG child_index,
-                                       vector<CDrvdProp *> pdrgpdp_ctxt, ULONG ul_opt_req) const {
+                                       vector<CDerivedProperty *> pdrgpdp_ctxt, ULONG ul_opt_req) const {
 	// sort operator is order-establishing and does not require child to deliver
 	// any sort order; we return an empty sort order as child requirement
 	return new COrderSpec();
@@ -68,7 +68,7 @@ vector<ColumnBinding> PhysicalOrder::GetColumnBindings() {
 //
 //---------------------------------------------------------------------------
 vector<ColumnBinding> PhysicalOrder::PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrs_required,
-                                                  ULONG child_index, vector<CDrvdProp *> pdrgpdp_ctxt, ULONG ul_opt_req) {
+                                                  ULONG child_index, vector<CDerivedProperty *> pdrgpdp_ctxt, ULONG ul_opt_req) {
 	vector<ColumnBinding> pcrs_sort;
 	for (auto &child : orders) {
 		vector<ColumnBinding> cell = child.expression->getColumnBinding();

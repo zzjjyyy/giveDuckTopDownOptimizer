@@ -7,7 +7,7 @@ namespace duckdb {
 LogicalFilter::LogicalFilter()
 	: LogicalOperator(LogicalOperatorType::LOGICAL_FILTER)
 {
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_property_relation = new CDerivedPropRelation();
 	m_group_expression = nullptr;
 	m_derived_property_plan = nullptr;
 	m_required_plan_property = nullptr;
@@ -16,7 +16,7 @@ LogicalFilter::LogicalFilter()
 LogicalFilter::LogicalFilter(unique_ptr<Expression> expression)
 	: LogicalOperator(LogicalOperatorType::LOGICAL_FILTER)
 {
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_property_relation = new CDerivedPropRelation();
 	m_group_expression = nullptr;
 	m_derived_property_plan = nullptr;
 	m_required_plan_property = nullptr;

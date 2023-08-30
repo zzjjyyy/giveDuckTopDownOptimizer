@@ -17,7 +17,7 @@ using namespace gpos;
 
 // forward declarations
 class CGroupExpression;
-class CDrvdProp;
+class CDerivedProperty;
 class COptimizationContext;
 
 //---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ public:
 	void MoveDuplicateGExpr(CGroupExpression* pgexpr);
 
 	// initialize group's properties;
-	void InitProperties(CDrvdProp* ppdp);
+	void InitProperties(CDerivedProperty * ppdp);
 
 	// retrieve first group expression
 	list<CGroupExpression*>::iterator PgexprFirst();

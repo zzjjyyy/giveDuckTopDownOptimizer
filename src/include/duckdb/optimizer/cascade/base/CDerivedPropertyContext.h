@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDrvdPropCtxt.h
+//		CDerivedPropertyContext.h
 //
 //	@doc:
 //		Base class for derived properties context;
@@ -10,68 +10,61 @@
 #define GPOPT_CDrvdPropCtxt_H
 
 #include "duckdb/optimizer/cascade/base.h"
+
 #include <memory>
 
 using namespace gpos;
 using namespace std;
 
-namespace gpopt
-{
+namespace gpopt {
 // fwd declarations
-class CDrvdPropCtxt;
-class CDrvdProp;
+class CDerivedPropertyContext;
+class CDerivedProperty;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CDrvdPropCtxt
+//		CDerivedPropertyContext
 //
 //	@doc:
 //		Container of information passed among expression nodes during
 //		property derivation
 //
 //---------------------------------------------------------------------------
-class CDrvdPropCtxt
-{
+class CDerivedPropertyContext {
 public:
 	// ctor
-	CDrvdPropCtxt()
-	{
+	CDerivedPropertyContext() {
 	}
 
 	// no copy ctor
-	CDrvdPropCtxt(const CDrvdPropCtxt &) = delete;
+	CDerivedPropertyContext(const CDerivedPropertyContext &) = delete;
 
 	// dtor
-	virtual ~CDrvdPropCtxt()
-	{
+	virtual ~CDerivedPropertyContext() {
 	}
 
 public:
 	// copy function
-	virtual CDrvdPropCtxt* PdpctxtCopy() const = 0;
+	virtual CDerivedPropertyContext *PdpctxtCopy() const = 0;
 
 	// add props to context
-	virtual void AddProps(CDrvdProp* pdp) = 0;
+	virtual void AddProps(CDerivedProperty *pdp) = 0;
 
 public:
 	// copy function
-	static CDrvdPropCtxt* PdpctxtCopy(CDrvdPropCtxt* pdpctxt)
-	{
-		if (nullptr == pdpctxt)
-		{
+	static CDerivedPropertyContext *PdpctxtCopy(CDerivedPropertyContext *pdpctxt) {
+		if (nullptr == pdpctxt) {
 			return nullptr;
 		}
 		return pdpctxt->PdpctxtCopy();
 	}
 
 	// add derived props to context
-	static void AddDerivedProps(CDrvdProp* pdp, CDrvdPropCtxt* pdpctxt)
-	{
-		if (nullptr != pdpctxt)
-		{
+	static void AddDerivedProps(CDerivedProperty *pdp, CDerivedPropertyContext *pdpctxt) {
+		if (nullptr != pdpctxt) {
 			pdpctxt->AddProps(pdp);
 		}
 	}
-};	// class CDrvdPropCtxt
-}  // namespace gpopt
+}; // class CDerivedPropertyContext
+} // namespace gpopt
 #endif

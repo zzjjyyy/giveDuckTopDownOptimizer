@@ -1,16 +1,17 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDrvdProp.cpp
+//		CDerivedProperty.cpp
 //
 //	@doc:
 //		Implementation of derived properties
 //---------------------------------------------------------------------------
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
+
 #include "duckdb/optimizer/cascade/base.h"
 
 namespace gpopt
 {
-CDrvdProp::CDrvdProp()
+CDerivedProperty::CDerivedProperty()
 {
 }
 }  // namespace gpopt

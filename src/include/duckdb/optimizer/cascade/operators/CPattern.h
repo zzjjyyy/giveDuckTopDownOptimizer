@@ -50,7 +50,7 @@ public:
 	}
 
 	// create derived properties container
-	CDrvdProp* PdpCreate() override;
+	CDerivedProperty * PdpCreate() override;
 
 	// create required properties container
 	CRequiredProperty * PrpCreate() const override;

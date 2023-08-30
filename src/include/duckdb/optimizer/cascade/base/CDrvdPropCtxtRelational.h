@@ -11,7 +11,7 @@
 #define GPOPT_CDrvdPropCtxtRelational_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropCtxt.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropertyContext.h"
 
 namespace gpopt
 {
@@ -26,17 +26,16 @@ using namespace gpos;
 //		derivation of relational properties
 //
 //---------------------------------------------------------------------------
-class CDrvdPropCtxtRelational : public CDrvdPropCtxt
-{
+class CDrvdPropCtxtRelational : public CDerivedPropertyContext {
 public:
 	// copy function
-	virtual CDrvdPropCtxt* PdpctxtCopy() const
+	virtual CDerivedPropertyContext * PdpctxtCopy() const
 	{
 		return new CDrvdPropCtxtRelational();
 	}
 
 	// add props to context
-	virtual void AddProps(CDrvdProp* pdp)
+	virtual void AddProps(CDerivedProperty * pdp)
 	{
 		// derived relational context is currently empty
 	}
@@ -44,7 +43,7 @@ public:
 public:
 	// ctor
 	CDrvdPropCtxtRelational()
-		: CDrvdPropCtxt()
+		: CDerivedPropertyContext()
 	{
 	}
 	
@@ -57,7 +56,7 @@ public:
 	}
 
 	// conversion function
-	static CDrvdPropCtxtRelational* PdpctxtrelConvert(CDrvdPropCtxt* pdpctxt)
+	static CDrvdPropCtxtRelational* PdpctxtrelConvert(CDerivedPropertyContext * pdpctxt)
 	{
 		return static_cast<CDrvdPropCtxtRelational*>(pdpctxt);
 	}

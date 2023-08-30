@@ -67,7 +67,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 			// use provided child cost context to collect accurate costing info
 			double dRowsChild = pgroupChild->m_group_exprs.front()->m_operator->estimated_cardinality;
 			pci->SetChildRows(ulIndex, dRowsChild);
-			// double dWidthChild = child_stats->Width(prppChild->m_required_cols).Get();
+			// double dWidthChild = child_stats->Width(prppChild->m_cols).Get();
 			// pci->SetChildWidth(ulIndex, dWidthChild);
 			// pci->SetChildRebinds(ulIndex, child_stats->NumRebinds().Get());
 			pci->SetChildCost(ulIndex, dRowsChild);
@@ -80,7 +80,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 		double dRowsChild = pgroupChild->m_group_exprs.front()->m_operator->estimated_cardinality;
 		pci->SetChildRows(ulIndex, dRowsChild);
 		// pci->SetChildRebinds(ulIndex, child_stats->NumRebinds().Get());
-		// double dWidthChild = child_stats->Width(prppChild->m_required_cols).Get();
+		// double dWidthChild = child_stats->Width(prppChild->m_cols).Get();
 		// pci->SetChildWidth(ulIndex, dWidthChild);
 		// use child group's cost lower bound as the child cost
 		// double dCostChild = pgroupChild->CostLowerBound(prppChild).Get();
@@ -106,7 +106,7 @@ double CPartialPlan::CostCompute()
 	exprhdl.DeriveProps(NULL);
 	exprhdl.InitReqdProps(m_prpp);
 	// create array of child derived properties
-	duckdb::vector<CDrvdProp*> pdrgpdp;
+	duckdb::vector<CDerivedProperty *> pdrgpdp;
 	const ULONG arity = m_pgexpr->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
@@ -117,7 +117,7 @@ double CPartialPlan::CostCompute()
 	// extract rows from stats
 	double rows = pop->estimated_cardinality;
 	// extract width from stats
-	// double width = m_group_expression->Pgroup()->Pstats()->Width(mp, m_required_plan_property->m_required_cols).Get();
+	// double width = m_group_expression->Pgroup()->Pstats()->Width(mp, m_required_plan_property->m_cols).Get();
 	// ci.SetWidth(width);
 	// extract rebinds
 	// double num_rebinds = m_group_expression->Pgroup()->Pstats()->NumRebinds().Get();

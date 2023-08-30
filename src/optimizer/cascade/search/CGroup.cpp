@@ -8,7 +8,7 @@
 #include "duckdb/optimizer/cascade/search/CGroup.h"
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtRelational.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
@@ -272,7 +272,7 @@ void CGroup::SetId(ULONG id) {
 //		Initialize group's properties
 //
 //---------------------------------------------------------------------------
-void CGroup::InitProperties(CDrvdProp *pdp) {
+void CGroup::InitProperties(CDerivedProperty *pdp) {
 	m_derived_properties = pdp;
 }
 

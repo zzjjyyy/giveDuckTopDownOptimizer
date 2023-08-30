@@ -1,17 +1,18 @@
 #include "duckdb/execution/physical_operator.hpp"
+
 #include "duckdb/common/printer.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/common/tree_renderer.hpp"
 #include "duckdb/execution/execution_context.hpp"
+#include "duckdb/execution/operator/projection/physical_projection.hpp"
 #include "duckdb/execution/operator/set/physical_recursive_cte.hpp"
 #include "duckdb/main/client_context.hpp"
+#include "duckdb/optimizer/cascade/base/CDerivedPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/parallel/meta_pipeline.hpp"
 #include "duckdb/parallel/pipeline.hpp"
 #include "duckdb/parallel/thread_context.hpp"
 #include "duckdb/storage/buffer_manager.hpp"
-#include "duckdb/optimizer/cascade/base/CUtils.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropPlan.h"
-#include "duckdb/execution/operator/projection/physical_projection.hpp"
 
 namespace duckdb {
 
@@ -22,7 +23,7 @@ PhysicalOperator::PhysicalOperator(PhysicalOperatorType type, vector<LogicalType
 	/* Operator fields */
 	physical_type = type;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_property_relation = new CDerivedPropRelation();
 	m_derived_property_plan = nullptr;
 	m_required_plan_property = nullptr;
 	m_cost = GPOPT_INVALID_COST;
@@ -241,12 +242,12 @@ void PhysicalOperator::Verify()
 //		Create base container of derived properties
 //
 //---------------------------------------------------------------------------
-CDrvdProp* PhysicalOperator::PdpCreate()
+CDerivedProperty * PhysicalOperator::PdpCreate()
 {
-	return new CDrvdPropPlan();
+	return new CDerivedPropPlan();
 }
 
-COrderProperty::EOrderMatching PhysicalOperator::Eom(CRequiredPropPlan *, ULONG, vector<CDrvdProp*>, ULONG) {
+COrderProperty::EOrderMatching PhysicalOperator::Eom(CRequiredPropPlan *, ULONG, vector<CDerivedProperty *>, ULONG) {
 	return COrderProperty::EomSatisfy;
 }
 
@@ -278,7 +279,7 @@ COrderProperty::EPropEnforcingType PhysicalOperator::EpetOrder(CExpressionHandle
 			CGroup* gp = pgexpr->m_child_groups[0];
 			for (auto iter = gp->m_sht.begin(); iter != gp->m_sht.end(); iter++) {
 				auto op_ctxt = iter->second;
-				if(CUtils::ContainsAll(op_ctxt->m_required_plan_properties->m_required_sort_order->m_pos->m_pdrgpoe, v)) {
+				if(CUtils::ContainsAll(op_ctxt->m_required_plan_properties->m_sort_order->m_sort_order->orderby_node, v)) {
 					return COrderProperty::EPropEnforcingType::EpetOptional;
 				}
 			}

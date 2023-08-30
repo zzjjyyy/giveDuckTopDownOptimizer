@@ -9,7 +9,7 @@
 #pragma once
 
 #include "duckdb/execution/physical_operator.hpp"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 
 namespace duckdb {
 

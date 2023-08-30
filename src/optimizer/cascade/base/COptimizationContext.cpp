@@ -10,7 +10,7 @@
 #include "duckdb/execution/operator/join/physical_nested_loop_join.hpp"
 #include "duckdb/execution/operator/order/physical_order.hpp"
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/optimizer/cascade/base/COrderProperty.h"
 #include "duckdb/optimizer/cascade/base/COrderSpec.h"
 #include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
@@ -150,7 +150,7 @@ bool COptimizationContext::FEqualContextIds(duckdb::vector<COptimizationContext 
 //---------------------------------------------------------------------------
 bool COptimizationContext::FOptimizeSort(CGroupExpression *pgexprParent, CGroupExpression *pgexprSort,
                                          COptimizationContext *poc, ULONG ulSearchStages) {
-	return poc->m_required_plan_properties->m_required_sort_order->FCompatible(
+	return poc->m_required_plan_properties->m_sort_order->FCompatible(
 	    ((PhysicalOrder *)pgexprSort->m_operator.get())->Pos());
 }
 
@@ -189,9 +189,9 @@ bool COptimizationContext::FOptimizeNLJoin(CGroupExpression *pgexprParent, CGrou
 	// columns and columns to be generated from inner child
 	duckdb::vector<ColumnBinding> pcrs;
 	duckdb::vector<ColumnBinding> pcrsOuterChild =
-	    CDrvdPropRelational::GetRelationalProperties((*pgexprJoin)[0]->m_derived_properties)->GetOutputColumns();
+	    CDerivedPropRelation::GetRelationalProperties((*pgexprJoin)[0]->m_derived_properties)->GetOutputColumns();
 	pcrs.insert(pcrsOuterChild.begin(), pcrsOuterChild.end(), pcrs.end());
-	bool fIncluded = CUtils::ContainsAll(pcrs, poc->m_required_plan_properties->m_required_cols);
+	bool fIncluded = CUtils::ContainsAll(pcrs, poc->m_required_plan_properties->m_cols);
 	return fIncluded;
 }
 } // namespace gpopt

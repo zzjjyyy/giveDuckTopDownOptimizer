@@ -18,8 +18,8 @@ using namespace duckdb;
 using namespace gpos;
 
 // forward declaration
-class CDrvdPropRelational;
-class CDrvdPropPlan;
+class CDerivedPropRelation;
+class CDerivedPropPlan;
 class COrderProperty;
 class CExpressionHandle;
 
@@ -34,13 +34,13 @@ class CExpressionHandle;
 class CRequiredPropPlan : public CRequiredProperty {
 public:
 	// required columns
-	duckdb::vector<ColumnBinding> m_required_cols;
+	duckdb::vector<ColumnBinding> m_cols;
 	// required sort order
-	COrderProperty *m_required_sort_order;
+	COrderProperty *m_sort_order;
 
 public:
 	// default ctor
-	CRequiredPropPlan() : m_required_sort_order(NULL) {
+	CRequiredPropPlan() : m_sort_order(NULL) {
 	}
 
 	// ctor
@@ -59,11 +59,11 @@ public:
 
 	// required properties computation function
 	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-	                     duckdb::vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) override;
+	                     duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
 
 	// required columns computation function
 	void ComputeReqdCols(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-	                     duckdb::vector<CDrvdProp *> pdrgpdpCtxt);
+	                     duckdb::vector<CDerivedProperty *> pdrgpdpCtxt);
 
 	// equality function
 	bool Equals(CRequiredPropPlan *prpp) const;
@@ -72,11 +72,11 @@ public:
 	ULONG HashValue() const;
 
 	// check if plan properties are satisfied by the given derived properties
-	bool FSatisfied(CDrvdPropRelational *pdprel, CDrvdPropPlan *pdpplan) const;
+	bool FSatisfied(CDerivedPropRelation *rel, CDerivedPropPlan *plan) const;
 
 	// check if plan properties are compatible with the given derived properties
-	bool FCompatible(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, CDrvdPropRelational *pdprel,
-	                 CDrvdPropPlan *pdpplan) const;
+	bool FCompatible(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, CDerivedPropRelation *pdprel,
+	                 CDerivedPropPlan *pdpplan) const;
 
 	// check if expression attached to handle provides required columns by all plan properties
 	bool FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG ulOptReq) const;
@@ -95,7 +95,7 @@ public:
 	// equality function used for cost bounding
 	static bool FEqualForCostBounding(CRequiredPropPlan *prppFst, CRequiredPropPlan *prppSnd);
 	// map input required and derived plan properties into new required plan properties
-	// static CRequiredPropPlan* PrppRemapForCTE(CRequiredPropPlan *prppInput, CDrvdPropPlan *pdpplanInput);
+	// static CRequiredPropPlan* PrppRemapForCTE(CRequiredPropPlan *prppInput, CDerivedPropPlan *pdpplanInput);
 }; // class CRequiredPropPlan
 } // namespace gpopt
 #endif

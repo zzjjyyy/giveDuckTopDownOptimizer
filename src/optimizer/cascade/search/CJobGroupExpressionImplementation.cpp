@@ -92,11 +92,11 @@ void CJobGroupExpressionImplementation::Init(CGroupExpression* pgexpr)
 {
 	CJobGroupExpression::Init(pgexpr);
 	GPOS_ASSERT(pgexpr->Pop()->FLogical());
-	m_jsm.Init(rgeev6);
+	m_job_state_machine.Init(rgeev6);
 	// set job actions
-	m_jsm.SetAction(estInitialized, EevtImplementChildren);
-	m_jsm.SetAction(estChildrenImplemented, EevtImplementSelf);
-	m_jsm.SetAction(estSelfImplemented, EevtFinalize);
+	m_job_state_machine.SetAction(estInitialized, EevtImplementChildren);
+	m_job_state_machine.SetAction(estChildrenImplemented, EevtImplementSelf);
+	m_job_state_machine.SetAction(estSelfImplemented, EevtFinalize);
 	CJob::SetInit();
 }
 
@@ -111,7 +111,7 @@ void CJobGroupExpressionImplementation::Init(CGroupExpression* pgexpr)
 void CJobGroupExpressionImplementation::ScheduleApplicableTransformations(CSchedulerContext* psc)
 {
 	// get all applicable xforms
-	CXform_set * xform_set = ((LogicalOperator*)m_pgexpr->m_operator.get())->PxfsCandidates();
+	CXform_set * xform_set = ((LogicalOperator*)m_group_expression->m_operator.get())->PxfsCandidates();
 	// intersect them with required xforms and schedule jobs
 	*xform_set &= *(CXformFactory::XformFactory()->XformImplementation());
 	*xform_set &= *(psc->m_engine->CurrentStageXforms());
@@ -129,10 +129,10 @@ void CJobGroupExpressionImplementation::ScheduleApplicableTransformations(CSched
 //---------------------------------------------------------------------------
 void CJobGroupExpressionImplementation::ScheduleChildGroupsJobs(CSchedulerContext* psc)
 {
-	ULONG arity = m_pgexpr->Arity();
+	ULONG arity = m_group_expression->Arity();
 	for (ULONG i = 0; i < arity; i++)
 	{
-		CJobGroupImplementation::ScheduleJob(psc, (*(m_pgexpr))[i], this);
+		CJobGroupImplementation::ScheduleJob(psc, (*(m_group_expression))[i], this);
 	}
 	SetChildrenScheduled();
 }
@@ -151,7 +151,7 @@ CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::Eev
 	CJobGroupExpressionImplementation* pjgei = PjConvert(pjOwner);
 	if (!pjgei->FChildrenScheduled())
 	{
-		pjgei->m_pgexpr->SetState(CGroupExpression::estImplementing);
+		pjgei->m_group_expression->SetState(CGroupExpression::estImplementing);
 		pjgei->ScheduleChildGroupsJobs(psc);
 		return eevImplementingChildren;
 	}
@@ -196,7 +196,7 @@ CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::Eev
 {
 	// get a job pointer
 	CJobGroupExpressionImplementation* pjgei = PjConvert(pjOwner);
-	pjgei->m_pgexpr->SetState(CGroupExpression::estImplemented);
+	pjgei->m_group_expression->SetState(CGroupExpression::estImplemented);
 	return eevFinalized;
 }
 
@@ -210,7 +210,7 @@ CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::Eev
 //---------------------------------------------------------------------------
 BOOL CJobGroupExpressionImplementation::FExecute(CSchedulerContext* psc)
 {
-	return m_jsm.FRun(psc, this);
+	return m_job_state_machine.FRun(psc, this);
 }
 
 //---------------------------------------------------------------------------

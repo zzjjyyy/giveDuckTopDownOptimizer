@@ -82,7 +82,7 @@ void PhysicalComparisonJoin::ConstructEmptyJoinResult(JoinType join_type, bool h
 }
 
 vector<ColumnBinding> PhysicalComparisonJoin::PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrs_required,
-	                                ULONG child_index, vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) {
+	                                ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) {
 	vector<ColumnBinding> pcrs_join;
 	for (auto &child : this->conditions) {
 		vector<ColumnBinding> left_cell = child.left->getColumnBinding();

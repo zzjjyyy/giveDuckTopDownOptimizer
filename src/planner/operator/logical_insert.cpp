@@ -1,15 +1,16 @@
+#include "duckdb/planner/operator/logical_insert.hpp"
+
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
 #include "duckdb/common/field_writer.hpp"
-#include "duckdb/planner/operator/logical_insert.hpp"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/parser/parsed_data/create_table_info.hpp"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
 
 namespace duckdb {
 
 LogicalInsert::LogicalInsert(TableCatalogEntry &table, idx_t table_index)
     : LogicalOperator(LogicalOperatorType::LOGICAL_INSERT), table(table), table_index(table_index), return_chunk(false), action_type(OnConflictAction::THROW)
 {
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_property_relation = new CDerivedPropRelation();
 	m_group_expression = nullptr;
 	m_derived_property_plan = nullptr;
 	m_required_plan_property = nullptr;

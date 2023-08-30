@@ -28,7 +28,7 @@ const CHAR*COrderProperty::m_szOrderMatching[EomSentinel] = {"satisfy"};
 //
 //---------------------------------------------------------------------------
 COrderProperty::COrderProperty(COrderSpec* pos, EOrderMatching eom)
-	: m_pos(pos), m_eom(eom)
+	: m_sort_order(pos), m_order_match_type(eom)
 {
 }
 
@@ -57,10 +57,10 @@ COrderProperty::~COrderProperty()
 //---------------------------------------------------------------------------
 bool COrderProperty::FCompatible(COrderSpec* pos) const
 {
-	switch (m_eom)
+	switch (m_order_match_type)
 	{
 		case EomSatisfy:
-			return pos->FSatisfies(m_pos);
+			return pos->FSatisfies(m_sort_order);
 		case EomSentinel:
 			break;
 	}
@@ -78,7 +78,7 @@ bool COrderProperty::FCompatible(COrderSpec* pos) const
 //---------------------------------------------------------------------------
 ULONG COrderProperty::HashValue() const
 {
-	return gpos::CombineHashes(m_eom + 1, m_pos->HashValue());
+	return gpos::CombineHashes(m_order_match_type + 1, m_sort_order->HashValue());
 }
 
 //---------------------------------------------------------------------------
@@ -93,7 +93,7 @@ COrderProperty::EPropEnforcingType COrderProperty::Epet(CExpressionHandle &exprh
 {
 	if (fOrderReqd)
 	{
-		return popPhysical->EpetOrder(exprhdl, this->m_pos->m_pdrgpoe);
+		return popPhysical->EpetOrder(exprhdl, this->m_sort_order->orderby_node);
 	}
 	return EpetUnnecessary;
 }

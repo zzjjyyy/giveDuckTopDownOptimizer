@@ -1,8 +1,9 @@
 #include "duckdb/execution/operator/projection/physical_projection.hpp"
-#include "duckdb/parallel/thread_context.hpp"
+
 #include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
+#include "duckdb/parallel/thread_context.hpp"
 #include "duckdb/planner/expression/bound_reference_expression.hpp"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
 
 namespace duckdb
 {

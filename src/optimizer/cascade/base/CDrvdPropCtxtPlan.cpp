@@ -6,8 +6,9 @@
 //		Derived plan properties context
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
+
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropPlan.h"
 
 using namespace gpopt;
 
@@ -20,7 +21,7 @@ using namespace gpopt;
 //
 //---------------------------------------------------------------------------
 CDrvdPropCtxtPlan::CDrvdPropCtxtPlan(BOOL fUpdateCTEMap)
-	: CDrvdPropCtxt()
+	: CDerivedPropertyContext()
 {
 }
 
@@ -44,7 +45,7 @@ CDrvdPropCtxtPlan::~CDrvdPropCtxtPlan()
 //		Copy function
 //
 //---------------------------------------------------------------------------
-CDrvdPropCtxt* CDrvdPropCtxtPlan::PdpctxtCopy() const
+CDerivedPropertyContext * CDrvdPropCtxtPlan::PdpctxtCopy() const
 {
 	CDrvdPropCtxtPlan* pdpctxtplan = new CDrvdPropCtxtPlan();
 	return pdpctxtplan;
@@ -58,7 +59,7 @@ CDrvdPropCtxt* CDrvdPropCtxtPlan::PdpctxtCopy() const
 //		Add props to context
 //
 //---------------------------------------------------------------------------
-void CDrvdPropCtxtPlan::AddProps(CDrvdProp* pdp)
+void CDrvdPropCtxtPlan::AddProps(CDerivedProperty * pdp)
 {
 	return;
 }

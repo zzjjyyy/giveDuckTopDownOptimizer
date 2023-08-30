@@ -23,7 +23,7 @@ using namespace gpos;
 // forward declarations
 class CGroup;
 class CGroupExpression;
-class CDrvdProp;
+class CDerivedProperty;
 class CDrvdPropCtxtPlan;
 class CGroupProxy;
 class COptimizationContext;
@@ -122,7 +122,7 @@ public:
 	// list of duplicate group expressions identified by group merge
 	std::list<CGroupExpression *> m_duplicate_group_exprs;
 	// group derived properties
-	CDrvdProp *m_derived_properties;
+	CDerivedProperty *m_derived_properties;
 	// scalar expression for stat derivation (subqueries substituted with a dummy)
 	Expression *m_scalar_expr;
 	// scalar expression above is exactly the same as the scalar expr in the group
@@ -178,7 +178,7 @@ public:
 	// move duplicate group expression to duplicates list
 	void MoveDuplicateGExpr(CGroupExpression *pgexpr);
 	// initialize group's properties
-	void InitProperties(CDrvdProp *pdp);
+	void InitProperties(CDerivedProperty *pdp);
 	// retrieve first group expression
 	list<CGroupExpression *>::iterator FirstGroupExpr();
 	// retrieve next group expression

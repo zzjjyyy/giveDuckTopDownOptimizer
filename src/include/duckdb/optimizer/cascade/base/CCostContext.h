@@ -19,7 +19,7 @@ using namespace duckdb;
 
 namespace gpopt {
 // fwd declarations
-class CDrvdPropPlan;
+class CDerivedPropPlan;
 class CCostContext;
 
 // cost context pointer definition
@@ -55,6 +55,10 @@ public:
 	};
 
 public:
+	CCostContext(COptimizationContext *poc, ULONG ulOptReq, CGroupExpression *pgexpr);
+	CCostContext(const CCostContext &) = delete;
+	virtual ~CCostContext();
+
 	// cost of group expression under optimization context
 	double m_cost;
 	// cost context state
@@ -66,7 +70,7 @@ public:
 	// array of optimization contexts of child groups
 	duckdb::vector<COptimizationContext *> m_optimization_contexts;
 	// derived properties of the carried plan
-	CDrvdPropPlan *m_derived_prop_plan;
+	CDerivedPropPlan *m_derived_prop_plan;
 	// optimization request number
 	ULONG m_optimization_request_num;
 	// flag to indicate if cost context is pruned,
@@ -77,16 +81,6 @@ public:
 	COptimizationContext *m_poc;
 	// link for cost context hash table in CGroupExpression
 	SLink m_link;
-
-public:
-	// ctor
-	CCostContext(COptimizationContext *poc, ULONG ulOptReq, CGroupExpression *pgexpr);
-
-	// private copy ctor
-	CCostContext(const CCostContext &) = delete;
-
-	// dtor
-	virtual ~CCostContext();
 
 public:
 	// for two cost contexts with join plans of the same cost, break the tie based on join depth,

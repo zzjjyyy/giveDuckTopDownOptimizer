@@ -15,7 +15,7 @@
 
 namespace gpopt {
 class CGroup;
-class CDrvdProp;
+class CDerivedProperty;
 class CDrvdPropCtxtPlan;
 class CMemoProxy;
 class COptimizationContext;
