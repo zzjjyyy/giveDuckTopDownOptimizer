@@ -38,10 +38,10 @@ const CGroupExpression CGroupExpression::M_INVALID_GROUP_EXPR;
 //
 //---------------------------------------------------------------------------
 CGroupExpression::CGroupExpression(duckdb::unique_ptr<Operator> op, duckdb::vector<CGroup *> groups,
-                                   CXform::EXformId xform_id, CGroupExpression *group_expr_origin, bool fIntermediate)
+                                   CXform::EXformId xform_id, CGroupExpression *group_expr_origin, bool is_intermediate)
     : m_id(GPOPT_INVALID_GEXPR_ID), m_duplicate_group_expr(nullptr), m_operator(std::move(op)), m_child_groups(groups),
       m_group(nullptr), m_xform_id_origin(xform_id), m_group_expr_origin(group_expr_origin),
-      m_intermediate(fIntermediate), m_estate(estUnexplored), m_eol(EolLow), m_circular_dependency(ecdDefault) {
+      m_intermediate(is_intermediate), m_estate(estUnexplored), m_eol(EolLow), m_circular_dependency(ecdDefault) {
 	// store sorted array of children for faster comparison
 	if (1 < groups.size() && !m_operator->FInputOrderSensitive()) {
 		m_child_groups_sorted.insert(m_child_groups_sorted.end(), groups.begin(), groups.end());
@@ -614,7 +614,7 @@ bool CGroupExpression::ContainsCircularDependencies() {
 	duckdb::vector<CGroup *> child_groups = m_child_groups;
 	for (ULONG ul = 0; ul < child_groups.size(); ul++) {
 		CGroup *child_group = child_groups[ul];
-		if (child_group->m_is_calar)
+		if (child_group->m_is_scalar)
 			continue;
 		CGroup *child_duplicate_group = child_group->m_group_for_duplicate_groups;
 		if (child_duplicate_group != nullptr) {

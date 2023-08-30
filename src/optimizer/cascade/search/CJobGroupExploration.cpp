@@ -9,6 +9,7 @@
 //		Implementation of group exploration job
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CJobGroupExploration.h"
+
 #include "duckdb/optimizer/cascade/engine/CEngine.h"
 #include "duckdb/optimizer/cascade/search/CGroup.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
@@ -42,11 +43,10 @@ using namespace gpopt;
 // |      estCompleted      |
 // +------------------------+
 //
-const CJobGroupExploration::EEvent rgeev2[CJobGroupExploration::estSentinel][CJobGroupExploration::estSentinel] =
-{
-	{CJobGroupExploration::eevSentinel, CJobGroupExploration::eevStartedExploration, CJobGroupExploration::eevSentinel},
-	{CJobGroupExploration::eevSentinel, CJobGroupExploration::eevNewChildren, CJobGroupExploration::eevExplored},
-	{CJobGroupExploration::eevSentinel, CJobGroupExploration::eevSentinel, CJobGroupExploration::eevSentinel},
+const CJobGroupExploration::EEvent rgeev2[CJobGroupExploration::estSentinel][CJobGroupExploration::estSentinel] = {
+    {CJobGroupExploration::eevSentinel, CJobGroupExploration::eevStartedExploration, CJobGroupExploration::eevSentinel},
+    {CJobGroupExploration::eevSentinel, CJobGroupExploration::eevNewChildren, CJobGroupExploration::eevExplored},
+    {CJobGroupExploration::eevSentinel, CJobGroupExploration::eevSentinel, CJobGroupExploration::eevSentinel},
 };
 
 //---------------------------------------------------------------------------
@@ -57,8 +57,7 @@ const CJobGroupExploration::EEvent rgeev2[CJobGroupExploration::estSentinel][CJo
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::CJobGroupExploration()
-{
+CJobGroupExploration::CJobGroupExploration() {
 }
 
 //---------------------------------------------------------------------------
@@ -69,8 +68,7 @@ CJobGroupExploration::CJobGroupExploration()
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::~CJobGroupExploration()
-{
+CJobGroupExploration::~CJobGroupExploration() {
 }
 
 //---------------------------------------------------------------------------
@@ -81,8 +79,7 @@ CJobGroupExploration::~CJobGroupExploration()
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void CJobGroupExploration::Init(CGroup* pgroup)
-{
+void CJobGroupExploration::Init(CGroup *pgroup) {
 	CJobGroup::Init(pgroup);
 	m_jsm.Init(rgeev2);
 	// set job actions
@@ -101,18 +98,15 @@ void CJobGroupExploration::Init(CGroup* pgroup)
 //		the function returns true if it could schedule any new jobs
 //
 //---------------------------------------------------------------------------
-bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext* psc)
-{
-	auto pgexprLast = m_pgexprLastScheduled;
+bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext *psc) {
+	auto last_expr = m_last_scheduled_expr;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
-	while (m_pgroup->m_group_exprs.end() != itr)
-	{
-		CGroupExpression* pgexpr = *itr;
-		if (!pgexpr->FTransitioned(CGroupExpression::estExplored))
-		{
-			CJobGroupExpressionExploration::ScheduleJob(psc, pgexpr, this);
-			pgexprLast = itr;
+	while (m_pgroup->m_group_exprs.end() != itr) {
+		CGroupExpression *expr = *itr;
+		if (!expr->FTransitioned(CGroupExpression::estExplored)) {
+			CJobGroupExpressionExploration::ScheduleJob(psc, expr, this);
+			last_expr = itr;
 		}
 		// move to next expression
 		{
@@ -120,9 +114,9 @@ bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext* psc)
 			++itr;
 		}
 	}
-	bool fNewJobs = (m_pgexprLastScheduled != pgexprLast);
+	bool fNewJobs = (m_last_scheduled_expr != last_expr);
 	// set last scheduled expression
-	m_pgexprLastScheduled = itr;
+	m_last_scheduled_expr = itr;
 	return fNewJobs;
 }
 
@@ -134,11 +128,10 @@ bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext* psc)
 //		Start group exploration
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedulerContext* psc, CJob* pjOwner)
-{
+CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedulerContext *psc, CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupExploration* pjge = PjConvert(pjOwner);
-	CGroup* pgroup = pjge->m_pgroup;
+	CJobGroupExploration *pjge = PjConvert(pjOwner);
+	CGroup *pgroup = pjge->m_pgroup;
 	// move group to exploration state
 	{
 		CGroupProxy gp(pgroup);
@@ -155,25 +148,20 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedul
 //		Explore child group expressions
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedulerContext* psc, CJob* pjOwner)
-{
+CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedulerContext *psc, CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupExploration* pjge = PjConvert(pjOwner);
-	if (pjge->FScheduleGroupExpressions(psc))
-	{
+	CJobGroupExploration *pjge = PjConvert(pjOwner);
+	if (pjge->FScheduleGroupExpressions(psc)) {
 		// new expressions have been added to group
 		return eevNewChildren;
-	}
-	else
-	{
+	} else {
 		// no new expressions have been added to group, move to explored state
 		{
 			CGroupProxy gp(pjge->m_pgroup);
 			gp.SetState(CGroup::estExplored);
 		}
 		// if this is the root, complete exploration phase
-		if (psc->m_engine->FRoot(pjge->m_pgroup))
-		{
+		if (psc->m_engine->FRoot(pjge->m_pgroup)) {
 			psc->m_engine->FinalizeExploration();
 		}
 		return eevExplored;
@@ -188,8 +176,7 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedule
 //		Main job function
 //
 //---------------------------------------------------------------------------
-bool CJobGroupExploration::FExecute(CSchedulerContext* psc)
-{
+bool CJobGroupExploration::FExecute(CSchedulerContext *psc) {
 	return m_jsm.FRun(psc, this);
 }
 
@@ -201,11 +188,10 @@ bool CJobGroupExploration::FExecute(CSchedulerContext* psc)
 //		Schedule a new group exploration job
 //
 //---------------------------------------------------------------------------
-void CJobGroupExploration::ScheduleJob(CSchedulerContext* psc, CGroup* pgroup, CJob* pjParent)
-{
-	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExploration);
+void CJobGroupExploration::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent) {
+	CJob *pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExploration);
 	// initialize job
-	CJobGroupExploration* pjge = PjConvert(pj);
+	CJobGroupExploration *pjge = PjConvert(pj);
 	pjge->Init(pgroup);
 	psc->m_scheduler->Add(pjge, pjParent);
 }

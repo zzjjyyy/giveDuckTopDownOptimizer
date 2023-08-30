@@ -37,7 +37,7 @@ namespace gpopt {
 //---------------------------------------------------------------------------
 CExpressionHandle::CExpressionHandle()
     : m_pop(nullptr), m_expr(nullptr), m_pgexpr(nullptr), m_pcc(nullptr), m_derived_prop_pplan(nullptr),
-      m_prp(nullptr) {
+      m_required_property(nullptr) {
 }
 
 //---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ void CExpressionHandle::DerivePlanPropsForCostContext() {
 	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
 	// CopyStats();
 	// create/derive local properties
-	m_derived_prop_pplan = m_pgexpr->m_operator->PdpCreate();
+	m_derived_prop_pplan = m_pgexpr->m_operator->CreateDerivedProperty();
 	m_derived_prop_pplan->Derive(*this, pdpctxtplan);
 	delete pdpctxtplan;
 }
@@ -163,14 +163,14 @@ void CExpressionHandle::DerivePlanPropsForCostContext() {
 //---------------------------------------------------------------------------
 void CExpressionHandle::InitReqdProps(CRequiredProperty *prpInput) {
 	// set required properties of attached expr/gexpr
-	m_prp = prpInput;
+	m_required_property = prpInput;
 	// compute required properties of children
 	// initialize array with input requirements,
 	// the initial requirements are only place holders in the array
 	// and they are replaced when computing the requirements of each child
 	const ULONG arity = Arity();
 	for (ULONG ul = 0; ul < arity; ul++) {
-		m_pdrgprp.push_back(m_prp);
+		m_children_required_properties.push_back(m_required_property);
 	}
 }
 
@@ -180,16 +180,15 @@ void CExpressionHandle::InitReqdProps(CRequiredProperty *prpInput) {
 //
 //	@doc:
 //		Compute required properties of the n-th child
-//
-//
 //---------------------------------------------------------------------------
-void CExpressionHandle::ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt,
-                                              ULONG ulOptReq) {
+void CExpressionHandle::ComputeChildReqdProps(ULONG child_index,
+                                              duckdb::vector<CDerivedProperty *> derived_property_children,
+                                              ULONG num_opt_request) {
 	// compute required properties based on child type
-	CRequiredProperty *prp = Pop()->PrpCreate();
-	prp->Compute(*this, m_prp, child_index, pdrgpdpCtxt, ulOptReq);
+	CRequiredProperty *property = Pop()->CreateRequiredProperty();
+	property->Compute(*this, m_required_property, child_index, derived_property_children, num_opt_request);
 	// replace required properties of given child
-	m_pdrgprp[child_index] = prp;
+	m_children_required_properties[child_index] = property;
 }
 
 //---------------------------------------------------------------------------
@@ -201,7 +200,7 @@ void CExpressionHandle::ComputeChildReqdProps(ULONG child_index, duckdb::vector<
 //
 //---------------------------------------------------------------------------
 void CExpressionHandle::CopyChildReqdProps(ULONG child_index, CRequiredProperty *prp) {
-	m_pdrgprp[child_index] = prp;
+	m_children_required_properties[child_index] = prp;
 }
 
 //---------------------------------------------------------------------------
@@ -213,10 +212,10 @@ void CExpressionHandle::CopyChildReqdProps(ULONG child_index, CRequiredProperty 
 //
 //---------------------------------------------------------------------------
 void CExpressionHandle::ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt) {
-	CRequiredProperty *prp = Pop()->PrpCreate();
-	CRequiredPropPlan::Prpp(prp)->ComputeReqdCols(*this, m_prp, child_index, pdrgpdpCtxt);
+	CRequiredProperty *prp = Pop()->CreateRequiredProperty();
+	CRequiredPropPlan::Prpp(prp)->ComputeReqdCols(*this, m_required_property, child_index, pdrgpdpCtxt);
 	// replace required properties of given child
-	m_pdrgprp[child_index] = prp;
+	m_children_required_properties[child_index] = prp;
 }
 
 //---------------------------------------------------------------------------
@@ -426,21 +425,21 @@ CDerivedPropPlan *CExpressionHandle::Pdpplan(ULONG child_index) const {
 //
 //---------------------------------------------------------------------------
 CRequiredPropRelational *CExpressionHandle::GetReqdRelationalProps(ULONG child_index) const {
-	CRequiredProperty *prp = m_pdrgprp[child_index];
+	CRequiredProperty *prp = m_children_required_properties[child_index];
 	return CRequiredPropRelational::GetReqdRelationalProps(prp);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CExpressionHandle::Prpp
+//		CExpressionHandle::RequiredPropPlan
 //
 //	@doc:
 //		Retrieve required relational props of n-th child;
 //		Assumes caller knows what properties to ask for;
 //
 //---------------------------------------------------------------------------
-CRequiredPropPlan *CExpressionHandle::Prpp(ULONG child_index) const {
-	CRequiredProperty *prp = m_pdrgprp[child_index];
+CRequiredPropPlan *CExpressionHandle::RequiredPropPlan(ULONG child_index) const {
+	CRequiredProperty *prp = m_children_required_properties[child_index];
 	return CRequiredPropPlan::Prpp(prp);
 }
 

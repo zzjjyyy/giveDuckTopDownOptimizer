@@ -31,7 +31,7 @@ list<CGroupExpression *>::iterator CBinding::PgexprNext(CGroup *pgroup, CGroupEx
 		return gp.PgexprFirst();
 	}
 	auto itr = std::find(gp.m_pgroup->m_group_exprs.begin(), gp.m_pgroup->m_group_exprs.end(), pgexpr);
-	if (pgroup->m_is_calar) {
+	if (pgroup->m_is_scalar) {
 		return ++itr;
 	}
 	// for non-scalar group, we only consider logical expressions in bindings
@@ -98,11 +98,11 @@ Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPatter
 	}
 	// for a scalar operator, there is always only one group expression in it's
 	// group. scalar operators are required to derive the scalar properties only
-	// and no xforms are applied to them (i.e no PxfsCandidates in scalar op)
+	// and no xforms are applied to them (i.e no XformCandidates in scalar op)
 	// specifically which will generate equivalent scalar operators in the same group.
 	// so, if a scalar op been extracted once, there is no need to explore
 	// all the child bindings, as the scalar properites will remain the same.
-	if (NULL != pexprLast && pgexpr->m_group->m_is_calar) {
+	if (NULL != pexprLast && pgexpr->m_group->m_is_scalar) {
 		return NULL;
 	}
 	duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr;

@@ -24,6 +24,7 @@ class CCostContext;
 class CGroupExpression;
 class CDerivedPropPlan;
 class CDerivedPropRelation;
+class CRequiredPropRelational;
 class CDrvdPropCtxtPlan;
 class CPropConstraint;
 
@@ -55,8 +56,10 @@ public:
 	CDerivedPropRelation *m_derived_property_relation;
 	//! derived properties of the carried plan
 	CDerivedPropPlan *m_derived_property_plan;
+	//! required relational properties
+	CRequiredPropRelational *m_required_property_relation;
 	//! required plan properties
-	CRequiredPropPlan *m_required_plan_property;
+	CRequiredPropPlan *m_required_property_plan;
 	double m_cost;
 
 	// --------------------------- DuckDB ----------------------
@@ -84,7 +87,7 @@ public:
 		D_ASSERT(child);
 		children.emplace_back(std::move(child));
 	}
-	
+
 	//! Return a vector of the types that will be returned by this operator
 	const duckdb::vector<LogicalType> &GetTypes() const {
 		return types;
@@ -146,9 +149,14 @@ public:
 		return nullptr;
 	}
 	//! create container for derived properties
-	virtual CDerivedProperty *PdpCreate() {
+	virtual CDerivedProperty *CreateDerivedProperty() {
 		return nullptr;
 	}
+	//! create container for required properties
+	virtual CRequiredProperty *CreateRequiredProperty() const {
+		return nullptr;
+	}
+
 	//! is operator logical?
 	virtual bool FLogical() const {
 		return ((logical_type != LogicalOperatorType::LOGICAL_INVALID) &&
@@ -171,10 +179,6 @@ public:
 	//! sensitivity to order of inputs
 	virtual bool FInputOrderSensitive() {
 		return false;
-	};
-	//! create container for required properties
-	virtual CRequiredProperty *PrpCreate() const {
-		return nullptr;
 	};
 	//! match function, abstract to enforce an implementation for each new operator
 	virtual bool Matches(Operator *pop) {

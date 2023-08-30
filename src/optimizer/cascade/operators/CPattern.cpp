@@ -14,27 +14,27 @@ using namespace duckdb;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPattern::PdpCreate
+//		CPattern::CreateDerivedProperty
 //
 //	@doc:
 //		Pattern operators cannot derive properties; the assembly of the
 //		expression has to take care of this on a higher level
 //
 //---------------------------------------------------------------------------
-CDerivedProperty *CPattern::PdpCreate() {
+CDerivedProperty *CPattern::CreateDerivedProperty() {
 	return nullptr;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPattern::PrpCreate
+//		CPattern::CreateRequiredProperty
 //
 //	@doc:
 //		Pattern operators cannot compute required properties; the assembly of the
 //		expression has to take care of this on a higher level
 //
 //---------------------------------------------------------------------------
-CRequiredProperty *CPattern::PrpCreate() const {
+CRequiredProperty *CPattern::CreateRequiredProperty() const {
 	return nullptr;
 }
 

@@ -24,7 +24,7 @@ public:
 		m_derived_property_relation = new CDerivedPropRelation();
 		m_group_expression = nullptr;
 		m_derived_property_plan = nullptr;
-		m_required_plan_property = nullptr;
+		m_required_property_plan = nullptr;
 	}
 
 	idx_t table_index;
@@ -55,7 +55,7 @@ public:
 		return 1;
 	}
 
-	CXform_set *PxfsCandidates() const override;
+	CXform_set *XformCandidates() const override;
 
 	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 

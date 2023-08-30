@@ -13,7 +13,7 @@ LogicalInsert::LogicalInsert(TableCatalogEntry &table, idx_t table_index)
 	m_derived_property_relation = new CDerivedPropRelation();
 	m_group_expression = nullptr;
 	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_required_property_plan = nullptr;
 }
 
 void LogicalInsert::Serialize(FieldWriter &writer) const {

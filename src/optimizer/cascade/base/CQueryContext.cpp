@@ -26,7 +26,7 @@ CQueryContext::CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPropPla
                              bool derive_stats)
     : m_required_plan_property(property), m_required_output_cols(col_ids), m_derivation_stats(derive_stats) {
 	duckdb::vector<ColumnBinding> output_and_ordering_cols;
-	duckdb::vector<ColumnBinding> order_spec = property->m_sort_order->m_sort_order->PcrsUsed();
+	duckdb::vector<ColumnBinding> order_spec = property->m_sort_order->m_order_spec->PcrsUsed();
 	output_and_ordering_cols.insert(output_and_ordering_cols.end(), col_ids.begin(), col_ids.end());
 	output_and_ordering_cols.insert(output_and_ordering_cols.end(), order_spec.begin(), order_spec.end());
 	for (auto &child : col_names) {
@@ -92,7 +92,42 @@ CQueryContext *CQueryContext::QueryContextGenerate(duckdb::unique_ptr<Operator> 
 	}
 	COrderProperty *order_property = new COrderProperty(pos, COrderProperty::EomSatisfy);
 	CRequiredPropPlan *property_plan = new CRequiredPropPlan(required_cols, order_property);
+
+	// Remove Orderby operators in the logical plan
+	D_ASSERT(expr->logical_type != LogicalOperatorType::LOGICAL_ORDER_BY);
+	OrderByPreprocess(nullptr, expr.get());
+	LogicalOperator *logical_op = (LogicalOperator *)expr.get();
+	Printer::Print("Removing Orderby operators in the logical plan\n");
+	logical_op->Print();
+
 	// Finally, create the CQueryContext
 	return new CQueryContext(std::move(expr), property_plan, sort_order, col_names, derive_stats);
+}
+
+void CQueryContext::OrderByPreprocess(Operator *parent, Operator *expr) {
+	// if this operator is order by, remove it and add order spec to its children
+	if (LogicalOperatorType::LOGICAL_ORDER_BY == expr->logical_type) {
+		auto orderby = (LogicalOrder *)expr;
+		D_ASSERT(orderby->children.size() == 1);
+
+		COrderSpec *spec = new COrderSpec();
+		for (auto &order : orderby->orders) {
+			spec->orderby_node.emplace_back(order.type, order.null_order, order.expression->Copy());
+		}
+		COrderProperty *order_property = new COrderProperty(spec, COrderProperty::EomSatisfy);
+		CRequiredPropPlan *property_plan = new CRequiredPropPlan(duckdb::vector<ColumnBinding>(), order_property);
+
+		parent->m_required_property_plan = property_plan;
+		parent->children[0] = std::move(orderby->children[0]);
+		expr = parent;
+	}
+
+	if (!expr->children.empty()) {
+		for (auto &child : expr->children) {
+			OrderByPreprocess(expr, child.get());
+		}
+	}
+
+	return;
 }
 } // namespace gpopt

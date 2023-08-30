@@ -54,12 +54,12 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
 		CGroup* pgroupChild = (*m_pgexpr)[ul];
-		if (pgroupChild->m_is_calar)
+		if (pgroupChild->m_is_scalar)
 		{
 			// skip scalar children
 			continue;
 		}
-		// CRequiredPropPlan* prppChild = exprhdl.Prpp(ul);
+		// CRequiredPropPlan* prppChild = exprhdl.RequiredPropPlan(ul);
 		if (ul == m_ulChildIndex)
 		{
 			// we have reached a child with a known plan,
@@ -117,7 +117,7 @@ double CPartialPlan::CostCompute()
 	// extract rows from stats
 	double rows = pop->estimated_cardinality;
 	// extract width from stats
-	// double width = m_group_expression->Pgroup()->Pstats()->Width(mp, m_required_plan_property->m_cols).Get();
+	// double width = m_group_expression->Pgroup()->Pstats()->Width(mp, m_required_property_plan->m_cols).Get();
 	// ci.SetWidth(width);
 	// extract rebinds
 	// double num_rebinds = m_group_expression->Pgroup()->Pstats()->NumRebinds().Get();

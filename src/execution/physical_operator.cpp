@@ -5,7 +5,6 @@
 #include "duckdb/common/tree_renderer.hpp"
 #include "duckdb/execution/execution_context.hpp"
 #include "duckdb/execution/operator/projection/physical_projection.hpp"
-#include "duckdb/execution/operator/set/physical_recursive_cte.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/optimizer/cascade/base/CDerivedPropPlan.h"
 #include "duckdb/optimizer/cascade/base/CUtils.h"
@@ -16,8 +15,7 @@
 
 namespace duckdb {
 
-PhysicalOperator::PhysicalOperator(PhysicalOperatorType type, vector<LogicalType> types, idx_t estimated_cardinality)
-{
+PhysicalOperator::PhysicalOperator(PhysicalOperatorType type, vector<LogicalType> types, idx_t estimated_cardinality) {
 	/* PhysicalOperator fields */
 	m_total_opt_requests = 1;
 	/* Operator fields */
@@ -25,7 +23,7 @@ PhysicalOperator::PhysicalOperator(PhysicalOperatorType type, vector<LogicalType
 	m_group_expression = nullptr;
 	m_derived_property_relation = new CDerivedPropRelation();
 	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_required_property_plan = nullptr;
 	m_cost = GPOPT_INVALID_COST;
 	estimated_props = make_uniq<EstimatedProperties>(estimated_cardinality, 0);
 	this->types = types;
@@ -33,45 +31,37 @@ PhysicalOperator::PhysicalOperator(PhysicalOperatorType type, vector<LogicalType
 	has_estimated_cardinality = false;
 }
 
-PhysicalOperator::~PhysicalOperator()
-{
+PhysicalOperator::~PhysicalOperator() {
 }
 
-string PhysicalOperator::GetName() const
-{
+string PhysicalOperator::GetName() const {
 	return PhysicalOperatorToString(physical_type);
 }
 
-string PhysicalOperator::ParamsToString() const
-{
+string PhysicalOperator::ParamsToString() const {
 	return "";
 }
 
-string PhysicalOperator::ToString() const
-{
+string PhysicalOperator::ToString() const {
 	TreeRenderer renderer;
 	return renderer.ToString(*this);
 }
 
 // LCOV_EXCL_START
-void PhysicalOperator::Print() const
-{
+void PhysicalOperator::Print() const {
 	Printer::Print(ToString());
 }
 // LCOV_EXCL_STOP
 
-vector<const_reference<PhysicalOperator>> PhysicalOperator::GetChildren() const
-{
+vector<const_reference<PhysicalOperator>> PhysicalOperator::GetChildren() const {
 	vector<const_reference<PhysicalOperator>> result;
-	for (auto &child : children)
-	{
-		result.push_back(*(PhysicalOperator*)child.get());
+	for (auto &child : children) {
+		result.push_back(*(PhysicalOperator *)child.get());
 	}
 	return result;
 }
 
-bool PhysicalOperator::Equals(const PhysicalOperator &other) const
-{
+bool PhysicalOperator::Equals(const PhysicalOperator &other) const {
 	return false;
 }
 
@@ -79,18 +69,16 @@ bool PhysicalOperator::Equals(const PhysicalOperator &other) const
 // Operator
 //===--------------------------------------------------------------------===//
 // LCOV_EXCL_START
-unique_ptr<OperatorState> PhysicalOperator::GetOperatorState(ExecutionContext &context) const
-{
+unique_ptr<OperatorState> PhysicalOperator::GetOperatorState(ExecutionContext &context) const {
 	return make_uniq<OperatorState>();
 }
 
-unique_ptr<GlobalOperatorState> PhysicalOperator::GetGlobalOperatorState(ClientContext &context) const
-{
+unique_ptr<GlobalOperatorState> PhysicalOperator::GetGlobalOperatorState(ClientContext &context) const {
 	return make_uniq<GlobalOperatorState>();
 }
 
-OperatorResultType PhysicalOperator::Execute(ExecutionContext &context, DataChunk &input, DataChunk &chunk, GlobalOperatorState &gstate, OperatorState &state) const
-{
+OperatorResultType PhysicalOperator::Execute(ExecutionContext &context, DataChunk &input, DataChunk &chunk,
+                                             GlobalOperatorState &gstate, OperatorState &state) const {
 	throw InternalException("Calling Execute on a node that is not an operator!");
 }
 
@@ -178,23 +166,19 @@ void PhysicalOperator::BuildPipelines(Pipeline &current, MetaPipeline &meta_pipe
 
 		// we create a new pipeline starting from the child
 		auto &child_meta_pipeline = meta_pipeline.CreateChildMetaPipeline(current, *this);
-		PhysicalOperator* physical_children = (PhysicalOperator*)(children[0].get());
+		PhysicalOperator *physical_children = (PhysicalOperator *)(children[0].get());
 		child_meta_pipeline.Build(*physical_children);
-	}
-	else
-	{
+	} else {
 		// operator is not a sink! recurse in children
-		if (children.empty())
-		{
+		if (children.empty()) {
 			// source
 			state.SetPipelineSource(current, *this);
 		} else {
-			if (children.size() != 1)
-			{
+			if (children.size() != 1) {
 				throw InternalException("Operator not supported in BuildPipelines");
 			}
 			state.AddPipelineOperator(current, *this);
-			PhysicalOperator* physical_children = (PhysicalOperator*)(children[0].get());
+			PhysicalOperator *physical_children = (PhysicalOperator *)(children[0].get());
 			physical_children->BuildPipelines(current, meta_pipeline);
 		}
 	}
@@ -215,10 +199,11 @@ vector<const_reference<PhysicalOperator>> PhysicalOperator::GetSources() const {
 			if (children.size() != 1) {
 				throw InternalException("Operator not supported in GetSource");
 			}
-			PhysicalOperator* physical_children = (PhysicalOperator*)(children[0].get());
+			PhysicalOperator *physical_children = (PhysicalOperator *)(children[0].get());
 			return physical_children->GetSources();
 		}
-	}}
+	}
+}
 
 bool PhysicalOperator::AllSourcesSupportBatchIndex() const {
 	auto sources = GetSources();
@@ -230,33 +215,37 @@ bool PhysicalOperator::AllSourcesSupportBatchIndex() const {
 	return true;
 }
 
-void PhysicalOperator::Verify()
-{
+void PhysicalOperator::Verify() {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CPhysical::PdpCreate
+//		CPhysical::CreateDerivedProperty
 //
 //	@doc:
 //		Create base container of derived properties
 //
 //---------------------------------------------------------------------------
-CDerivedProperty * PhysicalOperator::PdpCreate()
-{
+CDerivedProperty *PhysicalOperator::CreateDerivedProperty() {
 	return new CDerivedPropPlan();
 }
 
-COrderProperty::EOrderMatching PhysicalOperator::Eom(CRequiredPropPlan *, ULONG, vector<CDerivedProperty *>, ULONG) {
+CRequiredProperty *PhysicalOperator::CreateRequiredProperty() const {
+	return new CRequiredPropPlan();
+}
+
+COrderProperty::EOrderMatching PhysicalOperator::OrderMatching(CRequiredPropPlan *, ULONG, vector<CDerivedProperty *>,
+                                                               ULONG) {
 	return COrderProperty::EomSatisfy;
 }
 
 // The ColumnBinding will change after pass through the projection operator
-unique_ptr<Expression> PhysicalOperator::ExpressionPassThrough(const PhysicalOperator* op, Expression* expr) {
+unique_ptr<Expression> PhysicalOperator::ExpressionPassThrough(const PhysicalOperator *op, Expression *expr) {
 	if (op->physical_type == PhysicalOperatorType::PROJECTION) {
 		D_ASSERT(expr->expression_class == ExpressionClass::BOUND_COLUMN_REF);
-		PhysicalProjection* proj = (PhysicalProjection*)op;
-		unique_ptr<BoundColumnRefExpression> result = unique_ptr_cast<Expression, BoundColumnRefExpression>(expr->Copy());
+		PhysicalProjection *proj = (PhysicalProjection *)op;
+		unique_ptr<BoundColumnRefExpression> result =
+		    unique_ptr_cast<Expression, BoundColumnRefExpression>(expr->Copy());
 		idx_t idx = result->binding.column_index;
 		return proj->select_list[idx]->Copy();
 	} else {
@@ -264,22 +253,24 @@ unique_ptr<Expression> PhysicalOperator::ExpressionPassThrough(const PhysicalOpe
 	}
 }
 
-COrderProperty::EPropEnforcingType PhysicalOperator::EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const {
+COrderProperty::EPropEnforcingType PhysicalOperator::EenforcingTypeOrder(CExpressionHandle &exprhdl,
+                                                                         vector<BoundOrderByNode> &peo) const {
 	if (exprhdl.Pgexpr() != nullptr) {
 		vector<BoundOrderByNode> v;
 		/* In case inconsistence */
-		for(auto &child : peo) {
+		for (auto &child : peo) {
 			unique_ptr<Expression> new_expr = ExpressionPassThrough(this, child.expression.get());
 			v.emplace_back(child.type, child.null_order, std::move(new_expr));
 		}
 		// derive all the possible order of this CGroupExpression
-		CGroupExpression* pgexpr = exprhdl.Pgexpr();
-		if(pgexpr->m_child_groups.size() > 0) {
+		CGroupExpression *pgexpr = exprhdl.Pgexpr();
+		if (pgexpr->m_child_groups.size() > 0) {
 			// Only the order of the first child influence the order of its parent
-			CGroup* gp = pgexpr->m_child_groups[0];
+			CGroup *gp = pgexpr->m_child_groups[0];
 			for (auto iter = gp->m_sht.begin(); iter != gp->m_sht.end(); iter++) {
 				auto op_ctxt = iter->second;
-				if(CUtils::ContainsAll(op_ctxt->m_required_plan_properties->m_sort_order->m_sort_order->orderby_node, v)) {
+				if (CUtils::ContainsAll(op_ctxt->m_required_plan_properties->m_sort_order->m_order_spec->orderby_node,
+				                        v)) {
 					return COrderProperty::EPropEnforcingType::EpetOptional;
 				}
 			}
@@ -288,8 +279,7 @@ COrderProperty::EPropEnforcingType PhysicalOperator::EpetOrder(CExpressionHandle
 	return COrderProperty::EPropEnforcingType::EpetRequired;
 }
 
-bool CachingPhysicalOperator::CanCacheType(const LogicalType &type)
-{
+bool CachingPhysicalOperator::CanCacheType(const LogicalType &type) {
 	switch (type.id()) {
 	case LogicalTypeId::LIST:
 	case LogicalTypeId::MAP:
@@ -308,21 +298,20 @@ bool CachingPhysicalOperator::CanCacheType(const LogicalType &type)
 	}
 }
 
-CachingPhysicalOperator::CachingPhysicalOperator(PhysicalOperatorType type, vector<LogicalType> types_p, idx_t estimated_cardinality)
-    : PhysicalOperator(type, std::move(types_p), estimated_cardinality)
-{
+CachingPhysicalOperator::CachingPhysicalOperator(PhysicalOperatorType type, vector<LogicalType> types_p,
+                                                 idx_t estimated_cardinality)
+    : PhysicalOperator(type, std::move(types_p), estimated_cardinality) {
 	caching_supported = true;
-	for (auto &col_type : types)
-	{
-		if (!CanCacheType(col_type))
-		{
+	for (auto &col_type : types) {
+		if (!CanCacheType(col_type)) {
 			caching_supported = false;
 			break;
 		}
 	}
 }
 
-OperatorResultType CachingPhysicalOperator::Execute(ExecutionContext &context, DataChunk &input, DataChunk &chunk, GlobalOperatorState &gstate, OperatorState &state_p) const {
+OperatorResultType CachingPhysicalOperator::Execute(ExecutionContext &context, DataChunk &input, DataChunk &chunk,
+                                                    GlobalOperatorState &gstate, OperatorState &state_p) const {
 	auto &state = state_p.Cast<CachingOperatorState>();
 	// Execute child operator
 	auto child_result = ExecuteInternal(context, input, chunk, gstate, state);
@@ -373,7 +362,9 @@ OperatorResultType CachingPhysicalOperator::Execute(ExecutionContext &context, D
 	return child_result;
 }
 
-OperatorFinalizeResultType CachingPhysicalOperator::FinalExecute(ExecutionContext &context, DataChunk &chunk, GlobalOperatorState &gstate, OperatorState &state_p) const {
+OperatorFinalizeResultType CachingPhysicalOperator::FinalExecute(ExecutionContext &context, DataChunk &chunk,
+                                                                 GlobalOperatorState &gstate,
+                                                                 OperatorState &state_p) const {
 	auto &state = state_p.Cast<CachingOperatorState>();
 	if (state.cached_chunk) {
 		chunk.Move(*state.cached_chunk);
@@ -386,19 +377,6 @@ OperatorFinalizeResultType CachingPhysicalOperator::FinalExecute(ExecutionContex
 
 //---------------------------------------------------------------------------
 //	@function:
-//		PhysicalOperator::PrpCreate
-//
-//	@doc:
-//		Create base container of required properties
-//
-//---------------------------------------------------------------------------
-CRequiredProperty * PhysicalOperator::PrpCreate() const
-{
-	return new CRequiredPropPlan();
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CPhysical::FUnaryProvidesReqdCols
 //
 //	@doc:
@@ -406,8 +384,7 @@ CRequiredProperty * PhysicalOperator::PrpCreate() const
 //		no new columns include the required columns
 //
 //---------------------------------------------------------------------------
-BOOL PhysicalOperator::FUnaryProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired) const
-{
+BOOL PhysicalOperator::FUnaryProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired) const {
 	vector<ColumnBinding> pcrsOutput = exprhdl.DeriveOutputColumns(0);
 	return CUtils::ContainsAll(pcrsOutput, pcrsRequired);
 }
@@ -422,14 +399,14 @@ BOOL PhysicalOperator::FUnaryProvidesReqdCols(CExpressionHandle &exprhdl, vector
 //		scalar
 //
 //---------------------------------------------------------------------------
-vector<ColumnBinding> PhysicalOperator::PcrsChildReqd(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired, ULONG child_index)
-{
+vector<ColumnBinding> PhysicalOperator::PcrsChildReqd(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
+                                                      ULONG child_index) {
 	// intersect computed column set with child's output columns
 	vector<ColumnBinding> output_cols = exprhdl.DeriveOutputColumns(child_index);
 	vector<ColumnBinding> res;
-	for(auto &child : output_cols) {
-		for(auto &sub_child : pcrsRequired) {
-			if(child == sub_child) {
+	for (auto &child : output_cols) {
+		for (auto &sub_child : pcrsRequired) {
+			if (child == sub_child) {
 				res.push_back(child);
 				break;
 			}

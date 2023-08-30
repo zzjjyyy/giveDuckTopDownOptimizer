@@ -41,7 +41,7 @@ public:
 	Operator *SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
 	                        CDrvdPropCtxtPlan *pdpctxtplan) override;
 	// Transformations: candidate set of xforms
-	CXform_set *PxfsCandidates() const override;
+	CXform_set *XformCandidates() const override;
 
 	duckdb::unique_ptr<Operator> Copy() override;
 

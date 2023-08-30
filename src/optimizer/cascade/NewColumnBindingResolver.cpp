@@ -1,11 +1,11 @@
 #include "duckdb/optimizer/cascade/NewColumnBindingResolver.h"
 
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
-#include "duckdb/planner/expression_iterator.hpp"
-#include "duckdb/execution/physical_operator.hpp"
+#include "duckdb/common/enums/physical_operator_type.hpp"
+#include "duckdb/common/to_string.hpp"
 #include "duckdb/execution/operator/aggregate/physical_ungrouped_aggregate.hpp"
-#include "duckdb/execution/operator/helper/physical_limit_percent.hpp"
 #include "duckdb/execution/operator/helper/physical_limit.hpp"
+#include "duckdb/execution/operator/helper/physical_limit_percent.hpp"
 #include "duckdb/execution/operator/join/physical_comparison_join.hpp"
 #include "duckdb/execution/operator/join/physical_delim_join.hpp"
 #include "duckdb/execution/operator/order/physical_order.hpp"
@@ -14,61 +14,49 @@
 #include "duckdb/execution/operator/projection/physical_projection.hpp"
 #include "duckdb/execution/operator/scan/physical_expression_scan.hpp"
 #include "duckdb/execution/operator/schema/physical_create_index.hpp"
-#include "duckdb/common/enums/physical_operator_type.hpp"
+#include "duckdb/execution/physical_operator.hpp"
+#include "duckdb/planner/expression/bound_columnref_expression.hpp"
+#include "duckdb/planner/expression/bound_reference_expression.hpp"
+#include "duckdb/planner/expression_iterator.hpp"
 #include "duckdb/planner/operator/logical_any_join.hpp"
 #include "duckdb/planner/operator/logical_create_index.hpp"
 #include "duckdb/planner/operator/logical_delim_join.hpp"
 #include "duckdb/planner/operator/logical_insert.hpp"
-#include "duckdb/planner/expression/bound_columnref_expression.hpp"
-#include "duckdb/planner/expression/bound_reference_expression.hpp"
-#include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
-#include "duckdb/common/to_string.hpp"
 
-namespace gpopt
-{
-NewColumnBindingResolver::NewColumnBindingResolver()
-{
+namespace gpopt {
+NewColumnBindingResolver::NewColumnBindingResolver() {
 }
 
-void NewColumnBindingResolver::VisitOperatorChildren(PhysicalOperator &op)
-{
-	for (auto &child : op.children)
-	{
-		PhysicalOperator* input = (PhysicalOperator*)child.get();
+void NewColumnBindingResolver::VisitOperatorChildren(PhysicalOperator &op) {
+	for (auto &child : op.children) {
+		PhysicalOperator *input = (PhysicalOperator *)child.get();
 		VisitOperator(*input);
 	}
 }
 
-void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op)
-{
-	switch (op.physical_type)
-	{
-    case PhysicalOperatorType::NESTED_LOOP_JOIN:
-    case PhysicalOperatorType::DELIM_JOIN:
-	case PhysicalOperatorType::HASH_JOIN:
-	{
+void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op) {
+	switch (op.physical_type) {
+	case PhysicalOperatorType::NESTED_LOOP_JOIN:
+	case PhysicalOperatorType::DELIM_JOIN:
+	case PhysicalOperatorType::HASH_JOIN: {
 		// special case: comparison join
 		auto &comp_join = op.Cast<PhysicalComparisonJoin>();
 		// first get the bindings of the LHS and resolve the LHS expressions
-		PhysicalOperator* left_op = (PhysicalOperator*)comp_join.children[0].get();
+		PhysicalOperator *left_op = (PhysicalOperator *)comp_join.children[0].get();
 		VisitOperator(*left_op);
-		for (auto &cond : comp_join.conditions)
-		{
+		for (auto &cond : comp_join.conditions) {
 			VisitExpression(&cond.left);
 		}
-		if (left_op->physical_type == PhysicalOperatorType::DELIM_JOIN)
-		{
+		if (left_op->physical_type == PhysicalOperatorType::DELIM_JOIN) {
 			// visit the duplicate eliminated columns on the LHS, if any
 			auto &delim_join = op.Cast<PhysicalDelimJoin>();
-			for (auto scan : delim_join.delim_scans)
-			{
+			for (auto scan : delim_join.delim_scans) {
 			}
 		}
 		// then get the bindings of the RHS and resolve the RHS expressions
-		PhysicalOperator* right_op = (PhysicalOperator*)comp_join.children[1].get();
+		PhysicalOperator *right_op = (PhysicalOperator *)comp_join.children[1].get();
 		VisitOperator(*right_op);
-		for (auto &cond : comp_join.conditions)
-		{
+		for (auto &cond : comp_join.conditions) {
 			VisitExpression(&cond.right);
 		}
 		// finally update the bindings with the result bindings of the join
@@ -87,8 +75,7 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op)
 		auto &proj = op.Cast<PhysicalProjection>();
 		/* Notice: we do not update bindings here because only the binding from children is correct */
 		/* the GetColumnBindings in Projection is for subquery (I guess) */
-		for (auto &cond : proj.select_list)
-		{
+		for (auto &cond : proj.select_list) {
 			VisitExpression(&cond);
 		}
 		bindings = op.GetColumnBindings();
@@ -97,13 +84,20 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op)
 	case PhysicalOperatorType::ORDER_BY: {
 		VisitOperatorChildren(op);
 		auto &order = op.Cast<PhysicalOrder>();
-		for (auto &child : order.orders)
-		{
+		for (auto &child : order.orders) {
 			VisitExpression(&child.expression);
 		}
 		bindings = op.GetColumnBindings();
 		return;
 	}
+	case PhysicalOperatorType::DUMMY_SCAN:
+		// first visit the children of this operator
+		VisitOperatorChildren(op);
+		// now visit the expressions of this operator to resolve any bound column references
+		VisitOperatorExpressions(op);
+		// finally update the current set of bindings to the current set of column bindings
+		bindings = op.GetColumnBindings();
+		return;
 	default:
 		throw InternalException("Add a new case for %s!", PhysicalOperatorToString(op.physical_type));
 		break;
@@ -117,19 +111,13 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op)
 	bindings = op.GetColumnBindings();
 }
 
-void
-NewColumnBindingResolver::EnumerateExpressions(PhysicalOperator &op,
-                                            const std::function<void(duckdb::unique_ptr<Expression> *child)> &callback)
-{
-	switch (op.physical_type)
-	{
-	case PhysicalOperatorType::EXPRESSION_SCAN:
-	{
+void NewColumnBindingResolver::EnumerateExpressions(
+    PhysicalOperator &op, const std::function<void(duckdb::unique_ptr<Expression> *child)> &callback) {
+	switch (op.physical_type) {
+	case PhysicalOperatorType::EXPRESSION_SCAN: {
 		auto &get = op.Cast<PhysicalExpressionScan>();
-		for (auto &expr_list : get.expressions)
-		{
-			for (auto &expr : expr_list)
-			{
+		for (auto &expr_list : get.expressions) {
+			for (auto &expr : expr_list) {
 				callback(&expr);
 			}
 		}
@@ -200,7 +188,8 @@ NewColumnBindingResolver::EnumerateExpressions(PhysicalOperator &op,
 }
 
 void NewColumnBindingResolver::VisitOperatorExpressions(PhysicalOperator &op) {
-	NewColumnBindingResolver::EnumerateExpressions(op, [&](duckdb::unique_ptr<Expression> *child) { VisitExpression(child); });
+	NewColumnBindingResolver::EnumerateExpressions(
+	    op, [&](duckdb::unique_ptr<Expression> *child) { VisitExpression(child); });
 }
 
 void NewColumnBindingResolver::VisitExpression(duckdb::unique_ptr<Expression> *expression) {
@@ -270,16 +259,12 @@ void NewColumnBindingResolver::VisitExpressionChildren(Expression &expr) {
 	ExpressionIterator::EnumerateChildren(expr, [&](duckdb::unique_ptr<Expression> &expr) { VisitExpression(&expr); });
 }
 
-duckdb::unique_ptr<Expression>
-NewColumnBindingResolver::VisitReplace(BoundColumnRefExpression &expr,
-                                    duckdb::unique_ptr<Expression> *expr_ptr)
-{
+duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundColumnRefExpression &expr,
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	D_ASSERT(expr.depth == 0);
 	// check the current set of column bindings to see which index corresponds to the column reference
-	for (idx_t i = 0; i < bindings.size(); i++)
-	{
-		if (expr.binding == bindings[i])
-		{
+	for (idx_t i = 0; i < bindings.size(); i++) {
+		if (expr.binding == bindings[i]) {
 			return make_uniq<BoundReferenceExpression>(expr.alias, expr.return_type, i);
 		}
 	}
@@ -294,83 +279,84 @@ NewColumnBindingResolver::VisitReplace(BoundColumnRefExpression &expr,
 		bound_columns += to_string(bindings[i].table_index) + "." + to_string(bindings[i].column_index);
 	}
 	bound_columns += "]";
-	throw InternalException("Failed to bind column reference \"%s\" [%d.%d] (bindings: %s)", expr.alias, expr.binding.table_index, expr.binding.column_index, bound_columns);
+	throw InternalException("Failed to bind column reference \"%s\" [%d.%d] (bindings: %s)", expr.alias,
+	                        expr.binding.table_index, expr.binding.column_index, bound_columns);
 	// LCOV_EXCL_STOP
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundAggregateExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundBetweenExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundCaseExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundCastExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundComparisonExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundConjunctionExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundConstantExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundDefaultExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundFunctionExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundOperatorExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundParameterExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundReferenceExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundSubqueryExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundWindowExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
 duckdb::unique_ptr<Expression> NewColumnBindingResolver::VisitReplace(BoundUnnestExpression &expr,
-                                                            duckdb::unique_ptr<Expression> *expr_ptr) {
+                                                                      duckdb::unique_ptr<Expression> *expr_ptr) {
 	return nullptr;
 }
 
-} // namespace duckdb
+} // namespace gpopt

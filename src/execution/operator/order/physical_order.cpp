@@ -18,7 +18,7 @@ PhysicalOrder::PhysicalOrder(vector<LogicalType> types, vector<BoundOrderByNode>
       orders(std::move(orders)), projections(std::move(projections)) {
 }
 
-COrderProperty::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &exprhdl,
+COrderProperty::EPropEnforcingType PhysicalOrder::EenforcingTypeOrder(CExpressionHandle &exprhdl,
                                                         vector<BoundOrderByNode> &peo) const {
 	bool compactible = true;
 	for (size_t ul = 0; ul < peo.size(); ul++) {
@@ -43,7 +43,7 @@ COrderProperty::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &e
 	return COrderProperty::EpetProhibited;
 }
 
-COrderSpec *PhysicalOrder::PosRequired(CExpressionHandle &exprhdl, COrderSpec *pos_required, ULONG child_index,
+COrderSpec *PhysicalOrder::RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *pos_required, ULONG child_index,
                                        vector<CDerivedProperty *> pdrgpdp_ctxt, ULONG ul_opt_req) const {
 	// sort operator is order-establishing and does not require child to deliver
 	// any sort order; we return an empty sort order as child requirement
@@ -130,7 +130,7 @@ unique_ptr<Operator> PhysicalOrder::Copy() {
 	/* Operator fields */
 	copy->m_derived_property_relation = this->m_derived_property_relation;
 	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
@@ -159,7 +159,7 @@ unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression*
 	/* Operator fields */
 	copy->m_derived_property_relation = this->m_derived_property_relation;
 	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
@@ -190,7 +190,7 @@ unique_ptr<Operator> PhysicalOrder::CopyWithNewChildren(CGroupExpression* pgexpr
 	/* Operator fields */
 	copy->m_derived_property_relation = this->m_derived_property_relation;
 	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}

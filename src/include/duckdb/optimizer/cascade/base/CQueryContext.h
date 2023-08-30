@@ -87,6 +87,9 @@ public:
 	//---------------------------------------------------------------------------
 	static CQueryContext *QueryContextGenerate(duckdb::unique_ptr<Operator> expr, duckdb::vector<ULONG *> col_ids,
 	                                           duckdb::vector<std::string> col_names, bool derive_stats);
+
+private:
+	static void OrderByPreprocess(Operator *parent, Operator *expr);
 }; // class CQueryContext
 } // namespace gpopt
 #endif

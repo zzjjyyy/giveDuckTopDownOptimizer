@@ -123,7 +123,7 @@ duckdb::unique_ptr<Operator> PhysicalProjection::Copy()
 	/* Operator fields */
 	result->m_derived_property_relation = this->m_derived_property_relation;
 	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_required_property_plan = this->m_required_property_plan;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();
@@ -156,7 +156,7 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGro
 	/* Operator fields */
 	result->m_derived_property_relation = this->m_derived_property_relation;
 	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_required_property_plan = this->m_required_property_plan;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();
@@ -188,7 +188,7 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewChildren(CGroupExpre
 	/* Operator fields */
 	result->m_derived_property_relation = this->m_derived_property_relation;
 	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_required_property_plan = this->m_required_property_plan;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();

@@ -72,7 +72,7 @@ CDerivedPropPlan *CDerivedPropPlan::DrvdPlanProperty(CDerivedProperty *pdp) {
 //
 //---------------------------------------------------------------------------
 BOOL CDerivedPropPlan::FSatisfies(const CRequiredPropPlan *prop_plan) const {
-	return m_sort_order->FSatisfies(prop_plan->m_sort_order->m_sort_order);
+	return m_sort_order->FSatisfies(prop_plan->m_sort_order->m_order_spec);
 }
 
 //---------------------------------------------------------------------------

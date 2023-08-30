@@ -82,10 +82,11 @@ public:
 public:
 	ULONG HashValue() const override;
 
-	COrderProperty::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
+	COrderProperty::EPropEnforcingType EenforcingTypeOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
 
-	COrderSpec* PosRequired(CExpressionHandle &exprhdl, gpopt::COrderSpec* posRequired,
-							ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt,
+	COrderSpec*RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *posRequired,
+							ULONG child_index,
+	                             vector<CDerivedProperty *> pdrgpdpCtxt,
 							ULONG ulOptReq) const override {
 		return nullptr;
 	}

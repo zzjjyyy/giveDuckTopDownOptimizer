@@ -23,31 +23,35 @@ public:
 	explicit LogicalOrder(vector<BoundOrderByNode> orders);
 
 	vector<BoundOrderByNode> orders;
-
 	vector<idx_t> projections;
 
 public:
 	vector<ColumnBinding> GetColumnBindings() override;
 
-	CKeyCollection* DeriveKeyCollection(CExpressionHandle &exprhdl) override;
-	
-	CPropConstraint* DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
+	CKeyCollection *DeriveKeyCollection(CExpressionHandle &exprhdl) override;
+	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 
 	void Serialize(FieldWriter &writer) const override;
-	
 	static unique_ptr<LogicalOperator> Deserialize(LogicalDeserializationState &state, FieldReader &reader);
 
-	string ParamsToString() const override
-	{
+	string ParamsToString() const override {
 		string result = "ORDERS:\n";
-		for (idx_t i = 0; i < orders.size(); i++)
-		{
+		for (idx_t i = 0; i < orders.size(); i++) {
 			if (i > 0) {
 				result += "\n";
 			}
 			result += orders[i].expression->GetName();
 		}
 		return result;
+	}
+
+	// --------------------------- ORCA ------------------------------
+	duckdb::unique_ptr<Operator> Copy() override;
+
+	CXform_set *XformCandidates() const override {
+		auto xform_set = new CXform_set();
+		xform_set->set(CXform::ExfOrderImplementation);
+		return xform_set;
 	}
 
 protected:

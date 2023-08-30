@@ -88,13 +88,13 @@ void LogicalJoin::Deserialize(LogicalJoin &join, LogicalDeserializationState &st
 
 //---------------------------------------------------------------------------
 //	@function:
-//		LogicalJoin::PxfsCandidates
+//		LogicalJoin::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set * LogicalJoin::PxfsCandidates() const
+CXform_set * LogicalJoin::XformCandidates() const
 {
 	CXform_set * xform_set = new CXform_set();
 	if(join_type == JoinType::INNER)

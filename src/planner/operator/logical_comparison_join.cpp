@@ -95,7 +95,7 @@ unique_ptr<Operator> LogicalComparisonJoin::Copy() {
 	/* Operator fields */
 	copy->m_derived_property_relation = this->m_derived_property_relation;
 	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
@@ -135,7 +135,7 @@ unique_ptr<Operator> LogicalComparisonJoin::CopyWithNewGroupExpression(CGroupExp
 	/* Operator fields */
 	copy->m_derived_property_relation = this->m_derived_property_relation;
 	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
@@ -177,7 +177,7 @@ unique_ptr<Operator> LogicalComparisonJoin::CopyWithNewChildren(CGroupExpression
 	/* Operator fields */
 	copy->m_derived_property_relation = this->m_derived_property_relation;
 	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}

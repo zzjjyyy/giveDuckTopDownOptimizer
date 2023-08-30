@@ -185,13 +185,13 @@ ULONG PhysicalTableScan::HashValue() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		PhysicalTableScan::EpetOrder
+//		PhysicalTableScan::EenforcingTypeOrder
 //
 //	@doc:
 //		Return the enforcing type for order property based on this operator
 //
 //---------------------------------------------------------------------------
-COrderProperty::EPropEnforcingType PhysicalTableScan::EpetOrder(CExpressionHandle &exprhdl,
+COrderProperty::EPropEnforcingType PhysicalTableScan::EenforcingTypeOrder(CExpressionHandle &exprhdl,
                                                             vector<BoundOrderByNode> &peo) const {
 	return COrderProperty::EpetRequired;
 }
@@ -267,7 +267,7 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::Copy() {
 	/* Operator fields */
 	result->m_derived_property_relation = this->m_derived_property_relation;
 	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		result->estimated_props = this->estimated_props->Copy();
 	}
@@ -305,7 +305,7 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::CopyWithNewGroupExpression(CGrou
 	/* Operator fields */
 	result->m_derived_property_relation = this->m_derived_property_relation;
 	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		result->estimated_props = this->estimated_props->Copy();
 	}
@@ -345,7 +345,7 @@ PhysicalTableScan::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<
 	/* Operator fields */
 	result->m_derived_property_relation = this->m_derived_property_relation;
 	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_required_property_plan = this->m_required_property_plan;
 	if (nullptr != this->estimated_props) {
 		result->estimated_props = this->estimated_props->Copy();
 	}

@@ -370,8 +370,8 @@ duckdb::vector<COptimizationContext *> CEngine::ChildrenOptimizationContext(CExp
 	const ULONG arity = exprhdl.Arity();
 	for (ULONG ul = 0; ul < arity; ul++) {
 		CGroup *pgroup_child = (*exprhdl.Pgexpr())[ul];
-		if (!pgroup_child->m_is_calar) {
-			COptimizationContext *poc = pgroup_child->PocLookupBest(m_search_strategy.size(), exprhdl.Prpp(ul));
+		if (!pgroup_child->m_is_scalar) {
+			COptimizationContext *poc = pgroup_child->PocLookupBest(m_search_strategy.size(), exprhdl.RequiredPropPlan(ul));
 			pdrgpoc.emplace_back(poc);
 		}
 	}
@@ -572,68 +572,51 @@ bool CEngine::FValidPlanSample(CEnumeratorConfig *enumerator_config, ULLONG plan
 //		CEngine::FCheckEnforceableProps
 //
 //	@doc:
-//		Check enforceable properties and append enforcers to the current
-// group if 		required.
+//		Check enforceable properties and append enforcers to the current group if required.
 //
 //		This check is done in two steps:
 //
-//		First, it determines if any particular property needs to be
-// enforced at 		all. For example, the EopttraceDisableSort traceflag can
-// disable
-// order 		enforcement. Also, if there are no partitioned tables
-// referenced in the 		subtree, partition propagation enforcement can be
-// skipped.
+//		First, it determines if any particular property needs to be enforced at all. For example, the
+// EopttraceDisableSort traceflag can disable order enforcement. Also, if there are no partitioned tables referenced in
+// the subtree, partition propagation enforcement can be skipped.
 //
-//		Second, EPET methods are called for each property to determine
-// if
-// an 		enforcer needs to be added. These methods in turn call into
-// virtual 		methods in the different operators. For example,
-// CPhysical::EpetOrder() 		is used to determine a Sort node needs
-// to be added to the group. These 		methods are passed an expression
-// handle (to access derived properties of 		the subtree) and the
-// required properties as a object of a subclass of 		CEnfdProp.
+//		Second, EPET methods are called for each property to determine if an enforcer needs to be added. These methods
+// in turn call into virtual methods in the different operators. For example, CPhysical::EenforcingTypeOrder() is used
+// to determine a Sort node needs to be added to the group. These methods are passed an expression handle (to access
+// derived properties of the subtree) and the required properties as a object of a subclass of CEnfdProp.
 //
-//		Finally, based on return values of the EPET methods,
-//		CEnfdProp::AppendEnforcers() is called for each of the enforced
-//		properties.
+//		Finally, based on return values of the EPET methods, CEnfdProp::AppendEnforcers() is called for each of the
+// enforced properties.
 //
-//		Returns true if no enforcers were created because they were
-// deemed 		unnecessary or optional i.e all enforced properties were
-// satisfied for 		the group expression under the current optimization
-// context. Returns 		false otherwise.
+//		Returns true if no enforcers were created because they were deemed unnecessary or optional i.e all enforced
+// properties were satisfied for the group expression under the current optimization context. Returns false otherwise.
 //
-//		NB: This method is only concerned with a certain enforcer needs
-// to
-// be 		added into the group. Once added, there is no connection between
-// the 		enforcer and the operator that created it. That is although some
-// group expression X created the enforcer E, later, during costing, E can still
-//		decide to pick some other group expression Y for its child,
-// since 		theoretically, all group expressions in a group are
-// equivalent.
+//		NB: This method is only concerned with a certain enforcer needs to be added into the group. Once added, there is
+// no connection between the enforcer and the operator that created it. That is although some group expression X created
+// the enforcer E, later, during costing, E can still decide to pick some other group expression Y for its child, since
+// theoretically, all group expressions in a group are equivalent.
 //
 //---------------------------------------------------------------------------
-bool CEngine::FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationContext *poc, ULONG ul_opt_req,
+bool CEngine::FCheckEnforceableProps(CGroupExpression *expr, COptimizationContext *poc, ULONG num_opt_request,
                                      duckdb::vector<COptimizationContext *> pdrgpoc) {
 	// check if all children could be successfully optimized
 	if (!FChildrenOptimized(pdrgpoc)) {
 		return false;
 	}
 	// load a handle with derived plan properties
-	CCostContext *pcc = new CCostContext(poc, ul_opt_req, pgexpr);
+	CCostContext *pcc = new CCostContext(poc, num_opt_request, expr);
 	pcc->SetChildContexts(pdrgpoc);
-	CExpressionHandle exprhdl;
-	exprhdl.Attach(pcc);
-	exprhdl.DerivePlanPropsForCostContext();
+	CExpressionHandle expr_handle;
+	expr_handle.Attach(pcc);
+	expr_handle.DerivePlanPropsForCostContext();
 	PhysicalOperator *pop_physical = (PhysicalOperator *)(pcc->m_group_expression->m_operator.get());
 	CRequiredPropPlan *prpp = poc->m_required_plan_properties;
-	// Determine if any property enforcement is disable or unnecessary
-	bool f_order_reqd = !prpp->m_sort_order->m_sort_order->IsEmpty();
-	// Determine if adding an enforcer to the group is required, optional,
-	// unnecessary or prohibited over the group expression and given the current
-	// optimization context (required properties)
-	// get order enforcing type
-	COrderProperty::EPropEnforcingType epet_order =
-	    prpp->m_sort_order->Epet(exprhdl, pop_physical, f_order_reqd);
+	// Determine if any property enforcement is disabled or unnecessary
+	bool f_order_reqd = !prpp->m_sort_order->m_order_spec->IsEmpty();
+	// Determine if adding an enforcer to the group is required, optional, unnecessary or prohibited over the group
+	// expression and given the current optimization context (required properties) get order enforcing type
+	COrderProperty::EPropEnforcingType enforcing_type_order =
+	    prpp->m_sort_order->EorderEnforcingType(expr_handle, pop_physical, f_order_reqd);
 	// Skip adding enforcers entirely if any property determines it to be
 	// 'prohibited'. In this way, a property may veto out the creation of an
 	// enforcer for the current group expression and optimization context.
@@ -642,18 +625,18 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationCont
 	// expression G because it was prohibited, some other group expression H may
 	// decide to add it. And if E is added, it is possible for E to consider both
 	// G and H as its child.
-	if (FProhibited(epet_order)) {
+	if (FProhibited(enforcing_type_order)) {
 		return false;
 	}
 	duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr_enforcers;
 	// extract a leaf pattern from target group
 	CBinding binding;
-	Operator *pexpr = binding.PexprExtract(exprhdl.Pgexpr(), m_expr_enforcer_pattern.get(), nullptr);
-	prpp->m_sort_order->AppendEnforcers(prpp, pdrgpexpr_enforcers, pexpr->Copy(), epet_order, exprhdl);
+	Operator *pexpr = binding.PexprExtract(expr_handle.Pgexpr(), m_expr_enforcer_pattern.get(), nullptr);
+	prpp->m_sort_order->AppendEnforcers(prpp, pdrgpexpr_enforcers, pexpr->Copy(), enforcing_type_order, expr_handle);
 	if (!pdrgpexpr_enforcers.empty()) {
-		AddEnforcers(exprhdl.Pgexpr(), std::move(pdrgpexpr_enforcers));
+		AddEnforcers(expr_handle.Pgexpr(), std::move(pdrgpexpr_enforcers));
 	}
-	return FOptimize(epet_order);
+	return FOptimize(enforcing_type_order);
 }
 
 //---------------------------------------------------------------------------
@@ -722,18 +705,14 @@ bool CEngine::FProhibited(COrderProperty::EPropEnforcingType enforcing_type_orde
 //		CEngine::FCheckRequiredProps
 //
 //	@doc:
-//		Determine if checking required properties is needed.
-//		This method is called after a group expression optimization job
-// has 		started executing and can be used to cancel the job early.
+//		Determine if checking required properties is needed. This method is called after a group expression optimization
+// job has started executing and can be used to cancel the job early.
 //
-//		This is useful to prevent deadlocks when an enforcer optimizes
-// same 		group with the same optimization context. Also, in case
-// the
-// subtree 		doesn't provide the required columns we can save
-// optimization time by skipping this optimization request.
+//		This is useful to prevent deadlocks when an enforcer optimizes same group with the same optimization context.
+// Also, in case the subtree doesn't provide the required columns we can save optimization time by skipping this
+// optimization request.
 //
-//		NB: Only relational properties are available at this stage to
-// make this 		decision.
+//		NB: Only relational properties are available at this stage to make this decision.
 //---------------------------------------------------------------------------
 bool CEngine::FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp, ULONG ul_opt_req) {
 	// check if operator provides required columns
@@ -744,7 +723,7 @@ bool CEngine::FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPropPlan 
 	// check if sort operator is passed an empty order spec;
 	// this check is required to avoid self-deadlocks, i.e.
 	// sort optimizing same group with the same optimization context;
-	bool f_order_reqd = !prpp->m_sort_order->m_sort_order->IsEmpty();
+	bool f_order_reqd = !prpp->m_sort_order->m_order_spec->IsEmpty();
 	if (!f_order_reqd && PhysicalOperatorType::ORDER_BY == pop_physical->physical_type) {
 		return false;
 	}

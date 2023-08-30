@@ -178,6 +178,7 @@ void CJobGroupExpressionOptimization::InitChildGroupsOptimization(CSchedulerCont
 	}
 	m_plan_properties_handler->DeriveProps(nullptr);
 	m_plan_properties_handler->InitReqdProps(m_opt_context->m_required_plan_properties);
+
 	// initialize required relational properties computation
 	m_relation_properties_handler = new CExpressionHandle();
 	CGroupExpression *pgexprForStats = m_group_expression->m_group->BestPromiseGroupExpr(m_group_expression);
@@ -235,12 +236,12 @@ void CJobGroupExpressionOptimization::DerivePrevChildProps(CSchedulerContext *sc
 	ULONG prev_child_index = m_plan_properties_handler->UlPreviousOptimizedChildIndex(m_children_index);
 	// retrieve plan properties of the optimal implementation of previous child group
 	CGroup *child = (*m_group_expression)[prev_child_index];
-	if (child->m_is_calar) {
+	if (child->m_is_scalar) {
 		// exit if previous child is a scalar group
 		return;
 	}
 	COptimizationContext *poc_child = child->PocLookupBest(scheduler_context->m_engine->PreviousSearchStageIdx(),
-	                                                       m_plan_properties_handler->Prpp(prev_child_index));
+	                         m_plan_properties_handler->RequiredPropPlan(prev_child_index));
 	CCostContext *pcc_child_best = poc_child->m_best_cost_context;
 	if (nullptr == pcc_child_best) {
 		// failed to optimize child
@@ -300,7 +301,7 @@ void CJobGroupExpressionOptimization::ComputeCurrentChildRequirements(CScheduler
 //---------------------------------------------------------------------------
 void CJobGroupExpressionOptimization::ScheduleChildGroupsJobs(CSchedulerContext *psc) {
 	CGroup *pgroupChild = (*m_group_expression)[m_children_index];
-	if (pgroupChild->m_is_calar) {
+	if (pgroupChild->m_is_scalar) {
 		if (!m_plan_properties_handler->FNextChildIndex(&m_children_index)) {
 			// child group optimization is complete
 			SetChildrenScheduled();
@@ -312,11 +313,11 @@ void CJobGroupExpressionOptimization::ScheduleChildGroupsJobs(CSchedulerContext 
 		return;
 	}
 	// compute required relational properties
-	CRequiredPropRelational *prprel =
-	    new CRequiredPropRelational(); // m_relation_properties_handler->GetReqdRelationalProps(m_children_index);
+	CRequiredPropRelational *prprel = new CRequiredPropRelational();
+	// m_relation_properties_handler->GetReqdRelationalProps(m_children_index);
 	// schedule optimization job for current child group
 	COptimizationContext *pocChild = new COptimizationContext(
-	    pgroupChild, m_plan_properties_handler->Prpp(m_children_index), prprel, psc->m_engine->CurrentSearchStageIdx());
+	    pgroupChild, m_plan_properties_handler->RequiredPropPlan(m_children_index), prprel, psc->m_engine->CurrentSearchStageIdx());
 	if (pgroupChild == m_group_expression->m_group && pocChild->Matches(m_opt_context)) {
 		// this is to prevent deadlocks, child context cannot be the same as parent context
 		m_child_optimization_failed = true;
@@ -369,9 +370,9 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtAdd
 	// build child contexts array
 	pjgeo->m_children_opt_contexts = psc->m_engine->ChildrenOptimizationContext(*pjgeo->m_plan_properties_handler);
 	// enforce physical properties
-	BOOL fCheckEnfdProps = psc->m_engine->FCheckEnforceableProps(
+	BOOL check_enforceable_props = psc->m_engine->FCheckEnforceableProps(
 	    pjgeo->m_group_expression, pjgeo->m_opt_context, pjgeo->m_opt_request_num, pjgeo->m_children_opt_contexts);
-	if (fCheckEnfdProps) {
+	if (check_enforceable_props) {
 		// No new enforcers group expressions were added because they were either
 		// optional or unnecessary. So, move on to optimize the current group
 		// expression.

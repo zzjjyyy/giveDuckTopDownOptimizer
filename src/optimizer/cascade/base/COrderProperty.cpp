@@ -11,13 +11,12 @@
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace duckdb;
 using namespace gpos;
 
 // initialization of static variables
-const CHAR*COrderProperty::m_szOrderMatching[EomSentinel] = {"satisfy"};
+const CHAR *COrderProperty::m_szOrderMatching[EomSentinel] = {"satisfy"};
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -27,11 +26,8 @@ const CHAR*COrderProperty::m_szOrderMatching[EomSentinel] = {"satisfy"};
 //		Ctor
 //
 //---------------------------------------------------------------------------
-COrderProperty::COrderProperty(COrderSpec* pos, EOrderMatching eom)
-	: m_sort_order(pos), m_order_match_type(eom)
-{
+COrderProperty::COrderProperty(COrderSpec *pos, EOrderMatching eom) : m_order_spec(pos), m_order_match_type(eom) {
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -41,10 +37,8 @@ COrderProperty::COrderProperty(COrderSpec* pos, EOrderMatching eom)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-COrderProperty::~COrderProperty()
-{
+COrderProperty::~COrderProperty() {
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -55,18 +49,15 @@ COrderProperty::~COrderProperty()
 //		order specification of this object for the specified matching type
 //
 //---------------------------------------------------------------------------
-bool COrderProperty::FCompatible(COrderSpec* pos) const
-{
-	switch (m_order_match_type)
-	{
-		case EomSatisfy:
-			return pos->FSatisfies(m_sort_order);
-		case EomSentinel:
-			break;
+bool COrderProperty::FCompatible(COrderSpec *pos) const {
+	switch (m_order_match_type) {
+	case EomSatisfy:
+		return pos->FSatisfies(m_order_spec);
+	case EomSentinel:
+		break;
 	}
 	return false;
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -76,25 +67,23 @@ bool COrderProperty::FCompatible(COrderSpec* pos) const
 // 		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG COrderProperty::HashValue() const
-{
-	return gpos::CombineHashes(m_order_match_type + 1, m_sort_order->HashValue());
+ULONG COrderProperty::HashValue() const {
+	return gpos::CombineHashes(m_order_match_type + 1, m_order_spec->HashValue());
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		COrderProperty::Epet
+//		COrderProperty::EorderEnforcingType
 //
 //	@doc:
 // 		Get order enforcing type for the given operator
 //
 //---------------------------------------------------------------------------
-COrderProperty::EPropEnforcingType COrderProperty::Epet(CExpressionHandle &exprhdl, PhysicalOperator* popPhysical, bool fOrderReqd) const
-{
-	if (fOrderReqd)
-	{
-		return popPhysical->EpetOrder(exprhdl, this->m_sort_order->orderby_node);
+COrderProperty::EPropEnforcingType
+COrderProperty::EorderEnforcingType(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, bool fOrderReqd) const {
+	if (fOrderReqd) {
+		return popPhysical->EenforcingTypeOrder(exprhdl, this->m_order_spec->orderby_node);
 	}
 	return EpetUnnecessary;
 }
-}
+} // namespace gpopt

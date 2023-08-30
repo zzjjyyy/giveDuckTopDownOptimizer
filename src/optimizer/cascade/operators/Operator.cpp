@@ -86,7 +86,7 @@ CRequiredPropPlan *Operator::PrppCompute(CRequiredPropPlan *required_properties_
 	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
 	(void)PdpDerive(pdpctxtplan);
 	// decorate nodes with required properties
-	return m_required_plan_property;
+	return m_required_property_plan;
 }
 
 CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
@@ -121,7 +121,7 @@ CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 }
 
 CRequiredPropPlan *Operator::PrppDecorate(CRequiredPropPlan *required_properties_input) {
-	return m_required_plan_property;
+	return m_required_property_plan;
 }
 
 duckdb::unique_ptr<Operator> Operator::Copy() {

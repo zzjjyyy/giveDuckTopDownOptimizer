@@ -151,7 +151,7 @@ bool COptimizationContext::FEqualContextIds(duckdb::vector<COptimizationContext 
 bool COptimizationContext::FOptimizeSort(CGroupExpression *pgexprParent, CGroupExpression *pgexprSort,
                                          COptimizationContext *poc, ULONG ulSearchStages) {
 	return poc->m_required_plan_properties->m_sort_order->FCompatible(
-	    ((PhysicalOrder *)pgexprSort->m_operator.get())->Pos());
+	    ((PhysicalOrder *)pgexprSort->m_operator.get())->OrderSpec());
 }
 
 //---------------------------------------------------------------------------
@@ -166,7 +166,7 @@ bool COptimizationContext::FOptimizeAgg(CGroupExpression *pgexprParent, CGroupEx
                                         COptimizationContext *poc, ULONG ulSearchStages) {
 	// otherwise, we need to avoid optimizing node unless it is a multi-stage agg
 	// COptimizationContext* pocFound = pgexprAgg->m_group->PocLookupBest(ulSearchStages,
-	// poc->m_required_plan_property); if (NULL != pocFound && pocFound->FHasMultiStageAggPlan())
+	// poc->m_required_property_plan); if (NULL != pocFound && pocFound->FHasMultiStageAggPlan())
 	// {
 	//  	// context already has a multi-stage agg plan, optimize child only if it is also a multi-stage agg
 	// 	    return CPhysicalAgg::PopConvert(pgexprAgg->Pop())->FMultiStage();

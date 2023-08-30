@@ -121,7 +121,7 @@ public:
 	bool FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp, ULONG ul_opt_req);
 	// check enforceable properties;
 	// return false if it's impossible for the operator to satisfy one or more
-	bool FCheckEnforceableProps(CGroupExpression *pgexpr, COptimizationContext *poc, ULONG ul_opt_req,
+	bool FCheckEnforceableProps(CGroupExpression *expr, COptimizationContext *poc, ULONG num_opt_request,
 	                            duckdb::vector<COptimizationContext *> pdrgpoc);
 	// check if the given expression has valid cte and partition properties
 	// with respect to the given requirements

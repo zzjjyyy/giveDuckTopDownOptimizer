@@ -40,7 +40,7 @@ public:
 
 public:
 	// default ctor
-	CRequiredPropPlan() : m_sort_order(NULL) {
+	CRequiredPropPlan() : m_sort_order(nullptr) {
 	}
 
 	// ctor
@@ -58,8 +58,8 @@ public:
 	}
 
 	// required properties computation function
-	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-	                     duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
+	virtual void Compute(CExpressionHandle &expr_handle, CRequiredProperty *property, ULONG child_index,
+	                     duckdb::vector<CDerivedProperty *> children_derived_prop, ULONG num_opt_request) override;
 
 	// required columns computation function
 	void ComputeReqdCols(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,

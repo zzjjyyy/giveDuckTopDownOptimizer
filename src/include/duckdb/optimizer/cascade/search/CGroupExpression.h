@@ -36,7 +36,7 @@ public:
 	      m_estate(estUnexplored), m_eol(EolLow) {
 	}
 	CGroupExpression(duckdb::unique_ptr<Operator> op, duckdb::vector<CGroup *> groups, CXform::EXformId xform_id,
-	                 CGroupExpression *group_expr_origin, bool fIntermediate);
+	                 CGroupExpression *group_expr_origin, bool is_intermediate);
 	CGroupExpression(const CGroupExpression &) = delete;
 	virtual ~CGroupExpression();
 

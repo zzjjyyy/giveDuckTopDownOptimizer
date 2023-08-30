@@ -64,14 +64,15 @@ void CRequiredPropPlan::ComputeReqdCols(CExpressionHandle &exprhdl, CRequiredPro
 //		Compute required props
 //
 //---------------------------------------------------------------------------
-void CRequiredPropPlan::Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-                                duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) {
-	CRequiredPropPlan *prppInput = CRequiredPropPlan::Prpp(prpInput);
-	PhysicalOperator *popPhysical = (PhysicalOperator *)exprhdl.Pop();
-	ComputeReqdCols(exprhdl, prpInput, child_index, pdrgpdpCtxt);
-	m_sort_order = new COrderProperty(
-	    popPhysical->PosRequired(exprhdl, prppInput->m_sort_order->m_sort_order, child_index, pdrgpdpCtxt, ulOptReq),
-	    popPhysical->Eom(prppInput, child_index, pdrgpdpCtxt, ulOptReq));
+void CRequiredPropPlan::Compute(CExpressionHandle &expr_handle, CRequiredProperty *property, ULONG child_index,
+                                duckdb::vector<CDerivedProperty *> children_derived_prop, ULONG num_opt_request) {
+	CRequiredPropPlan *property_plan = CRequiredPropPlan::Prpp(property);
+	PhysicalOperator *physical_op = (PhysicalOperator *)expr_handle.Pop();
+	ComputeReqdCols(expr_handle, property, child_index, children_derived_prop);
+	m_sort_order =
+	    new COrderProperty(physical_op->RequiredSortSpec(expr_handle, property_plan->m_sort_order->m_order_spec,
+	                                                     child_index, children_derived_prop, num_opt_request),
+	    physical_op->OrderMatching(property_plan, child_index, children_derived_prop, num_opt_request));
 }
 
 //---------------------------------------------------------------------------
@@ -91,7 +92,7 @@ bool CRequiredPropPlan::FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG ulOp
 	duckdb::vector<ColumnBinding> pcrsOutput = exprhdl.DeriveOutputColumns();
 	// check if property spec members use columns from operator output
 	bool fProvidesReqdCols = true;
-	COrderSpec *pps = m_sort_order->m_sort_order;
+	COrderSpec *pps = m_sort_order->m_order_spec;
 	if (NULL == pps) {
 		return fProvidesReqdCols;
 	}

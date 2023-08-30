@@ -10,7 +10,7 @@ LogicalFilter::LogicalFilter()
 	m_derived_property_relation = new CDerivedPropRelation();
 	m_group_expression = nullptr;
 	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_required_property_plan = nullptr;
 }
 
 LogicalFilter::LogicalFilter(unique_ptr<Expression> expression)
@@ -19,7 +19,7 @@ LogicalFilter::LogicalFilter(unique_ptr<Expression> expression)
 	m_derived_property_relation = new CDerivedPropRelation();
 	m_group_expression = nullptr;
 	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_required_property_plan = nullptr;
 	expressions.push_back(std::move(expression));
 	SplitPredicates(expressions);
 }
@@ -105,13 +105,13 @@ Operator* LogicalFilter::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operato
 
 //---------------------------------------------------------------------------
 //	@function:
-//		LogicalFilter::PxfsCandidates
+//		LogicalFilter::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set * LogicalFilter::PxfsCandidates() const
+CXform_set * LogicalFilter::XformCandidates() const
 {
 	CXform_set * xform_set = new CXform_set();
 	(void) xform_set->set(CXform::ExfSelect2Apply);

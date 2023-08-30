@@ -125,7 +125,7 @@ void CJobGroupOptimization::Init(CGroup *pgroup, CGroupExpression *pgexprOrigin,
 //
 //---------------------------------------------------------------------------
 bool CJobGroupOptimization::FScheduleGroupExpressions(CSchedulerContext *psc) {
-	auto Last_itr = m_pgexprLastScheduled;
+	auto Last_itr = m_last_scheduled_expr;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
 	while (m_pgroup->m_group_exprs.end() != itr) {
@@ -147,9 +147,9 @@ bool CJobGroupOptimization::FScheduleGroupExpressions(CSchedulerContext *psc) {
 			++itr;
 		}
 	}
-	bool fNewJobs = (m_pgexprLastScheduled != Last_itr);
+	bool fNewJobs = (m_last_scheduled_expr != Last_itr);
 	// set last scheduled expression
-	m_pgexprLastScheduled = Last_itr;
+	m_last_scheduled_expr = Last_itr;
 	return fNewJobs;
 }
 
@@ -217,7 +217,7 @@ CJobGroupOptimization::EEvent CJobGroupOptimization::EevtCompleteOptimization(CS
 	pjgo->DampOptimizationLevel();
 	if (EolSentinel != pjgo->EolCurrent()) {
 		// we need to optimize group expressions matching current level
-		pjgo->m_pgexprLastScheduled = pjgo->m_pgroup->m_group_exprs.end();
+		pjgo->m_last_scheduled_expr = pjgo->m_pgroup->m_group_exprs.end();
 		return eevOptimizing;
 	}
 	// move optimization context to optimized state

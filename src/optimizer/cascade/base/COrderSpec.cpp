@@ -94,7 +94,7 @@ void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan *
 		projections.push_back(i);
 	}
 	duckdb::vector<BoundOrderByNode> v_orders;
-	for (auto &child : prpp->m_sort_order->m_sort_order->orderby_node) {
+	for (auto &child : prpp->m_sort_order->m_order_spec->orderby_node) {
 		v_orders.emplace_back(child.Copy());
 	}
 	auto pexprSort = make_uniq<PhysicalOrder>(pexpr->types, std::move(v_orders), std::move(projections), 0);
