@@ -287,18 +287,19 @@ CCostContext* CGroupExpression::PccComputeCost(COptimizationContext* poc, ULONG 
 		return nullptr;
 	}
 	CCostContext* pcc = new CCostContext(poc, ulOptReq, this);
-	bool fValid = true;
+	// bool fValid = true;
 	// computing cost
 	pcc->SetState(CCostContext::estCosting);
 	if (!fPruned)
 	{
 		pcc->SetChildContexts(pdrgpoc);
-		fValid = pcc->IsValid();
-		if(fValid)
-		{
-			double cost = CostCompute(pcc);
-			pcc->SetCost(cost);
-		}
+		/* I comment here */
+		// fValid = pcc->IsValid();
+		// if(fValid)
+		// {
+		double cost = CostCompute(pcc);
+		pcc->SetCost(cost);
+		// }
 	}
 	else
 	{
@@ -306,12 +307,12 @@ CCostContext* CGroupExpression::PccComputeCost(COptimizationContext* poc, ULONG 
 		pcc->SetCost(costLowerBound);
 	}
 	pcc->SetState(CCostContext::estCosted);
-	if(fValid)
-	{
-		return PccInsertBest(pcc);
-	}
+	// if(fValid)
+	// {
+	return PccInsertBest(pcc);
+	// }
 	// invalid cost context
-	return nullptr;
+	// return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -628,6 +629,7 @@ bool CGroupExpression::Matches(const CGroupExpression *pgexpr) const
 ULONG CGroupExpression::HashValue(Operator* pop, duckdb::vector<CGroup*> pdrgpgroup)
 {
 	ULONG ulHash = Operator::HashValue(pop);
+	// ULONG ulHash = pop->HashValue();
 	ULONG arity = pdrgpgroup.size();
 	for (ULONG i = 0; i < arity; i++)
 	{

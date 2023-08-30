@@ -349,8 +349,7 @@ shared_ptr<PreparedStatementData> ClientContext::CreatePreparedStatement(ClientC
 			Cascade cascade = Cascade(*this);
 			unique_ptr<LogicalOperator> logical_plan = unique_ptr_cast<Operator, LogicalOperator>(std::move(plan));
 			physical_plan = cascade.Optimize(std::move(logical_plan));
-		} else
-		{
+		} else {
 			Optimizer optimizer(*planner.binder, *this);
 			plan = optimizer.Optimize(std::move(plan));
 			D_ASSERT(plan);
