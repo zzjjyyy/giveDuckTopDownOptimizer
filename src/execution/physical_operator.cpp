@@ -243,6 +243,21 @@ COrderProperty::EOrderMatching PhysicalOperator::OrderMatching(CRequiredPropPlan
 unique_ptr<Expression> PhysicalOperator::ExpressionPassThrough(const PhysicalOperator *op, Expression *expr) {
 	if (op->physical_type == PhysicalOperatorType::PROJECTION) {
 		D_ASSERT(expr->expression_class == ExpressionClass::BOUND_COLUMN_REF);
+		PhysicalProjection* proj = (PhysicalProjection*)op;
+		unique_ptr<BoundColumnRefExpression> result = unique_ptr_cast<Expression, BoundColumnRefExpression>(expr->Copy());
+		// For yiming, I think the commented code should be used to solve the problem
+		// idx_t tbl_index = result->binding.table_index;
+		// if(tbl_index == proj->v_column_binding[0].table_index) {
+		//      // This means that the ColumnBinding belongs to Projection's
+		//	idx_t col_idx = result->binding.column_index;
+		//      return proj->select_list[col_idx]->Copy();
+		// } else {
+		// 	// This means that the ColumnBinding does not belong to Projection's
+		// 	return expr->Copy();
+		// }
+		// Add by Junyi
+		idx_t col_idx = result->binding.column_index;
+		return proj->select_list[col_idx]->Copy();
 		PhysicalProjection *proj = (PhysicalProjection *)op;
 		unique_ptr<BoundColumnRefExpression> result =
 		    unique_ptr_cast<Expression, BoundColumnRefExpression>(expr->Copy());
