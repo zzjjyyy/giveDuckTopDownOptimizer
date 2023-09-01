@@ -69,7 +69,7 @@ public:
 	// reset states of all memo groups
 	void ResetGroupStates();
 	// extract a plan that delivers the given required properties
-	duckdb::unique_ptr<Operator> ExtractPlan(CGroup *root, CRequiredPropPlan *required_property, ULONG search_stage);
+	duckdb::unique_ptr<Operator> ExtractPlan(CGroup *root, CRequiredPhysicalProp *required_property, ULONG search_stage);
 
 	// return number of groups
 	ULONG_PTR NumGroups() const {

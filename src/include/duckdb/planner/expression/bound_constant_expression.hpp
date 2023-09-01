@@ -35,7 +35,7 @@ public:
 	static unique_ptr<Expression> Deserialize(ExpressionDeserializationState &state, FieldReader &reader);
 
 public:
-	vector<ColumnBinding> getColumnBinding() override
+	vector<ColumnBinding> GetColumnBinding() override
 	{
 		vector<ColumnBinding> v;
 		return v;

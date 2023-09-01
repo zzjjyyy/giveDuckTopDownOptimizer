@@ -121,9 +121,9 @@ duckdb::unique_ptr<Operator> PhysicalProjection::Copy()
 	result->v_column_binding = this->v_column_binding;
 	
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_property_plan = this->m_required_property_plan;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();
@@ -154,9 +154,9 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGro
 	result->v_column_binding = this->v_column_binding;
 
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_property_plan = this->m_required_property_plan;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();
@@ -186,9 +186,9 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewChildren(CGroupExpre
 	result->v_column_binding = this->v_column_binding;
 
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_property_plan = this->m_required_property_plan;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();

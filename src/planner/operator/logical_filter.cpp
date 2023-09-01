@@ -7,19 +7,19 @@ namespace duckdb {
 LogicalFilter::LogicalFilter()
 	: LogicalOperator(LogicalOperatorType::LOGICAL_FILTER)
 {
-	m_derived_property_relation = new CDerivedPropRelation();
+	m_derived_logical_property = new CDerivedLogicalProp();
 	m_group_expression = nullptr;
-	m_derived_property_plan = nullptr;
-	m_required_property_plan = nullptr;
+	m_derived_physical_property = nullptr;
+	m_required_physical_property = nullptr;
 }
 
 LogicalFilter::LogicalFilter(unique_ptr<Expression> expression)
 	: LogicalOperator(LogicalOperatorType::LOGICAL_FILTER)
 {
-	m_derived_property_relation = new CDerivedPropRelation();
+	m_derived_logical_property = new CDerivedLogicalProp();
 	m_group_expression = nullptr;
-	m_derived_property_plan = nullptr;
-	m_required_property_plan = nullptr;
+	m_derived_physical_property = nullptr;
+	m_required_physical_property = nullptr;
 	expressions.push_back(std::move(expression));
 	SplitPredicates(expressions);
 }

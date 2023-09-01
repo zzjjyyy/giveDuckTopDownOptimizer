@@ -15,24 +15,24 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CRequiredPropRelational::CRequiredPropRelational
+//		CRequiredLogicalProp::CRequiredLogicalProp
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CRequiredPropRelational::CRequiredPropRelational() {
+CRequiredLogicalProp::CRequiredLogicalProp() {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CRequiredPropRelational::CRequiredPropRelational
+//		CRequiredLogicalProp::CRequiredLogicalProp
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CRequiredPropRelational::CRequiredPropRelational(duckdb::vector<ColumnBinding> pcrs) {
+CRequiredLogicalProp::CRequiredLogicalProp(duckdb::vector<ColumnBinding> pcrs) {
 	for (auto &child : pcrs) {
 		m_pcrsStat.emplace_back(child.table_index, child.column_index);
 	}
@@ -40,64 +40,64 @@ CRequiredPropRelational::CRequiredPropRelational(duckdb::vector<ColumnBinding> p
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CRequiredPropRelational::CRequiredPropRelationalonal
+//		CRequiredLogicalProp::CRequiredPropRelationalonal
 //
 //	@doc:
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CRequiredPropRelational::~CRequiredPropRelational() {
+CRequiredLogicalProp::~CRequiredLogicalProp() {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CRequiredPropRelational::Compute
+//		CRequiredLogicalProp::Compute
 //
 //	@doc:
 //		Compute required props
 //
 //---------------------------------------------------------------------------
-void CRequiredPropRelational::Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
+void CRequiredLogicalProp::Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
                                       duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) {
-	// CRequiredPropRelational* prprelInput = CRequiredPropRelational::GetReqdRelationalProps(prpInput);
+	// CRequiredLogicalProp* prprelInput = CRequiredLogicalProp::GetReqdRelationalProps(prpInput);
 	m_pcrsStat = ((LogicalOperator *)exprhdl.Pop())->GetColumnBindings();
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CRequiredPropRelational::GetReqdRelationalProps
+//		CRequiredLogicalProp::GetReqdRelationalProps
 //
 //	@doc:
 //		Short hand for conversion
 //
 //---------------------------------------------------------------------------
-CRequiredPropRelational *CRequiredPropRelational::GetReqdRelationalProps(CRequiredProperty *prp) {
-	return (CRequiredPropRelational *)prp;
+CRequiredLogicalProp *CRequiredLogicalProp::GetReqdRelationalProps(CRequiredProperty *prp) {
+	return (CRequiredLogicalProp *)prp;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CRequiredPropRelational::PrprelDifference
+//		CRequiredLogicalProp::PrprelDifference
 //
 //	@doc:
 //		Return difference from given properties
 //
 //---------------------------------------------------------------------------
-CRequiredPropRelational *CRequiredPropRelational::PrprelDifference(CRequiredPropRelational *prprel) {
+CRequiredLogicalProp *CRequiredLogicalProp::PrprelDifference(CRequiredLogicalProp *prprel) {
 	duckdb::vector<ColumnBinding> pcrs;
 	duckdb::vector<ColumnBinding> v2 = prprel->PcrsStat();
 	std::set_difference(m_pcrsStat.begin(), m_pcrsStat.end(), v2.begin(), v2.end(), pcrs.begin());
-	return new CRequiredPropRelational(pcrs);
+	return new CRequiredLogicalProp(pcrs);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CRequiredPropRelational::IsEmpty
+//		CRequiredLogicalProp::IsEmpty
 //
 //	@doc:
 //		Return true if property container is empty
 //
 //---------------------------------------------------------------------------
-bool CRequiredPropRelational::IsEmpty() const {
+bool CRequiredLogicalProp::IsEmpty() const {
 	return m_pcrsStat.size() == 0;
 }

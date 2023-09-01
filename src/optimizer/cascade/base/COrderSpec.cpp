@@ -9,7 +9,7 @@
 
 #include "duckdb/execution/operator/order/physical_order.hpp"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 
 using namespace gpopt;
 using namespace duckdb;
@@ -45,7 +45,7 @@ COrderSpec::~COrderSpec() {
 //
 //---------------------------------------------------------------------------
 void COrderSpec::Append(OrderType type, OrderByNullType null_order, Expression *expr) {
-	orderby_node.emplace_back(type, null_order, duckdb::unique_ptr<Expression>(expr));
+	order_nodes.emplace_back(type, null_order, duckdb::unique_ptr<Expression>(expr));
 }
 
 //---------------------------------------------------------------------------
@@ -57,7 +57,7 @@ void COrderSpec::Append(OrderType type, OrderByNullType null_order, Expression *
 //
 //---------------------------------------------------------------------------
 bool COrderSpec::Matches(COrderSpec *pos) const {
-	bool fMatch = orderby_node.size() == pos->orderby_node.size() && FSatisfies(pos);
+	bool fMatch = order_nodes.size() == pos->order_nodes.size() && FSatisfies(pos);
 	return fMatch;
 }
 
@@ -70,10 +70,10 @@ bool COrderSpec::Matches(COrderSpec *pos) const {
 //
 //---------------------------------------------------------------------------
 bool COrderSpec::FSatisfies(COrderSpec *pos) const {
-	const ULONG arity = pos->orderby_node.size();
-	bool fSatisfies = (orderby_node.size() >= arity);
+	const ULONG arity = pos->order_nodes.size();
+	bool fSatisfies = (order_nodes.size() >= arity);
 	for (ULONG ul = 0; fSatisfies && ul < arity; ul++) {
-		fSatisfies = orderby_node[ul].Equals(pos->orderby_node[ul]);
+		fSatisfies = order_nodes[ul].Equals(pos->order_nodes[ul]);
 	}
 	return fSatisfies;
 }
@@ -86,7 +86,7 @@ bool COrderSpec::FSatisfies(COrderSpec *pos) const {
 //		Add required enforcers enforcers to dynamic array
 //
 //---------------------------------------------------------------------------
-void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp,
+void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPhysicalProp *prpp,
                                  duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
                                  duckdb::unique_ptr<Operator> pexpr) {
 	duckdb::vector<idx_t> projections;
@@ -94,7 +94,7 @@ void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan *
 		projections.push_back(i);
 	}
 	duckdb::vector<BoundOrderByNode> v_orders;
-	for (auto &child : prpp->m_sort_order->m_order_spec->orderby_node) {
+	for (auto &child : prpp->m_sort_order->m_order_spec->order_nodes) {
 		v_orders.emplace_back(child.Copy());
 	}
 	auto pexprSort = make_uniq<PhysicalOrder>(pexpr->types, std::move(v_orders), std::move(projections), 0);
@@ -112,9 +112,9 @@ void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan *
 //---------------------------------------------------------------------------
 ULONG COrderSpec::HashValue() const {
 	ULONG ulHash = 0;
-	ULONG arity = orderby_node.size();
+	ULONG arity = order_nodes.size();
 	for (ULONG ul = 0; ul < arity; ul++) {
-		auto &poe = orderby_node[ul];
+		auto &poe = order_nodes[ul];
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashPtr<BoundOrderByNode>(&poe));
 	}
 	return ulHash;
@@ -130,9 +130,9 @@ ULONG COrderSpec::HashValue() const {
 //---------------------------------------------------------------------------
 COrderSpec *COrderSpec::PosExcludeColumns(duckdb::vector<ColumnBinding> pcrs) {
 	COrderSpec *pos = new COrderSpec();
-	const ULONG num_cols = orderby_node.size();
+	const ULONG num_cols = order_nodes.size();
 	for (ULONG ul = 0; ul < num_cols; ul++) {
-		auto &poe = orderby_node[ul];
+		auto &poe = order_nodes[ul];
 		ColumnBinding colref = ((BoundColumnRefExpression *)poe.expression.get())->binding;
 		if (std::find(pcrs.begin(), pcrs.end(), colref) != pcrs.end()) {
 			continue;
@@ -151,9 +151,9 @@ COrderSpec *COrderSpec::PosExcludeColumns(duckdb::vector<ColumnBinding> pcrs) {
 //
 //---------------------------------------------------------------------------
 void COrderSpec::ExtractCols(duckdb::vector<ColumnBinding> pcrs) const {
-	const ULONG ulOrderExprs = orderby_node.size();
+	const ULONG ulOrderExprs = order_nodes.size();
 	for (ULONG ul = 0; ul < ulOrderExprs; ul++) {
-		ColumnBinding cell = ((BoundColumnRefExpression *)orderby_node[ul].expression.get())->binding;
+		ColumnBinding cell = ((BoundColumnRefExpression *)order_nodes[ul].expression.get())->binding;
 		pcrs.emplace_back(cell.table_index, cell.column_index);
 	}
 }

@@ -19,7 +19,7 @@
 
 namespace gpopt {
 // fwd declaration
-class CDerivedPropPlan;
+class CDerivedPhysicalProp;
 class CPropConstraint;
 class CCostContext;
 
@@ -108,7 +108,7 @@ public:
 	// void DeriveCostContextStats();
 
 	// stats derivation using given properties and context
-	// void DeriveStats(CRequiredPropRelational* prprel, IStatisticsArray* stats_ctxt);
+	// void DeriveStats(CRequiredLogicalProp* prprel, IStatisticsArray* stats_ctxt);
 
 	// derive the properties of the plan carried by attached cost context,
 	// using default CDrvdPropCtxtPlan
@@ -130,19 +130,19 @@ public:
 	void ComputeReqdProps(CRequiredProperty *prpInput, ULONG ulOptReq);
 
 	// derived relational props of n-th child
-	CDerivedPropRelation *GetRelationalProperties(ULONG child_index) const;
+	CDerivedLogicalProp *GetRelationalProperties(ULONG child_index) const;
 
 	// derived stats of n-th child
 	// IStatistics* Pstats(ULONG child_index) const;
 
 	// derived plan props of n-th child
-	CDerivedPropPlan *Pdpplan(ULONG child_index) const;
+	CDerivedPhysicalProp *Pdpplan(ULONG child_index) const;
 
 	// derived properties of attached expr/gexpr
 	CDerivedProperty *DerivedProperty() const;
 
 	// derived relational properties of attached expr/gexpr
-	CDerivedPropRelation *GetRelationalProperties() const;
+	CDerivedLogicalProp *GetRelationalProperties() const;
 
 	// stats of attached expr/gexpr
 	// IStatistics* Pstats();
@@ -151,10 +151,10 @@ public:
 	bool FScalarChild(ULONG child_index) const;
 
 	// required relational props of n-th child
-	CRequiredPropRelational *GetReqdRelationalProps(ULONG child_index) const;
+	CRequiredLogicalProp *GetReqdRelationalProps(ULONG child_index) const;
 
 	// required plan props of n-th child
-	CRequiredPropPlan *RequiredPropPlan(ULONG child_index) const;
+	CRequiredPhysicalProp *RequiredPropPlan(ULONG child_index) const;
 
 	// arity function
 	ULONG Arity(int x = 0) const;
@@ -183,7 +183,7 @@ public:
 	}
 
 	// accessor for group expression
-	CGroupExpression *Pgexpr() const {
+	CGroupExpression *group_expr() const {
 		return m_pgexpr;
 	}
 

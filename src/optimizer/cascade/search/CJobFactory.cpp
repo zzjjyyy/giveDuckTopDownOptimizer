@@ -107,13 +107,13 @@ void CJobFactory::Release(CJob*job)
 			Release(CJobGroupOptimization::ConvertJob(job), m_group_opt_jobs);
 			break;
 		case CJob::EjtGroupImplementation:
-			Release(CJobGroupImplementation::PjConvert(job), m_group_impl_jobs);
+			Release(CJobGroupImplementation::ConvertJob(job), m_group_impl_jobs);
 			break;
 		case CJob::EjtGroupExploration:
-			Release(CJobGroupExploration::PjConvert(job), m_group_explore_jobs);
+			Release(CJobGroupExploration::ConvertJob(job), m_group_explore_jobs);
 			break;
 		case CJob::EjtGroupExpressionOptimization:
-			Release(CJobGroupExpressionOptimization::PjConvert(job), m_group_expr_opt_jobs);
+			Release(CJobGroupExpressionOptimization::ConvertJob(job), m_group_expr_opt_jobs);
 			break;
 		case CJob::EjtGroupExpressionImplementation:
 			Release(CJobGroupExpressionImplementation::PjConvert(job), m_group_expr_impl_jobs);

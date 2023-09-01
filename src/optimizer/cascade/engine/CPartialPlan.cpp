@@ -22,7 +22,7 @@ namespace gpopt
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPartialPlan::CPartialPlan(CGroupExpression* pgexpr, CRequiredPropPlan * prpp, CCostContext* pccChild, ULONG child_index)
+CPartialPlan::CPartialPlan(CGroupExpression* pgexpr, CRequiredPhysicalProp * prpp, CCostContext* pccChild, ULONG child_index)
 	: m_pgexpr(pgexpr), m_prpp(prpp), m_pccChild(pccChild), m_ulChildIndex(child_index)
 {
 }
@@ -59,7 +59,7 @@ void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle
 			// skip scalar children
 			continue;
 		}
-		// CRequiredPropPlan* prppChild = exprhdl.RequiredPropPlan(ul);
+		// CRequiredPhysicalProp* prppChild = exprhdl.RequiredPropPlan(ul);
 		if (ul == m_ulChildIndex)
 		{
 			// we have reached a child with a known plan,
@@ -117,7 +117,7 @@ double CPartialPlan::CostCompute()
 	// extract rows from stats
 	double rows = pop->estimated_cardinality;
 	// extract width from stats
-	// double width = m_group_expression->Pgroup()->Pstats()->Width(mp, m_required_property_plan->m_cols).Get();
+	// double width = m_group_expression->Pgroup()->Pstats()->Width(mp, m_required_physical_property->m_cols).Get();
 	// ci.SetWidth(width);
 	// extract rebinds
 	// double num_rebinds = m_group_expression->Pgroup()->Pstats()->NumRebinds().Get();
@@ -146,7 +146,7 @@ double CPartialPlan::CostCompute()
 ULONG CPartialPlan::HashValue(const CPartialPlan *ppp)
 {
 	ULONG ulHash = ppp->m_pgexpr->HashValue();
-	return CombineHashes(ulHash, CRequiredPropPlan::UlHashForCostBounding(ppp->m_prpp));
+	return CombineHashes(ulHash, CRequiredPhysicalProp::UlHashForCostBounding(ppp->m_prpp));
 }
 
 //---------------------------------------------------------------------------
@@ -170,13 +170,13 @@ bool CPartialPlan::Equals(const CPartialPlan *pppFst, const CPartialPlan *pppSnd
 		fEqual = (pppFst->m_pccChild == pppSnd->m_pccChild);
 	}
 	return fEqual && pppFst->m_ulChildIndex == pppSnd->m_ulChildIndex && pppFst->m_pgexpr == pppSnd->m_pgexpr &&
-	       CRequiredPropPlan::FEqualForCostBounding(pppFst->m_prpp, pppSnd->m_prpp);
+	       CRequiredPhysicalProp::FEqualForCostBounding(pppFst->m_prpp, pppSnd->m_prpp);
 }
 
 ULONG CPartialPlan::HashValue() const
 {
     ULONG ulHash = m_pgexpr->HashValue();
-	return CombineHashes(ulHash, CRequiredPropPlan::UlHashForCostBounding(m_prpp));
+	return CombineHashes(ulHash, CRequiredPhysicalProp::UlHashForCostBounding(m_prpp));
 }
 
 bool CPartialPlan::operator==(const CPartialPlan &pppSnd) const
@@ -192,6 +192,6 @@ bool CPartialPlan::operator==(const CPartialPlan &pppSnd) const
 		fEqual = (m_pccChild == pppSnd.m_pccChild);
 	}
 	return fEqual && m_ulChildIndex == pppSnd.m_ulChildIndex && m_pgexpr == pppSnd.m_pgexpr &&
-	       CRequiredPropPlan::FEqualForCostBounding(m_prpp, pppSnd.m_prpp);
+	       CRequiredPhysicalProp::FEqualForCostBounding(m_prpp, pppSnd.m_prpp);
 }
 }

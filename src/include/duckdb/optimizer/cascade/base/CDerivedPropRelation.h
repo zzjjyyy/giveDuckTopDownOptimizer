@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDerivedPropRelation.h
+//		CDerivedLogicalProp.h
 //
 //	@doc:
 //		Derived logical properties
@@ -22,14 +22,14 @@ using namespace gpos;
 namespace gpopt {
 // fwd declaration
 class CExpressionHandle;
-class CRequiredPropPlan;
+class CRequiredPhysicalProp;
 class CKeyCollection;
 class CPropConstraint;
 class CPartInfo;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CDerivedPropRelation
+//		CDerivedLogicalProp
 //
 //	@doc:
 //		Derived logical properties container.
@@ -40,7 +40,7 @@ class CPartInfo;
 //		of an expression.
 //
 //---------------------------------------------------------------------------
-class CDerivedPropRelation : public CDerivedProperty {
+class CDerivedLogicalProp : public CDerivedProperty {
 public:
 	// See member variables (below) with the same name for description on what
 	// the property types respresent
@@ -60,9 +60,9 @@ public:
 	};
 
 public:
-	CDerivedPropRelation();
-	CDerivedPropRelation(const CDerivedPropRelation &) = delete;
-	virtual ~CDerivedPropRelation();
+	CDerivedLogicalProp();
+	CDerivedLogicalProp(const CDerivedLogicalProp &) = delete;
+	virtual ~CDerivedLogicalProp();
 
 	// bitset representing whether property has been derived
 	bitset<EdptSentinel> m_is_prop_derived;
@@ -172,10 +172,10 @@ public:
 	CPropConstraint *GetPropertyConstraint() const;
 
 	// shorthand for conversion
-	static CDerivedPropRelation *GetRelationalProperties(CDerivedProperty *pdp);
+	static CDerivedLogicalProp *GetRelationalProperties(CDerivedProperty *pdp);
 
 	// check for satisfying required plan properties
-	bool FSatisfies(const CRequiredPropPlan *prop_plan) const override;
-}; // class CDerivedPropRelation
+	bool FSatisfies(const CRequiredPhysicalProp *prop_plan) const override;
+}; // class CDerivedLogicalProp
 } // namespace gpopt
 #endif

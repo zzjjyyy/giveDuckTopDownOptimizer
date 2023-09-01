@@ -20,10 +20,8 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type) {
 	/* Operator fields */
 	logical_type = type;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDerivedPropRelation();
-	m_derived_property_plan = nullptr;
-	m_required_property_relation = new CRequiredPropRelational();
-	m_required_property_plan = nullptr;
+	m_derived_logical_property = new CDerivedLogicalProp();
+	m_required_logical_property = new CRequiredLogicalProp();
 	m_cost = GPOPT_INVALID_COST;
 	estimated_cardinality = 0;
 	has_estimated_cardinality = false;
@@ -34,10 +32,8 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type, vector<unique_ptr<Exp
 	logical_type = type;
 	has_estimated_cardinality = false;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDerivedPropRelation();
-	m_derived_property_plan = nullptr;
-	m_required_property_relation = new CRequiredPropRelational();
-	m_required_property_plan = nullptr;
+	m_derived_logical_property = new CDerivedLogicalProp();
+	m_required_logical_property = new CRequiredLogicalProp();
 	m_cost = GPOPT_INVALID_COST;
 	estimated_cardinality = 0;
 	this->expressions = std::move(expressions);
@@ -342,19 +338,19 @@ unique_ptr<LogicalOperator> LogicalOperator::Copy(ClientContext &context) const 
 }
 
 CDerivedProperty *LogicalOperator::CreateDerivedProperty() {
-	if (m_derived_property_relation == nullptr) {
-		return new CDerivedPropRelation();
+	if (m_derived_logical_property == nullptr) {
+		return new CDerivedLogicalProp();
 	}
 
-	return m_derived_property_relation;
+	return m_derived_logical_property;
 }
 
 CRequiredProperty *LogicalOperator::CreateRequiredProperty() const {
-	if (m_required_property_relation == nullptr) {
-		return new CRequiredPropRelational();
+	if (m_required_logical_property == nullptr) {
+		return new CRequiredLogicalProp();
 	}
 
-	return m_required_property_relation ;
+	return m_required_logical_property;
 }
 
 //---------------------------------------------------------------------------
@@ -440,7 +436,7 @@ CPropConstraint *LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionH
 	arity = expression_handle.Arity(1);
 	for (ULONG ul = 0; ul < arity; ul++) {
 		Expression *expression_scalar = expression_handle.PexprScalarExactChild(ul);
-		vector<ColumnBinding> v = expression_scalar->getColumnBinding();
+		vector<ColumnBinding> v = expression_scalar->GetColumnBinding();
 		vector<vector<ColumnBinding>> pdrgpcrs_child;
 		pdrgpcrs_child = CUtils::AddEquivClassToArray(v, pdrgpcrs_child);
 		if (nullptr != expression_scalar) {
@@ -455,9 +451,9 @@ CPropConstraint *LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionH
 }
 
 void LogicalOperator::CloneORCAInfo(LogicalOperator *op) {
-	op->m_derived_property_relation = m_derived_property_relation;
-	op->m_derived_property_plan = m_derived_property_plan;
-	op->m_required_property_plan = m_required_property_plan;
+	op->m_derived_logical_property = m_derived_logical_property;
+	op->m_derived_physical_property = m_derived_physical_property;
+	op->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		op->estimated_props = estimated_props->Copy();
 	}

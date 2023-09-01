@@ -134,8 +134,10 @@ bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext *psc) 
 //---------------------------------------------------------------------------
 CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation(CSchedulerContext *psc,
                                                                                  CJob *pjOwner) {
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementation]");
+
 	// get a job pointer
-	CJobGroupImplementation *pjgi = PjConvert(pjOwner);
+	CJobGroupImplementation *pjgi = ConvertJob(pjOwner);
 	CGroup *pgroup = pjgi->m_pgroup;
 	if (!pgroup->FExplored()) {
 		// schedule a child exploration job
@@ -165,8 +167,10 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation
 //
 //---------------------------------------------------------------------------
 CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(CSchedulerContext *psc, CJob *pjOwner) {
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementChildren]");
+
 	// get a job pointer
-	CJobGroupImplementation *pjgi = PjConvert(pjOwner);
+	CJobGroupImplementation *pjgi = ConvertJob(pjOwner);
 	if (pjgi->FScheduleGroupExpressions(psc)) {
 		// implementation is in progress
 		return eevImplementing;
@@ -207,7 +211,7 @@ bool CJobGroupImplementation::FExecute(CSchedulerContext *psc) {
 void CJobGroupImplementation::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent) {
 	CJob *pj = psc->m_job_factory->CreateJob(CJob::EjtGroupImplementation);
 	// initialize job
-	CJobGroupImplementation *pjgi = PjConvert(pj);
+	CJobGroupImplementation *pjgi = ConvertJob(pj);
 	pjgi->Init(pgroup);
 	psc->m_scheduler->Add(pjgi, pjParent);
 }

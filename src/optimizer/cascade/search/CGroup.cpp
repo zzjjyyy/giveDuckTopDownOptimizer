@@ -152,10 +152,10 @@ void CGroup::UpdateBestCost(COptimizationContext *poc, CCostContext *pcc) {
 //		Lookup a given context in contexts hash table
 //
 //---------------------------------------------------------------------------
-COptimizationContext *CGroup::PocLookup(CRequiredPropPlan *prpp, ULONG search_stage_index) {
+COptimizationContext *CGroup::PocLookup(CRequiredPhysicalProp *prpp, ULONG search_stage_index) {
 	duckdb::vector<ColumnBinding> v;
 	COptimizationContext *poc =
-	    new COptimizationContext(this, prpp, new CRequiredPropRelational(v), search_stage_index);
+	    new COptimizationContext(this, prpp, new CRequiredLogicalProp(v), search_stage_index);
 	COptimizationContext *poc_found = nullptr;
 	{
 		auto itr = m_sht.find(poc->HashValue());
@@ -173,7 +173,7 @@ COptimizationContext *CGroup::PocLookup(CRequiredPropPlan *prpp, ULONG search_st
 //		properties
 //
 //---------------------------------------------------------------------------
-COptimizationContext *CGroup::PocLookupBest(ULONG ul_search_stages, CRequiredPropPlan *required_properties) {
+COptimizationContext *CGroup::PocLookupBest(ULONG ul_search_stages, CRequiredPhysicalProp *required_properties) {
 	COptimizationContext *poc_best = nullptr;
 	CCostContext *pcc_best = nullptr;
 	for (ULONG ul = 0; ul < ul_search_stages; ul++) {
@@ -514,7 +514,7 @@ void CGroup::CreateDummyCostContext() {
 	}
 	duckdb::vector<ColumnBinding> v;
 	COptimizationContext *poc =
-	    new COptimizationContext(this, CRequiredPropPlan::PrppEmpty(), new CRequiredPropRelational(v), 0);
+	    new COptimizationContext(this, CRequiredPhysicalProp::PrppEmpty(), new CRequiredLogicalProp(v), 0);
 	m_dummy_cost_context = new CCostContext(poc, 0, pgexprFirst);
 	m_dummy_cost_context->SetState(CCostContext::estCosting);
 	m_dummy_cost_context->SetCost(0.0);
@@ -716,7 +716,7 @@ void CGroup::ResetGroupJobQueues() {
 //		in current group, and satisfying the given required properties
 //
 //---------------------------------------------------------------------------
-double CGroup::CostLowerBound(CRequiredPropPlan *prppInput) {
+double CGroup::CostLowerBound(CRequiredPhysicalProp *prppInput) {
 	auto iter = m_cost_lower_bounds_map.find(prppInput);
 	double pcostLowerBound = GPOPT_INFINITE_COST;
 	if (m_cost_lower_bounds_map.end() != iter) {
@@ -751,6 +751,6 @@ double CGroup::CostLowerBound(CRequiredPropPlan *prppInput) {
 			pgexprCurrent = *itr;
 		}
 	}
-	m_cost_lower_bounds_map.insert(map<CRequiredPropPlan *, double>::value_type(prppInput, costLowerBound));
+	m_cost_lower_bounds_map.insert(map<CRequiredPhysicalProp *, double>::value_type(prppInput, costLowerBound));
 	return costLowerBound;
 }

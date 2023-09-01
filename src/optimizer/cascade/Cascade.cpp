@@ -88,17 +88,17 @@ duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<Logica
 	// CExpression* physical_plan = engine.ExprExtractPlan();
 	// CheckCTEConsistency(physical_plan);
 	// PrintQueryOrPlan(physical_plan);
-	// (void) physical_plan->PrppCompute(query_context->m_required_property_plan);
+	// (void) physical_plan->PrppCompute(query_context->m_required_physical_property);
 	task_proxy.DestroyAll();
 	worker.release();
-
-	// resolve column references
-	NewColumnBindingResolver new_resolver;
-	new_resolver.VisitOperator(*physical_plan);
 
 	// print physical plan
 	Printer::Print("Physical Plan: \n");
 	physical_plan->Print();
+
+	// resolve column references
+	NewColumnBindingResolver new_resolver;
+	new_resolver.VisitOperator(*physical_plan);
 
 	return physical_plan;
 }

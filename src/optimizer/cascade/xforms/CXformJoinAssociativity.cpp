@@ -55,8 +55,8 @@ void CXformJoinAssociativity::CreatePredicates(Operator* join, duckdb::vector<Jo
     NewLowerOutputCols.insert(NewLowerOutputCols.end(), LowerLeftOutputCols.begin(), LowerLeftOutputCols.end());
     NewLowerOutputCols.insert(NewLowerOutputCols.end(), UpperRightOutputCols.begin(), UpperRightOutputCols.end());
     for (auto &child : UpperJoin->conditions) {
-        if (CUtils::ContainsAll(NewLowerOutputCols, child.left->getColumnBinding())
-            && CUtils::ContainsAll(NewLowerOutputCols, child.right->getColumnBinding())) {
+        if (CUtils::ContainsAll(NewLowerOutputCols, child.left->GetColumnBinding())
+            && CUtils::ContainsAll(NewLowerOutputCols, child.right->GetColumnBinding())) {
             JoinCondition jc;
             jc.left = child.left->Copy();
             jc.right = child.right->Copy();
@@ -65,8 +65,8 @@ void CXformJoinAssociativity::CreatePredicates(Operator* join, duckdb::vector<Jo
         }
     }
     for (auto &child : UpperJoin->conditions) {
-        if (CUtils::ContainsAll(NewLowerOutputCols, child.left->getColumnBinding())
-            && CUtils::ContainsAll(NewLowerOutputCols, child.right->getColumnBinding())) {
+        if (CUtils::ContainsAll(NewLowerOutputCols, child.left->GetColumnBinding())
+            && CUtils::ContainsAll(NewLowerOutputCols, child.right->GetColumnBinding())) {
             continue;
         }
         JoinCondition jc;

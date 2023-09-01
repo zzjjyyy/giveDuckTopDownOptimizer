@@ -74,8 +74,8 @@ bool COptimizationContext::Matches(const COptimizationContext *poc) const {
 	if (m_group != poc->m_group || m_search_stage != poc->UlSearchStageIndex()) {
 		return false;
 	}
-	CRequiredPropPlan *prppFst = this->m_required_plan_properties;
-	CRequiredPropPlan *prppSnd = poc->m_required_plan_properties;
+	CRequiredPhysicalProp *prppFst = this->m_required_plan_properties;
+	CRequiredPhysicalProp *prppSnd = poc->m_required_plan_properties;
 	// make sure we are not comparing to invalid context
 	if (NULL == prppFst || NULL == prppSnd) {
 		return NULL == prppFst && NULL == prppSnd;
@@ -166,7 +166,7 @@ bool COptimizationContext::FOptimizeAgg(CGroupExpression *pgexprParent, CGroupEx
                                         COptimizationContext *poc, ULONG ulSearchStages) {
 	// otherwise, we need to avoid optimizing node unless it is a multi-stage agg
 	// COptimizationContext* pocFound = pgexprAgg->m_group->PocLookupBest(ulSearchStages,
-	// poc->m_required_property_plan); if (NULL != pocFound && pocFound->FHasMultiStageAggPlan())
+	// poc->m_required_physical_property); if (NULL != pocFound && pocFound->FHasMultiStageAggPlan())
 	// {
 	//  	// context already has a multi-stage agg plan, optimize child only if it is also a multi-stage agg
 	// 	    return CPhysicalAgg::PopConvert(pgexprAgg->Pop())->FMultiStage();
@@ -189,7 +189,7 @@ bool COptimizationContext::FOptimizeNLJoin(CGroupExpression *pgexprParent, CGrou
 	// columns and columns to be generated from inner child
 	duckdb::vector<ColumnBinding> pcrs;
 	duckdb::vector<ColumnBinding> pcrsOuterChild =
-	    CDerivedPropRelation::GetRelationalProperties((*pgexprJoin)[0]->m_derived_properties)->GetOutputColumns();
+	    CDerivedLogicalProp::GetRelationalProperties((*pgexprJoin)[0]->m_derived_properties)->GetOutputColumns();
 	pcrs.insert(pcrsOuterChild.begin(), pcrsOuterChild.end(), pcrs.end());
 	bool fIncluded = CUtils::ContainsAll(pcrs, poc->m_required_plan_properties->m_cols);
 	return fIncluded;

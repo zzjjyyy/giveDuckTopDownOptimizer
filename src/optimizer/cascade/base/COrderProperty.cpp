@@ -9,7 +9,7 @@
 
 #include "duckdb/execution/operator/order/physical_order.hpp"
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 
 namespace gpopt {
 using namespace duckdb;
@@ -82,7 +82,7 @@ ULONG COrderProperty::HashValue() const {
 COrderProperty::EPropEnforcingType
 COrderProperty::EorderEnforcingType(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, bool fOrderReqd) const {
 	if (fOrderReqd) {
-		return popPhysical->EenforcingTypeOrder(exprhdl, this->m_order_spec->orderby_node);
+		return popPhysical->EnforcingTypeOrder(exprhdl, this->m_order_spec->order_nodes);
 	}
 	return EpetUnnecessary;
 }

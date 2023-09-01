@@ -82,7 +82,7 @@ public:
 public:
 	ULONG HashValue() const override;
 
-	COrderProperty::EPropEnforcingType EenforcingTypeOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
+	COrderProperty::EPropEnforcingType EnforcingTypeOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
 
 	COrderSpec*RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *posRequired,
 							ULONG child_index,

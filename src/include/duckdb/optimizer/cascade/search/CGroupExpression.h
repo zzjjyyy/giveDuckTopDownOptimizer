@@ -115,7 +115,7 @@ public:
 	                             double cost_lower_bound);
 	// compute a cost lower bound for plans, rooted by current group expression, and satisfying the given required
 	// properties
-	double CostLowerBound(CRequiredPropPlan *input_required_prop_plan, CCostContext *child_cost_context,
+	double CostLowerBound(CRequiredPhysicalProp *input_required_prop_plan, CCostContext *child_cost_context,
 	                      ULONG child_index);
 	// initialize group expression
 	void Init(CGroup *pgroup, ULONG id);
@@ -193,5 +193,8 @@ public:
 	static const CGroupExpression M_INVALID_GROUP_EXPR;
 
 	virtual bool ContainsCircularDependencies();
+
+
+
 }; // class CGroupExpression
 } // namespace gpopt

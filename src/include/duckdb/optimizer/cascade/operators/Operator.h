@@ -22,9 +22,9 @@ using namespace gpos;
 class Operator;
 class CCostContext;
 class CGroupExpression;
-class CDerivedPropPlan;
-class CDerivedPropRelation;
-class CRequiredPropRelational;
+class CDerivedPhysicalProp;
+class CDerivedLogicalProp;
+class CRequiredLogicalProp;
 class CDrvdPropCtxtPlan;
 class CPropConstraint;
 
@@ -53,13 +53,13 @@ public:
 	// --------------------------- ORCA ------------------------
 	CGroupExpression *m_group_expression;
 	//! derived relational properties
-	CDerivedPropRelation *m_derived_property_relation;
+	CDerivedLogicalProp *m_derived_logical_property;
 	//! derived properties of the carried plan
-	CDerivedPropPlan *m_derived_property_plan;
+	CDerivedPhysicalProp *m_derived_physical_property;
 	//! required relational properties
-	CRequiredPropRelational *m_required_property_relation;
+	CRequiredLogicalProp *m_required_logical_property;
 	//! required plan properties
-	CRequiredPropPlan *m_required_property_plan;
+	CRequiredPhysicalProp *m_required_physical_property;
 	double m_cost;
 
 	// --------------------------- DuckDB ----------------------
@@ -115,9 +115,9 @@ public:
 
 	duckdb::vector<CFunctionalDependency *> DeriveFunctionalDependencies(CExpressionHandle &expression_handle);
 
-	CRequiredPropPlan *PrppCompute(CRequiredPropPlan *required_properties_input);
+	CRequiredPhysicalProp *PrppCompute(CRequiredPhysicalProp *required_properties_input);
 
-	CRequiredPropPlan *PrppDecorate(CRequiredPropPlan *required_properties_input);
+	CRequiredPhysicalProp *PrppDecorate(CRequiredPhysicalProp *required_properties_input);
 
 	CDerivedProperty *PdpDerive(CDrvdPropCtxtPlan *pdpctxtL = nullptr);
 

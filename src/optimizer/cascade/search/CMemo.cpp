@@ -12,7 +12,7 @@
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 #include "duckdb/optimizer/cascade/common/CAutoTimer.h"
 #include "duckdb/optimizer/cascade/engine/CEngine.h"
 #include "duckdb/optimizer/cascade/io/COstreamString.h"
@@ -69,7 +69,7 @@ void CMemo::SetRoot(CGroup *group) {
 //---------------------------------------------------------------------------
 void CMemo::Add(CGroup *group, Operator *expr_origin) {
 	// extract expression props
-	CDerivedProperty *pdp = expr_origin->m_derived_property_relation;
+	CDerivedProperty *pdp = expr_origin->m_derived_logical_property;
 	ULONG id = m_id_counter++;
 	{
 		CGroupProxy gp(group);
@@ -177,7 +177,7 @@ CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
 //		Extract a plan that delivers the given required properties
 //
 //---------------------------------------------------------------------------
-duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan *required_property,
+duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPhysicalProp *required_property,
                                                 ULONG search_stage) {
 	CGroupExpression *best_group_expr;
 	COptimizationContext *opt_context;
@@ -214,7 +214,7 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPropPlan 
 	ULONG arity = best_group_expr->Arity();
 	for (ULONG i = 0; i < arity; i++) {
 		CGroup *child_group = (*best_group_expr)[i];
-		CRequiredPropPlan *child_required_property = nullptr;
+		CRequiredPhysicalProp *child_required_property = nullptr;
 		// If the child group doesn't have scalar expression, we get the optimization
 		// context for that child group as well as the required plan properties.
 		//

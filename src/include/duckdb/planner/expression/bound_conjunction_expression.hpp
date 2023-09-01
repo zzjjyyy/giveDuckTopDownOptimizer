@@ -36,12 +36,12 @@ public:
 	static unique_ptr<Expression> Deserialize(ExpressionDeserializationState &state, FieldReader &reader);
 
 public:
-	vector<ColumnBinding> getColumnBinding() override
+	vector<ColumnBinding> GetColumnBinding() override
 	{
 		vector<ColumnBinding> v;
 		for(auto &child: children)
 		{
-			vector<ColumnBinding> v1 = child->getColumnBinding();
+			vector<ColumnBinding> v1 = child->GetColumnBinding();
 			v.insert(v1.begin(), v1.end(), v.end());
 		}
 		return v;

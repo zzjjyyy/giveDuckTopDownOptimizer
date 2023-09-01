@@ -11,21 +11,21 @@
 #ifndef GPOS_CWorkerPoolManager_H
 #define GPOS_CWorkerPoolManager_H
 
+#include "duckdb/common/unique_ptr.hpp"
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/task/CTask.h"
-#include "duckdb/optimizer/cascade/task/CWorker.h"
 #include "duckdb/optimizer/cascade/task/CTaskId.h"
 #include "duckdb/optimizer/cascade/task/CTaskSchedulerFifo.h"
-#include "duckdb/common/unique_ptr.hpp"
+#include "duckdb/optimizer/cascade/task/CWorker.h"
+
 #include <unordered_map>
 
-#define GPOS_WORKERPOOL_HT_SIZE (1024)		 // number of buckets in hash tables
-#define GPOS_WORKER_STACK_SIZE (500 * 1024)	 // max worker stack size
+#define GPOS_WORKERPOOL_HT_SIZE (1024)       // number of buckets in hash tables
+#define GPOS_WORKER_STACK_SIZE  (500 * 1024) // max worker stack size
 
 using namespace duckdb;
 
-namespace gpos
-{
+namespace gpos {
 //------------------------------------------------------------------------
 //	@class:
 //		CWorkerPoolManager
@@ -36,12 +36,10 @@ namespace gpos
 //		assigns tasks to workers;
 //
 //------------------------------------------------------------------------
-class CWorkerPoolManager
-{
+class CWorkerPoolManager {
 public:
 	// response to worker scheduling request
-	enum EScheduleResponse
-	{ EsrExecTask, EsrWorkerExit };
+	enum EScheduleResponse { EsrExecTask, EsrWorkerExit };
 
 public:
 	// task scheduler
@@ -57,32 +55,30 @@ public:
 	duckdb::unique_ptr<CWorker> m_single_worker;
 
 	// task storage
-	unordered_map<CTaskId, CTask*, CTaskId::CTaskIdHash> m_shtTS;
+	unordered_map<CTaskId, CTask *, CTaskId::CTaskIdHash> m_shtTS;
 
 public:
 	//-------------------------------------------------------------------
 	// Interface for CAutoTaskProxy
 	//-------------------------------------------------------------------
 	// add task to scheduler
-	void Schedule(CTask* task);
+	void Schedule(CTask *task);
 
 	// increment AutoTaskProxy reference counter
-	void AddRef()
-	{
+	void AddRef() {
 		m_auto_task_proxy_counter++;
 	}
 
 	// decrement AutoTaskProxy reference counter
-	void RemoveRef()
-	{
+	void RemoveRef() {
 		m_auto_task_proxy_counter--;
 	}
 
 	// insert task in table
-	void RegisterTask(CTask* task);
+	void RegisterTask(CTask *task);
 
 	// remove task from table
-	CTask* RemoveTask(CTaskId tid);
+	CTask *RemoveTask(CTaskId tid);
 
 	//-------------------------------------------------------------------
 	// Interface for CWorker
@@ -107,8 +103,7 @@ public:
 	CWorkerPoolManager(const CWorkerPoolManager &) = delete;
 
 	// dtor
-	~CWorkerPoolManager()
-	{
+	~CWorkerPoolManager() {
 	}
 
 	// initialize worker pool manager
@@ -119,6 +114,6 @@ public:
 
 	// cancel task by task id
 	void Cancel(CTaskId tid);
-};	// class CWorkerPoolManager
-}  // namespace gpos
+}; // class CWorkerPoolManager
+} // namespace gpos
 #endif

@@ -35,7 +35,7 @@ class COrderSpec;
 class COrderSpec {
 public:
 	// components of order spec
-	duckdb::vector<BoundOrderByNode> orderby_node;
+	duckdb::vector<BoundOrderByNode> order_nodes;
 
 public:
 	// ctor
@@ -53,12 +53,12 @@ public:
 
 	// number of sort expressions
 	ULONG UlSortColumns() const {
-		return orderby_node.size();
+		return order_nodes.size();
 	}
 
 	// accessor of sort column of the n-th component
 	ColumnBinding Pcr(ULONG ul) const {
-		return ((BoundColumnRefExpression *)orderby_node[ul].expression.get())->binding;
+		return ((BoundColumnRefExpression *)order_nodes[ul].expression.get())->binding;
 	}
 
 	// check if order spec has no columns
@@ -81,7 +81,7 @@ public:
 	bool FSatisfies(COrderSpec *pos) const;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp,
+	virtual void AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPhysicalProp *prpp,
 	                             duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
 	                             duckdb::unique_ptr<Operator> pexpr);
 

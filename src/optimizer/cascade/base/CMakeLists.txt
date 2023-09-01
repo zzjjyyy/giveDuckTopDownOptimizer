@@ -16,7 +16,7 @@ add_library_unity(
     CPropConstraint.cpp
     CQueryContext.cpp
         CRequiredProperty.cpp
-        CRequiredPropPlan.cpp
+        CRequiredPhysicalProp.cpp
     CReqPropRelational.cpp
     CUtils.cpp)
 set(ALL_OBJECT_FILES

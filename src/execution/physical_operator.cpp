@@ -21,9 +21,8 @@ PhysicalOperator::PhysicalOperator(PhysicalOperatorType type, vector<LogicalType
 	/* Operator fields */
 	physical_type = type;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDerivedPropRelation();
-	m_derived_property_plan = nullptr;
-	m_required_property_plan = nullptr;
+	m_derived_physical_property = nullptr;
+	m_required_physical_property = nullptr;
 	m_cost = GPOPT_INVALID_COST;
 	estimated_props = make_uniq<EstimatedProperties>(estimated_cardinality, 0);
 	this->types = types;
@@ -227,15 +226,21 @@ void PhysicalOperator::Verify() {
 //
 //---------------------------------------------------------------------------
 CDerivedProperty *PhysicalOperator::CreateDerivedProperty() {
-	return new CDerivedPropPlan();
+	if (m_derived_physical_property == nullptr)
+		return new CDerivedPhysicalProp();
+
+	return m_derived_physical_property;
 }
 
 CRequiredProperty *PhysicalOperator::CreateRequiredProperty() const {
-	return new CRequiredPropPlan();
+	if (m_required_physical_property == nullptr)
+		return new CRequiredPhysicalProp();
+
+	return m_required_physical_property;
 }
 
-COrderProperty::EOrderMatching PhysicalOperator::OrderMatching(CRequiredPropPlan *, ULONG, vector<CDerivedProperty *>,
-                                                               ULONG) {
+COrderProperty::EOrderMatching PhysicalOperator::OrderMatching(CRequiredPhysicalProp *, ULONG,
+                                                               vector<CDerivedProperty *>, ULONG) {
 	return COrderProperty::EomSatisfy;
 }
 
@@ -243,55 +248,86 @@ COrderProperty::EOrderMatching PhysicalOperator::OrderMatching(CRequiredPropPlan
 unique_ptr<Expression> PhysicalOperator::ExpressionPassThrough(const PhysicalOperator *op, Expression *expr) {
 	if (op->physical_type == PhysicalOperatorType::PROJECTION) {
 		D_ASSERT(expr->expression_class == ExpressionClass::BOUND_COLUMN_REF);
-		PhysicalProjection* proj = (PhysicalProjection*)op;
-		unique_ptr<BoundColumnRefExpression> result = unique_ptr_cast<Expression, BoundColumnRefExpression>(expr->Copy());
+		auto *proj = (PhysicalProjection *)op;
+		auto *result = (BoundColumnRefExpression *)(expr);
 		// For yiming, I think the commented code should be used to solve the problem
-		// idx_t tbl_index = result->binding.table_index;
-		// if(tbl_index == proj->v_column_binding[0].table_index) {
-		//      // This means that the ColumnBinding belongs to Projection's
-		//	idx_t col_idx = result->binding.column_index;
-		//      return proj->select_list[col_idx]->Copy();
-		// } else {
-		// 	// This means that the ColumnBinding does not belong to Projection's
-		// 	return expr->Copy();
-		// }
+		idx_t tbl_index = result->binding.table_index;
+		if (tbl_index == proj->v_column_binding[0].table_index) {
+			// This means that the ColumnBinding belongs to Projection's
+			idx_t col_idx = result->binding.column_index;
+			return proj->select_list[col_idx]->Copy();
+		} else {
+			// This means that the ColumnBinding does not belong to Projection's
+			return expr->Copy();
+		}
 		// Add by Junyi
-		idx_t col_idx = result->binding.column_index;
-		return proj->select_list[col_idx]->Copy();
-		PhysicalProjection *proj = (PhysicalProjection *)op;
-		unique_ptr<BoundColumnRefExpression> result =
-		    unique_ptr_cast<Expression, BoundColumnRefExpression>(expr->Copy());
-		idx_t idx = result->binding.column_index;
-		return proj->select_list[idx]->Copy();
 	} else {
 		return expr->Copy();
 	}
 }
 
-COrderProperty::EPropEnforcingType PhysicalOperator::EenforcingTypeOrder(CExpressionHandle &exprhdl,
-                                                                         vector<BoundOrderByNode> &peo) const {
-	if (exprhdl.Pgexpr() != nullptr) {
+COrderProperty::EPropEnforcingType PhysicalOperator::EnforcingTypeOrder(CExpressionHandle &handle,
+                                                                        vector<BoundOrderByNode> &peo) const {
+	if (handle.group_expr() != nullptr) {
+		// It is very dangerous here.
+//		if (physical_type == PhysicalOperatorType::PROJECTION) {
+//			vector<BoundOrderByNode> v;
+//			size_t proj_table_idx = ((PhysicalProjection *)this)->v_column_binding[0].table_index;
+//			for (auto &node : peo) {
+//				auto *bound_expr = (BoundColumnRefExpression *)node.expression.get();
+//				size_t node_table_idx = bound_expr->GetColumnBinding()[0].table_index;
+//				if (node_table_idx == proj_table_idx) {
+//					v.push_back(node);
+//				}
+//			}
+//			if (v.empty())
+//				return COrderProperty::EPropEnforcingType::EpetUnnecessary;
+//			else {
+//				return COrderProperty::EPropEnforcingType::EpetRequired;
+//			}
+//		}
+
 		vector<BoundOrderByNode> v;
 		/* In case inconsistence */
 		for (auto &child : peo) {
 			unique_ptr<Expression> new_expr = ExpressionPassThrough(this, child.expression.get());
 			v.emplace_back(child.type, child.null_order, std::move(new_expr));
 		}
+
 		// derive all the possible order of this CGroupExpression
-		CGroupExpression *pgexpr = exprhdl.Pgexpr();
-		if (pgexpr->m_child_groups.size() > 0) {
+		CGroupExpression *group_expr = handle.group_expr();
+		if (group_expr->m_child_groups.size() > 0) {
 			// Only the order of the first child influence the order of its parent
-			CGroup *gp = pgexpr->m_child_groups[0];
-			for (auto iter = gp->m_sht.begin(); iter != gp->m_sht.end(); iter++) {
-				auto op_ctxt = iter->second;
-				if (CUtils::ContainsAll(op_ctxt->m_required_plan_properties->m_sort_order->m_order_spec->orderby_node,
-				                        v)) {
+			CGroup *gp = group_expr->m_child_groups[0];
+			for (auto &it : gp->m_sht) {
+				auto &opt_context = it.second;
+				auto &order_nodes = opt_context->m_required_plan_properties->m_sort_order->m_order_spec->order_nodes;
+				if (CUtils::ContainsAll(order_nodes, v)) {
 					return COrderProperty::EPropEnforcingType::EpetOptional;
 				}
 			}
 		}
 	}
 	return COrderProperty::EPropEnforcingType::EpetRequired;
+}
+
+COrderSpec *PhysicalOperator::RequiredSortSpec(CExpressionHandle &handle, COrderSpec *order_spec, ULONG child_index,
+                                               vector<CDerivedProperty *> children_derived_property,
+                                               ULONG num_opt_request) const {
+	if (child_index == 0) {
+		auto first_child_cols = children[0]->GetColumnBindings();
+		COrderSpec *res = new COrderSpec();
+		for (auto &child : order_spec->order_nodes) {
+			unique_ptr<Expression> expr = ExpressionPassThrough(this, child.expression.get());
+			if (CUtils::ContainsAll(first_child_cols, expr->GetColumnBinding())) {
+				BoundOrderByNode order(child.type, child.null_order, std::move(expr));
+				res->order_nodes.push_back(std::move(order));
+			}
+		}
+		return res;
+	} else {
+		return new COrderSpec();
+	}
 }
 
 bool CachingPhysicalOperator::CanCacheType(const LogicalType &type) {

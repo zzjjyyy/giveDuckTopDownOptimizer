@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDerivedPropRelation.cpp
+//		CDerivedLogicalProp.cpp
 //
 //	@doc:
 //		Relational derived properties;
@@ -9,7 +9,7 @@
 
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CKeyCollection.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 #include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/operators/CExpressionHandle.h"
 #include "duckdb/optimizer/cascade/task/CWorker.h"
@@ -18,36 +18,36 @@ using namespace gpopt;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDerivedPropRelation::CDerivedPropRelation
+//		CDerivedLogicalProp::CDerivedLogicalProp
 //
 //	@doc:
 //		ctor
 //
 //---------------------------------------------------------------------------
-CDerivedPropRelation::CDerivedPropRelation()
+CDerivedLogicalProp::CDerivedLogicalProp()
     : m_collection(NULL), m_join_depth(0), m_prop_constraint(NULL), m_is_complete(false) {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDerivedPropRelation::CDerivedPropRelationn
+//		CDerivedLogicalProp::CDerivedPropRelationn
 //
 //	@doc:
 //		ctor
 //
 //---------------------------------------------------------------------------
-CDerivedPropRelation::~CDerivedPropRelation() {
+CDerivedLogicalProp::~CDerivedLogicalProp() {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDerivedPropRelation::Derive
+//		CDerivedLogicalProp::Derive
 //
 //	@doc:
 //		Derive relational props. This derives ALL properties
 //
 //---------------------------------------------------------------------------
-void CDerivedPropRelation::Derive(CExpressionHandle &exprhdl, CDerivedPropertyContext *pdpctxt) {
+void CDerivedLogicalProp::Derive(CExpressionHandle &exprhdl, CDerivedPropertyContext *pdpctxt) {
 	// call output derivation function on the operator
 	DeriveOutputColumns(exprhdl);
 	// derive outer-references
@@ -69,13 +69,13 @@ void CDerivedPropRelation::Derive(CExpressionHandle &exprhdl, CDerivedPropertyCo
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDerivedPropRelation::FSatisfies
+//		CDerivedLogicalProp::FSatisfies
 //
 //	@doc:
 //		Check for satisfying required properties
 //
 //---------------------------------------------------------------------------
-bool CDerivedPropRelation::FSatisfies(const CRequiredPropPlan *prop_plan) const {
+bool CDerivedLogicalProp::FSatisfies(const CRequiredPhysicalProp *prop_plan) const {
 	auto v1 = GetOutputColumns();
 	duckdb::vector<ColumnBinding> v(v1.size() + prop_plan->m_cols.size());
 	auto itr = set_difference(v1.begin(), v1.end(), prop_plan->m_cols.begin(), prop_plan->m_cols.end(), v.begin());
@@ -85,26 +85,26 @@ bool CDerivedPropRelation::FSatisfies(const CRequiredPropPlan *prop_plan) const 
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDerivedPropRelation::GetRelationalProperties
+//		CDerivedLogicalProp::GetRelationalProperties
 //
 //	@doc:
 //		Short hand for conversion
 //
 //---------------------------------------------------------------------------
-CDerivedPropRelation *CDerivedPropRelation::GetRelationalProperties(CDerivedProperty *pdp) {
-	return (CDerivedPropRelation *)pdp;
+CDerivedLogicalProp *CDerivedLogicalProp::GetRelationalProperties(CDerivedProperty *pdp) {
+	return (CDerivedLogicalProp *)pdp;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDerivedPropRelation::PdrgpfdChild
+//		CDerivedLogicalProp::PdrgpfdChild
 //
 //	@doc:
 //		Helper for getting applicable FDs from child
 //
 //---------------------------------------------------------------------------
 duckdb::vector<CFunctionalDependency *>
-CDerivedPropRelation::DeriveChildFunctionalDependencies(ULONG child_index, CExpressionHandle &exprhdl) {
+CDerivedLogicalProp::DeriveChildFunctionalDependencies(ULONG child_index, CExpressionHandle &exprhdl) {
 	// get FD's of the child
 	duckdb::vector<CFunctionalDependency *> pdrgpfdChild = exprhdl.Pdrgpfd(child_index);
 	// get output columns of the parent
@@ -135,14 +135,14 @@ CDerivedPropRelation::DeriveChildFunctionalDependencies(ULONG child_index, CExpr
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDerivedPropRelation::PdrgpfdLocal
+//		CDerivedLogicalProp::PdrgpfdLocal
 //
 //	@doc:
 //		Helper for deriving local FDs
 //
 //---------------------------------------------------------------------------
 duckdb::vector<CFunctionalDependency *>
-CDerivedPropRelation::DeriveLocalFunctionalDependencies(CExpressionHandle &exprhdl) {
+CDerivedLogicalProp::DeriveLocalFunctionalDependencies(CExpressionHandle &exprhdl) {
 	duckdb::vector<CFunctionalDependency *> pdrgpfd;
 	// get local key
 	CKeyCollection *pkc = exprhdl.DeriveKeyCollection();
@@ -171,12 +171,12 @@ CDerivedPropRelation::DeriveLocalFunctionalDependencies(CExpressionHandle &exprh
 }
 
 // output columns
-duckdb::vector<ColumnBinding> CDerivedPropRelation::GetOutputColumns() const {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::GetOutputColumns() const {
 	return m_output_cols;
 }
 
 // output columns
-duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveOutputColumns(CExpressionHandle &exprhdl) {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::DeriveOutputColumns(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptPcrsOutput]) {
 		m_output_cols = exprhdl.Pop()->GetColumnBindings();
 	}
@@ -185,12 +185,12 @@ duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveOutputColumns(CExpress
 }
 
 // outer references
-duckdb::vector<ColumnBinding> CDerivedPropRelation::GetOuterReferences() const {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::GetOuterReferences() const {
 	return m_outer_cols;
 }
 
 // outer references
-duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveOuterReferences(CExpressionHandle &exprhdl) {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::DeriveOuterReferences(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptPcrsOuter]) {
 		m_outer_cols = exprhdl.Pop()->GetColumnBindings();
 	}
@@ -199,11 +199,11 @@ duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveOuterReferences(CExpre
 }
 
 // nullable columns
-duckdb::vector<ColumnBinding> CDerivedPropRelation::GetNotNullColumns() const {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::GetNotNullColumns() const {
 	return m_not_null_cols;
 }
 
-duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveNotNullColumns(CExpressionHandle &exprhdl) {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::DeriveNotNullColumns(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptPcrsNotNull]) {
 		m_not_null_cols = exprhdl.Pop()->GetColumnBindings();
 	}
@@ -212,11 +212,11 @@ duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveNotNullColumns(CExpres
 }
 
 // columns from the inner child of a correlated-apply expression that can be used above the apply expression
-duckdb::vector<ColumnBinding> CDerivedPropRelation::GetCorrelatedApplyColumns() const {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::GetCorrelatedApplyColumns() const {
 	return m_correlated_apply_cols;
 }
 
-duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveCorrelatedApplyColumns(CExpressionHandle &exprhdl) {
+duckdb::vector<ColumnBinding> CDerivedLogicalProp::DeriveCorrelatedApplyColumns(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptPcrsCorrelatedApply]) {
 		m_correlated_apply_cols = exprhdl.Pop()->GetColumnBindings();
 	}
@@ -225,11 +225,11 @@ duckdb::vector<ColumnBinding> CDerivedPropRelation::DeriveCorrelatedApplyColumns
 }
 
 // key collection
-CKeyCollection *CDerivedPropRelation::GetKeyCollection() const {
+CKeyCollection *CDerivedLogicalProp::GetKeyCollection() const {
 	return m_collection;
 }
 
-CKeyCollection *CDerivedPropRelation::DeriveKeyCollection(CExpressionHandle &exprhdl) {
+CKeyCollection *CDerivedLogicalProp::DeriveKeyCollection(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptPkc]) {
 		m_collection = (static_cast<LogicalOperator *>(exprhdl.Pop()))->DeriveKeyCollection(exprhdl);
 	}
@@ -238,11 +238,11 @@ CKeyCollection *CDerivedPropRelation::DeriveKeyCollection(CExpressionHandle &exp
 }
 
 // functional dependencies
-duckdb::vector<CFunctionalDependency *> CDerivedPropRelation::GetFunctionalDependencies() const {
+duckdb::vector<CFunctionalDependency *> CDerivedLogicalProp::GetFunctionalDependencies() const {
 	return m_fun_deps;
 }
 
-duckdb::vector<CFunctionalDependency *> CDerivedPropRelation::DeriveFunctionalDependencies(CExpressionHandle &exprhdl) {
+duckdb::vector<CFunctionalDependency *> CDerivedLogicalProp::DeriveFunctionalDependencies(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptPdrgpfd]) {
 		duckdb::vector<CFunctionalDependency *> pdrgpfd;
 		const ULONG arity = exprhdl.Arity();
@@ -261,11 +261,11 @@ duckdb::vector<CFunctionalDependency *> CDerivedPropRelation::DeriveFunctionalDe
 }
 
 // join depth
-ULONG CDerivedPropRelation::GetJoinDepth() const {
+ULONG CDerivedLogicalProp::GetJoinDepth() const {
 	return m_join_depth;
 }
 
-ULONG CDerivedPropRelation::DeriveJoinDepth(CExpressionHandle &exprhdl) {
+ULONG CDerivedLogicalProp::DeriveJoinDepth(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptJoinDepth]) {
 		m_join_depth = ((LogicalOperator *)exprhdl.Pop())->DeriveJoinDepth(exprhdl);
 	}
@@ -274,11 +274,11 @@ ULONG CDerivedPropRelation::DeriveJoinDepth(CExpressionHandle &exprhdl) {
 }
 
 // constraint property
-CPropConstraint *CDerivedPropRelation::GetPropertyConstraint() const {
+CPropConstraint *CDerivedLogicalProp::GetPropertyConstraint() const {
 	return m_prop_constraint;
 }
 
-CPropConstraint *CDerivedPropRelation::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
+CPropConstraint *CDerivedLogicalProp::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
 	if (!m_is_prop_derived[EdptPpc]) {
 		m_prop_constraint = ((LogicalOperator *)exprhdl.Pop())->DerivePropertyConstraint(exprhdl);
 	}

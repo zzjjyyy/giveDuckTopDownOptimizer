@@ -70,8 +70,8 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 	unique_ptr<LogicalOperator> logical_plan = unique_ptr_cast<Operator, LogicalOperator>(std::move(plan_p));
 
 	// print the logical plan
-	Printer::Print("Logical Plan: \n");
-	logical_plan->Print();
+	//	Printer::Print("Logical Plan: \n");
+	//	logical_plan->Print();
 
 	Verify(*logical_plan);
 	this->plan = std::move(logical_plan);
@@ -157,7 +157,7 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 	unique_ptr<LogicalOperator> final_plan = unique_ptr_cast<Operator, LogicalOperator>(std::move(tmp_plan));
 
 	// print the logical plan
-	Printer::Print("Logical Plan Processed by duckdb: \n");
+	Printer::Print("Input Logical Plan: \n");
 	final_plan->Print();
 
 	return final_plan;

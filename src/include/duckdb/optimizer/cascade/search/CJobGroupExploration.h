@@ -71,7 +71,7 @@ public:
 	virtual bool FExecute(CSchedulerContext *psc);
 
 	// conversion function
-	static CJobGroupExploration *PjConvert(CJob *pj) {
+	static CJobGroupExploration *ConvertJob(CJob *pj) {
 		return dynamic_cast<CJobGroupExploration *>(pj);
 	}
 

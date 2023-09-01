@@ -46,7 +46,7 @@ public:
 	CGroupExpression* m_pgexpr;
 
 	// required plan properties of root operator
-	CRequiredPropPlan * m_prpp;
+	CRequiredPhysicalProp * m_prpp;
 
 	// cost context of known child plan -- can be null if no child plans are known
 	CCostContext* m_pccChild;
@@ -56,7 +56,7 @@ public:
 
 public:
 	// ctor
-	CPartialPlan(CGroupExpression* pgexpr, CRequiredPropPlan * prpp, CCostContext* pccChild, ULONG child_index);
+	CPartialPlan(CGroupExpression* pgexpr, CRequiredPhysicalProp * prpp, CCostContext* pccChild, ULONG child_index);
 	
 	// no copy ctor
 	CPartialPlan(const CPartialPlan &) = delete;

@@ -9,7 +9,7 @@
 #pragma once
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 #include "duckdb/optimizer/cascade/search/CJobQueue.h"
 
 #define GPOPT_INVALID_OPTCTXT_ID gpos::ulong_max
@@ -22,7 +22,7 @@ class CGroup;
 class CGroupExpression;
 class CCostContext;
 class COptimizationContext;
-class CRequiredPropRelational;
+class CRequiredLogicalProp;
 
 // optimization context pointer definition
 typedef COptimizationContext *OPTCTXT_PTR;
@@ -50,10 +50,10 @@ public:
 	//---------------------------------------------------------------------------
 	// ctor
 	// @inputs:
-	//	 CRequiredPropRelational* prprel: required relational props -- used during stats derivation
+	//	 CRequiredLogicalProp* prprel: required relational props -- used during stats derivation
 	//	 IStatisticsArray* stats_ctxt: stats of previously optimized expressions
 	//---------------------------------------------------------------------------
-	COptimizationContext(CGroup *pgroup, CRequiredPropPlan *prpp, CRequiredPropRelational *prprel,
+	COptimizationContext(CGroup *pgroup, CRequiredPhysicalProp *prpp, CRequiredLogicalProp *prprel,
 	                     ULONG search_stage_index)
 	    : m_id(GPOPT_INVALID_OPTCTXT_ID), m_group(pgroup), m_required_plan_properties(prpp),
 	      m_required_relational_properties(prprel), m_search_stage(search_stage_index), m_best_cost_context(nullptr),
@@ -67,9 +67,9 @@ public:
 	// back pointer to owner group, used for debugging
 	CGroup *m_group;
 	// required plan properties
-	CRequiredPropPlan *m_required_plan_properties;
+	CRequiredPhysicalProp *m_required_plan_properties;
 	// required relational properties -- used for stats computation during costing
-	CRequiredPropRelational *m_required_relational_properties;
+	CRequiredLogicalProp *m_required_relational_properties;
 	// index of search stage where context is generated
 	ULONG m_search_stage;
 	// best cost context under the optimization context
@@ -163,6 +163,6 @@ public:
 	static bool FEqualContextIds(duckdb::vector<COptimizationContext *> pdrgpocFst,
 	                             duckdb::vector<COptimizationContext *> pdrgpocSnd);
 	// compute required properties to CTE producer based on plan properties of CTE consumer
-	// static CRequiredPropPlan *PrppCTEProducer(COptimizationContext *poc, ULONG ulSearchStages);
+	// static CRequiredPhysicalProp *PrppCTEProducer(COptimizationContext *poc, ULONG ulSearchStages);
 }; // class COptimizationContext
 } // namespace gpopt

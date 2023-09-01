@@ -162,9 +162,12 @@ bool CJobGroupOptimization::FScheduleGroupExpressions(CSchedulerContext *psc) {
 //
 //---------------------------------------------------------------------------
 CJobGroupOptimization::EEvent CJobGroupOptimization::EevtStartOptimization(CSchedulerContext *psc, CJob *pjOwner) {
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartOptimization]");
+
 	// get a job pointer
 	CJobGroupOptimization *pjgo = ConvertJob(pjOwner);
 	CGroup *pgroup = pjgo->m_pgroup;
+
 	if (!pgroup->FImplemented()) {
 		// schedule a group implementation child job
 		CJobGroupImplementation::ScheduleJob(psc, pgroup, pjgo);
@@ -192,6 +195,8 @@ CJobGroupOptimization::EEvent CJobGroupOptimization::EevtStartOptimization(CSche
 //
 //---------------------------------------------------------------------------
 CJobGroupOptimization::EEvent CJobGroupOptimization::EevtOptimizeChildren(CSchedulerContext *psc, CJob *pjOwner) {
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[OptimizeChildren]");
+
 	// get a job pointer
 	CJobGroupOptimization *pjgo = ConvertJob(pjOwner);
 	if (pjgo->FScheduleGroupExpressions(psc)) {
@@ -211,6 +216,8 @@ CJobGroupOptimization::EEvent CJobGroupOptimization::EevtOptimizeChildren(CSched
 //
 //---------------------------------------------------------------------------
 CJobGroupOptimization::EEvent CJobGroupOptimization::EevtCompleteOptimization(CSchedulerContext *psc, CJob *pjOwner) {
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[CompleteOptimization]");
+
 	// get a job pointer
 	CJobGroupOptimization *pjgo = ConvertJob(pjOwner);
 	// move to next optimization level

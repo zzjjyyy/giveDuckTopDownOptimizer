@@ -291,7 +291,7 @@ CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *opt_context
 //		the given required properties
 //
 //---------------------------------------------------------------------------
-double CGroupExpression::CostLowerBound(CRequiredPropPlan *input_required_prop_plan, CCostContext *child_cost_context,
+double CGroupExpression::CostLowerBound(CRequiredPhysicalProp *input_required_prop_plan, CCostContext *child_cost_context,
                                         ULONG child_index) {
 	CPartialPlan *ppp = new CPartialPlan(this, input_required_prop_plan, child_cost_context, child_index);
 	auto itr = m_partial_plan_cost_map.find(ppp->HashValue());

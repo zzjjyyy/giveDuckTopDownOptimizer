@@ -93,9 +93,9 @@ duckdb::unique_ptr<Operator> LogicalProjection::Copy() {
 		v.push_back(child->Copy());
 	}
 	unique_ptr<LogicalProjection> result = make_uniq<LogicalProjection>(table_index, std::move(v));
-	result->m_derived_property_relation = m_derived_property_relation;
-	result->m_derived_property_plan = m_derived_property_plan;
-	result->m_required_property_plan = m_required_property_plan;
+	result->m_derived_logical_property = m_derived_logical_property;
+	result->m_derived_physical_property = m_derived_physical_property;
+	result->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		result->estimated_props = estimated_props->Copy();
 	}
@@ -118,9 +118,9 @@ duckdb::unique_ptr<Operator> LogicalProjection::CopyWithNewGroupExpression(CGrou
 		v.push_back(child->Copy());
 	}
 	unique_ptr<LogicalProjection> result = make_uniq<LogicalProjection>(table_index, std::move(v));
-	result->m_derived_property_relation = m_derived_property_relation;
-	result->m_derived_property_plan = m_derived_property_plan;
-	result->m_required_property_plan = m_required_property_plan;
+	result->m_derived_logical_property = m_derived_logical_property;
+	result->m_derived_physical_property = m_derived_physical_property;
+	result->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		result->estimated_props = estimated_props->Copy();
 	}
@@ -145,9 +145,9 @@ LogicalProjection::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<
 		v.push_back(child->Copy());
 	}
 	unique_ptr<LogicalProjection> result = make_uniq<LogicalProjection>(table_index, std::move(v));
-	result->m_derived_property_relation = m_derived_property_relation;
-	result->m_derived_property_plan = m_derived_property_plan;
-	result->m_required_property_plan = m_required_property_plan;
+	result->m_derived_logical_property = m_derived_logical_property;
+	result->m_derived_physical_property = m_derived_physical_property;
+	result->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		result->estimated_props = estimated_props->Copy();
 	}

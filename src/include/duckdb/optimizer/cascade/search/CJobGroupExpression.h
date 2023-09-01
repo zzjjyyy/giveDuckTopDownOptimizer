@@ -76,5 +76,16 @@ public:
 
 	// job's function
 	bool FExecute(CSchedulerContext *psc) override = 0;
+
+	static void PrintJob(CJobGroupExpression *job, std::string info) {
+		CGroup *group = job->m_group_expression->m_group;
+		CGroupExpression *expr = group->m_group_exprs.front();
+		Operator *op = expr->m_operator.get();
+
+		std::string op_names = "Logical Type: " + LogicalOperatorToString(op->logical_type);
+		size_t group_id = group->m_id;
+
+		duckdb::Printer::Print(info + " " + op_names + "\tGroup Id " + std::to_string(group_id));
+	}
 }; // class CJobGroupExpression
 } // namespace gpopt

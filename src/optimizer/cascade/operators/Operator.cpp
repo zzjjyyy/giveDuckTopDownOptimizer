@@ -55,7 +55,7 @@ idx_t Operator::EstimateCardinality(ClientContext &context) {
 }
 
 duckdb::vector<CFunctionalDependency *> Operator::DeriveFunctionalDependencies(CExpressionHandle &expression_handle) {
-	return m_derived_property_relation->DeriveFunctionalDependencies(expression_handle);
+	return m_derived_logical_property->DeriveFunctionalDependencies(expression_handle);
 }
 
 //---------------------------------------------------------------------------
@@ -81,12 +81,12 @@ bool Operator::FMatchPattern(CGroupExpression *group_expression) {
 	return false;
 }
 
-CRequiredPropPlan *Operator::PrppCompute(CRequiredPropPlan *required_properties_input) {
+CRequiredPhysicalProp *Operator::PrppCompute(CRequiredPhysicalProp *required_properties_input) {
 	// derive plan properties
 	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
 	(void)PdpDerive(pdpctxtplan);
 	// decorate nodes with required properties
-	return m_required_property_plan;
+	return m_required_physical_property;
 }
 
 CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
@@ -104,7 +104,7 @@ CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 		}
 		switch (ept) {
 		case CDerivedProperty::EptPlan:
-			m_derived_property_plan = new CDerivedPropPlan();
+			m_derived_physical_property = new CDerivedPhysicalProp();
 			break;
 		default:
 			break;
@@ -120,8 +120,8 @@ CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 	return Pdp(ept);
 }
 
-CRequiredPropPlan *Operator::PrppDecorate(CRequiredPropPlan *required_properties_input) {
-	return m_required_property_plan;
+CRequiredPhysicalProp *Operator::PrppDecorate(CRequiredPhysicalProp *required_properties_input) {
+	return m_required_physical_property;
 }
 
 duckdb::unique_ptr<Operator> Operator::Copy() {
@@ -159,9 +159,9 @@ void Operator::CE() {
 CDerivedProperty *Operator::Pdp(const CDerivedProperty::EPropType ept) const {
 	switch (ept) {
 	case CDerivedProperty::EptRelational:
-		return (CDerivedProperty *)m_derived_property_relation;
+		return (CDerivedProperty *)m_derived_logical_property;
 	case CDerivedProperty::EptPlan:
-		return (CDerivedProperty *)m_derived_property_plan;
+		return (CDerivedProperty *)m_derived_physical_property;
 	default:
 		break;
 	}

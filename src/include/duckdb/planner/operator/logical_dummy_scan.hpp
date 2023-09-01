@@ -21,10 +21,10 @@ public:
 	explicit LogicalDummyScan(idx_t table_index)
 	    : LogicalOperator(LogicalOperatorType::LOGICAL_DUMMY_SCAN), table_index(table_index) {
 		logical_type = LogicalOperatorType::LOGICAL_DUMMY_SCAN;
-		m_derived_property_relation = new CDerivedPropRelation();
+		m_derived_logical_property = new CDerivedLogicalProp();
 		m_group_expression = nullptr;
-		m_derived_property_plan = nullptr;
-		m_required_property_plan = nullptr;
+		m_derived_physical_property = nullptr;
+		m_required_physical_property = nullptr;
 	}
 
 	idx_t table_index;

@@ -71,6 +71,7 @@ void CXformOrderImplementation::Transform(CXformContext *context, CXformResult *
 
 		auto physical_order = make_uniq<PhysicalOrder>(order->types, std::move(orders), std::move(projections),
 		                                               order->estimated_cardinality);
+		physical_order->is_enforced = false;
 		physical_order->AddChild(std::move(child));
 		result->Add(move(physical_order));
 	} else {

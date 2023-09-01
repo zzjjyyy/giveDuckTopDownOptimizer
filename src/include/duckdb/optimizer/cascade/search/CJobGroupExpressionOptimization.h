@@ -101,13 +101,13 @@ public:
 	void ComputeCurrentChildRequirements(CSchedulerContext *psc);
 
 	// initialize action
-	static EEvent EevtInitialize(CSchedulerContext *scheduler_context, CJob *job_owner);
+	static EEvent EevtInitialize(CSchedulerContext *scheduler_context, CJob *pjOwner);
 	// optimize child groups action
 	static EEvent EevtOptimizeChildren(CSchedulerContext *psc, CJob *pj);
 	// add enforcers to the owning group
 	static EEvent EevtAddEnforcers(CSchedulerContext *psc, CJob *pj);
 	// optimize group expression action
-	static EEvent EevtOptimizeSelf(CSchedulerContext *psc, CJob *job_owner);
+	static EEvent EevtOptimizeSelf(CSchedulerContext *psc, CJob *pjOwner);
 	// finalize action
 	static EEvent EevtFinalize(CSchedulerContext *psc, CJob *pj);
 	// schedule a new group expression optimization job
@@ -122,7 +122,7 @@ public:
 	virtual void Cleanup();
 
 	// conversion function
-	static CJobGroupExpressionOptimization *PjConvert(CJob *pj) {
+	static CJobGroupExpressionOptimization *ConvertJob(CJob *pj) {
 		return dynamic_cast<CJobGroupExpressionOptimization *>(pj);
 	}
 }; // class CJobGroupExpressionOptimization

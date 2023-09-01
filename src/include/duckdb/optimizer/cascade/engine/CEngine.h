@@ -25,8 +25,8 @@ class CJob;
 class CJobFactory;
 class CQueryContext;
 class COptimizationContext;
-class CRequiredPropPlan;
-class CRequiredPropRelational;
+class CRequiredPhysicalProp;
+class CRequiredLogicalProp;
 class CEnumeratorConfig;
 
 //---------------------------------------------------------------------------
@@ -118,14 +118,14 @@ public:
 	Operator *ExprExtractPlan();
 	// check required properties;
 	// return false if it's impossible for the operator to satisfy one or more
-	bool FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp, ULONG ul_opt_req);
+	bool FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPhysicalProp *prpp, ULONG ul_opt_req);
 	// check enforceable properties;
 	// return false if it's impossible for the operator to satisfy one or more
 	bool FCheckEnforceableProps(CGroupExpression *expr, COptimizationContext *poc, ULONG num_opt_request,
 	                            duckdb::vector<COptimizationContext *> pdrgpoc);
 	// check if the given expression has valid cte and partition properties
 	// with respect to the given requirements
-	bool FValidCTEAndPartitionProperties(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp);
+	bool FValidCTEAndPartitionProperties(CExpressionHandle &exprhdl, CRequiredPhysicalProp *prpp);
 	// derive statistics
 	void DeriveStats();
 	// execute operations after exploration completes
@@ -175,12 +175,12 @@ public:
 	bool FOptimizeChild(CGroupExpression *pgexpr_parent, CGroupExpression *pgexpr_child,
 	                    COptimizationContext *poc_child, EOptimizationLevel eol);
 	// determine if a plan, rooted by given group expression, can be safely pruned based on cost bounds
-	bool FSafeToPrune(CGroupExpression *pgexpr, CRequiredPropPlan *prpp, CCostContext *pcc_child, ULONG child_index,
+	bool FSafeToPrune(CGroupExpression *pgexpr, CRequiredPhysicalProp *prpp, CCostContext *pcc_child, ULONG child_index,
 	                  double *pcost_lower_bound);
 	// damp optimization level to process group expressions in the next lower optimization level
 	static EOptimizationLevel DampOptimizationLevel(EOptimizationLevel eol);
 	// derive statistics
-	static void DeriveStats(CGroup *pgroup, CRequiredPropRelational *prprel);
+	static void DeriveStats(CGroup *pgroup, CRequiredLogicalProp *prprel);
 	// return the first group expression in a given group
 	static CGroupExpression *PgexprFirst(CGroup *pgroup);
 	duckdb::vector<ULONG_PTR *> GetNumberOfBindings();

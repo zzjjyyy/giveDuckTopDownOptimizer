@@ -129,8 +129,10 @@ bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext *psc) {
 //
 //---------------------------------------------------------------------------
 CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedulerContext *psc, CJob *pjOwner) {
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartExploration]");
+
 	// get a job pointer
-	CJobGroupExploration *pjge = PjConvert(pjOwner);
+	CJobGroupExploration *pjge = ConvertJob(pjOwner);
 	CGroup *pgroup = pjge->m_pgroup;
 	// move group to exploration state
 	{
@@ -149,8 +151,10 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedul
 //
 //---------------------------------------------------------------------------
 CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedulerContext *psc, CJob *pjOwner) {
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[ExploreChildren]");
+
 	// get a job pointer
-	CJobGroupExploration *pjge = PjConvert(pjOwner);
+	CJobGroupExploration *pjge = ConvertJob(pjOwner);
 	if (pjge->FScheduleGroupExpressions(psc)) {
 		// new expressions have been added to group
 		return eevNewChildren;
@@ -191,7 +195,7 @@ bool CJobGroupExploration::FExecute(CSchedulerContext *psc) {
 void CJobGroupExploration::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent) {
 	CJob *pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExploration);
 	// initialize job
-	CJobGroupExploration *pjge = PjConvert(pj);
+	CJobGroupExploration *pjge = ConvertJob(pj);
 	pjge->Init(pgroup);
 	psc->m_scheduler->Add(pjge, pjParent);
 }

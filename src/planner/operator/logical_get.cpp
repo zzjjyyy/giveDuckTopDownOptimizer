@@ -255,9 +255,9 @@ unique_ptr<Operator> LogicalGet::Copy() {
 	tmp_bind_data->column_ids = bind_data->Cast<TableFunctionData>().column_ids;
 	unique_ptr<LogicalGet> result =
 	    make_uniq<LogicalGet>(table_index, this->function, std::move(tmp_bind_data), returned_types, names);
-	result->m_derived_property_relation = m_derived_property_relation;
-	result->m_derived_property_plan = m_derived_property_plan;
-	result->m_required_property_plan = m_required_property_plan;
+	result->m_derived_logical_property = m_derived_logical_property;
+	result->m_derived_physical_property = m_derived_physical_property;
+	result->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		result->estimated_props = estimated_props->Copy();
 	}
@@ -293,9 +293,9 @@ unique_ptr<Operator> LogicalGet::CopyWithNewGroupExpression(CGroupExpression *pg
 	tmp_bind_data->column_ids = bind_data->Cast<TableFunctionData>().column_ids;
 	unique_ptr<LogicalGet> result =
 	    make_uniq<LogicalGet>(table_index, this->function, std::move(tmp_bind_data), returned_types, names);
-	result->m_derived_property_relation = m_derived_property_relation;
-	result->m_derived_property_plan = m_derived_property_plan;
-	result->m_required_property_plan = m_required_property_plan;
+	result->m_derived_logical_property = m_derived_logical_property;
+	result->m_derived_physical_property = m_derived_physical_property;
+	result->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		result->estimated_props = estimated_props->Copy();
 	}
@@ -333,9 +333,9 @@ unique_ptr<Operator> LogicalGet::CopyWithNewChildren(CGroupExpression *pgexpr,
 	tmp_bind_data->column_ids = bind_data->Cast<TableFunctionData>().column_ids;
 	unique_ptr<LogicalGet> result =
 	    make_uniq<LogicalGet>(table_index, this->function, std::move(tmp_bind_data), returned_types, names);
-	result->m_derived_property_relation = m_derived_property_relation;
-	result->m_derived_property_plan = m_derived_property_plan;
-	result->m_required_property_plan = m_required_property_plan;
+	result->m_derived_logical_property = m_derived_logical_property;
+	result->m_derived_physical_property = m_derived_physical_property;
+	result->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		result->estimated_props = estimated_props->Copy();
 	}

@@ -82,7 +82,7 @@ void CCostContext::DerivePlanProps() {
 		CExpressionHandle handle;
 		handle.Attach(this);
 		handle.DerivePlanPropsForCostContext();
-		CDerivedPropPlan *plan_property = CDerivedPropPlan::DrvdPlanProperty(handle.DerivedProperty());
+		CDerivedPhysicalProp *plan_property = CDerivedPhysicalProp::DrvdPlanProperty(handle.DerivedProperty());
 		m_derived_prop_plan = plan_property;
 	}
 }
@@ -109,8 +109,8 @@ bool CCostContext::operator==(const CCostContext &cc) const {
 //---------------------------------------------------------------------------
 bool CCostContext::IsValid() {
 	// obtain relational properties from group
-	CDerivedPropRelation *prop_relation =
-	    CDerivedPropRelation::GetRelationalProperties(m_group_expression->m_group->m_derived_properties);
+	CDerivedLogicalProp *prop_relation =
+	    CDerivedLogicalProp::GetRelationalProperties(m_group_expression->m_group->m_derived_properties);
 	// derive plan properties
 	DerivePlanProps();
 	// checking for required properties satisfaction
@@ -158,10 +158,10 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext *pccFst, CCostContext 
 	// both plans have equal estimated rows for both children, break tie based on join depth
 	*pfTiesResolved = true;
 	ULONG ulOuterJoinDepthFst =
-	    CDerivedPropRelation::GetRelationalProperties((*pccFst->m_group_expression)[0]->m_derived_properties)
+	    CDerivedLogicalProp::GetRelationalProperties((*pccFst->m_group_expression)[0]->m_derived_properties)
 	        ->GetJoinDepth();
 	ULONG ulInnerJoinDepthFst =
-	    CDerivedPropRelation::GetRelationalProperties((*pccFst->m_group_expression)[1]->m_derived_properties)
+	    CDerivedLogicalProp::GetRelationalProperties((*pccFst->m_group_expression)[1]->m_derived_properties)
 	        ->GetJoinDepth();
 	if (ulInnerJoinDepthFst < ulOuterJoinDepthFst) {
 		*ppccPrefered = pccFst;
@@ -196,7 +196,7 @@ bool CCostContext::FBetterThan(CCostContext *pcc) const {
 	// RULE 1: break ties in cost of join plans,
 	// if both plans have the same estimated rows for both children, prefer
 	// the plan with deeper outer child
-	if (CUtils::FPhysicalJoin(Pgexpr()->Pop()) && CUtils::FPhysicalJoin(pcc->Pgexpr()->Pop()))
+	if (CUtils::FPhysicalJoin(Pgexpr()->Pop()) && CUtils::FPhysicalJoin(pcc->group_expr()->Pop()))
 	{
 	    CONST_COSTCTXT_PTR pccPrefered = nullptr;
 	    bool fSuccess = false;

@@ -19,7 +19,7 @@ using namespace duckdb;
 
 namespace gpopt {
 // fwd declarations
-class CDerivedPropPlan;
+class CDerivedPhysicalProp;
 class CCostContext;
 
 // cost context pointer definition
@@ -70,7 +70,7 @@ public:
 	// array of optimization contexts of child groups
 	duckdb::vector<COptimizationContext *> m_optimization_contexts;
 	// derived properties of the carried plan
-	CDerivedPropPlan *m_derived_prop_plan;
+	CDerivedPhysicalProp *m_derived_prop_plan;
 	// optimization request number
 	ULONG m_optimization_request_num;
 	// flag to indicate if cost context is pruned,

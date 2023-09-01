@@ -29,12 +29,13 @@ public:
 
 	//! Input data
 	vector<BoundOrderByNode> orders;
-
 	vector<idx_t> projections;
+	// whether or not the order is enforced (i.e. the order is guaranteed to be correct)
+	bool is_enforced;
 
 public:
-	COrderProperty::EPropEnforcingType EenforcingTypeOrder(CExpressionHandle &exprhdl,
-	                                                       vector<BoundOrderByNode> &peo) const override;
+	COrderProperty::EPropEnforcingType EnforcingTypeOrder(CExpressionHandle &exprhdl,
+	                                                      vector<BoundOrderByNode> &peo) const override;
 
 	COrderSpec *RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *posRequired, ULONG child_index,
 	                             vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) const override;
@@ -136,7 +137,7 @@ public:
 	COrderSpec *OrderSpec() {
 		COrderSpec *result = new COrderSpec();
 		for (auto &child : orders) {
-			result->orderby_node.emplace_back(child.Copy());
+			result->order_nodes.emplace_back(child.Copy());
 		}
 		return result;
 	}

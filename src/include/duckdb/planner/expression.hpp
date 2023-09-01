@@ -102,7 +102,7 @@ public:
 	}
 
 public:
-	virtual vector<ColumnBinding> getColumnBinding()
+	virtual vector<ColumnBinding> GetColumnBinding()
 	{
 		vector<ColumnBinding> v;
 		return v;

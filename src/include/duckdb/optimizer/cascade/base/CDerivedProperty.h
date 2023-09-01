@@ -17,7 +17,7 @@ using namespace gpos;
 class CExpressionHandle;
 class Operator;
 class CDerivedPropertyContext;
-class CRequiredPropPlan;
+class CRequiredPhysicalProp;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -66,7 +66,7 @@ public:
 	// derivation function
 	virtual void Derive(CExpressionHandle &pop, CDerivedPropertyContext *pdpctxt) = 0;
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CRequiredPropPlan *prpp) const = 0;
+	virtual BOOL FSatisfies(const CRequiredPhysicalProp *prpp) const = 0;
 	virtual BOOL IsComplete() const {
 		return true;
 	}

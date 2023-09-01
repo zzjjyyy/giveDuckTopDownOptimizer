@@ -7,13 +7,14 @@
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/engine/CEngine.h"
 
+#include "duckdb/execution/operator/order/physical_order.hpp"
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CCostContext.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
 #include "duckdb/optimizer/cascade/base/CQueryContext.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 #include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
 #include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/common/CAutoTimer.h"
@@ -203,8 +204,8 @@ void CEngine::InsertXformResult(CGroup *pgroup_origin, CXformResult *pxfres, CXf
 //
 //---------------------------------------------------------------------------
 bool CEngine::FPossibleDuplicateGroups(CGroup *group_left, CGroup *group_right) {
-	CDerivedPropRelation *pdprel_fst = CDerivedPropRelation::GetRelationalProperties(group_left->m_derived_properties);
-	CDerivedPropRelation *pdprel_snd = CDerivedPropRelation::GetRelationalProperties(group_right->m_derived_properties);
+	CDerivedLogicalProp *pdprel_fst = CDerivedLogicalProp::GetRelationalProperties(group_left->m_derived_properties);
+	CDerivedLogicalProp *pdprel_snd = CDerivedLogicalProp::GetRelationalProperties(group_right->m_derived_properties);
 	// right now we only check the output columns, but we may possibly need to
 	// check other properties as well
 	duckdb::vector<ColumnBinding> v1 = pdprel_fst->GetOutputColumns();
@@ -233,13 +234,13 @@ void CEngine::DeriveStats() {
 //		Derive statistics on the group
 //
 //---------------------------------------------------------------------------
-void CEngine::DeriveStats(CGroup *pgroup, CRequiredPropRelational *prprel) {
+void CEngine::DeriveStats(CGroup *pgroup, CRequiredLogicalProp *prprel) {
 	CGroupExpression *pgexpr_first = CEngine::PgexprFirst(pgroup);
-	CRequiredPropRelational *prprel_new = prprel;
+	CRequiredLogicalProp *prprel_new = prprel;
 	if (nullptr == prprel_new) {
 		// create empty property container
 		duckdb::vector<ColumnBinding> pcrs;
-		prprel_new = new CRequiredPropRelational(pcrs);
+		prprel_new = new CRequiredLogicalProp(pcrs);
 	}
 	// (void) pgexprFirst->Pgroup()->PstatsRecursiveDerive(pmpLocal, pmpGlobal,
 	// prprelNew, pdrgpstatCtxtNew); pdrgpstatCtxtNew->Release();
@@ -317,7 +318,7 @@ bool CEngine::FOptimizeChild(CGroupExpression *pgexpr_parent, CGroupExpression *
 // safely 		pruned during optimization
 //
 //---------------------------------------------------------------------------
-bool CEngine::FSafeToPrune(CGroupExpression *pgexpr, CRequiredPropPlan *prpp, CCostContext *pcc_child,
+bool CEngine::FSafeToPrune(CGroupExpression *pgexpr, CRequiredPhysicalProp *prpp, CCostContext *pcc_child,
                            ULONG child_index, double *pcost_lower_bound) {
 	*pcost_lower_bound = GPOPT_INVALID_COST;
 	// check if container group has a plan for given properties
@@ -350,7 +351,7 @@ MemoTreeMap *CEngine::MemoToMap() {
 	if (nullptr == m_memo_table->TreeMap()) {
 		duckdb::vector<ColumnBinding> v;
 		COptimizationContext *poc = new COptimizationContext(GroupRoot(), m_query_context->m_required_plan_property,
-		                                                     new CRequiredPropRelational(v), 0);
+		                                                     new CRequiredLogicalProp(v), 0);
 		m_memo_table->BuildTreeMap(poc);
 	}
 	return m_memo_table->TreeMap();
@@ -369,9 +370,10 @@ duckdb::vector<COptimizationContext *> CEngine::ChildrenOptimizationContext(CExp
 	duckdb::vector<COptimizationContext *> pdrgpoc;
 	const ULONG arity = exprhdl.Arity();
 	for (ULONG ul = 0; ul < arity; ul++) {
-		CGroup *pgroup_child = (*exprhdl.Pgexpr())[ul];
+		CGroup *pgroup_child = (*exprhdl.group_expr())[ul];
 		if (!pgroup_child->m_is_scalar) {
-			COptimizationContext *poc = pgroup_child->PocLookupBest(m_search_strategy.size(), exprhdl.RequiredPropPlan(ul));
+			COptimizationContext *poc =
+			    pgroup_child->PocLookupBest(m_search_strategy.size(), exprhdl.RequiredPropPlan(ul));
 			pdrgpoc.emplace_back(poc);
 		}
 	}
@@ -461,7 +463,7 @@ void CEngine::Optimize() {
 		// optimize root group
 		duckdb::vector<ColumnBinding> v;
 		COptimizationContext *poc = new COptimizationContext(GroupRoot(), m_query_context->m_required_plan_property,
-		                                                     new CRequiredPropRelational(v), m_current_search_stage);
+		                                                     new CRequiredLogicalProp(v), m_current_search_stage);
 		// schedule main optimization job
 		ScheduleMainJob(&scheduler_context, poc);
 		// run optimization job
@@ -581,7 +583,7 @@ bool CEngine::FValidPlanSample(CEnumeratorConfig *enumerator_config, ULLONG plan
 // the subtree, partition propagation enforcement can be skipped.
 //
 //		Second, EPET methods are called for each property to determine if an enforcer needs to be added. These methods
-// in turn call into virtual methods in the different operators. For example, CPhysical::EenforcingTypeOrder() is used
+// in turn call into virtual methods in the different operators. For example, CPhysical::EnforcingTypeOrder() is used
 // to determine a Sort node needs to be added to the group. These methods are passed an expression handle (to access
 // derived properties of the subtree) and the required properties as a object of a subclass of CEnfdProp.
 //
@@ -610,7 +612,7 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *expr, COptimizationContex
 	expr_handle.Attach(pcc);
 	expr_handle.DerivePlanPropsForCostContext();
 	PhysicalOperator *pop_physical = (PhysicalOperator *)(pcc->m_group_expression->m_operator.get());
-	CRequiredPropPlan *prpp = poc->m_required_plan_properties;
+	CRequiredPhysicalProp *prpp = poc->m_required_plan_properties;
 	// Determine if any property enforcement is disabled or unnecessary
 	bool f_order_reqd = !prpp->m_sort_order->m_order_spec->IsEmpty();
 	// Determine if adding an enforcer to the group is required, optional, unnecessary or prohibited over the group
@@ -631,10 +633,10 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *expr, COptimizationContex
 	duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr_enforcers;
 	// extract a leaf pattern from target group
 	CBinding binding;
-	Operator *pexpr = binding.PexprExtract(expr_handle.Pgexpr(), m_expr_enforcer_pattern.get(), nullptr);
+	Operator *pexpr = binding.PexprExtract(expr_handle.group_expr(), m_expr_enforcer_pattern.get(), nullptr);
 	prpp->m_sort_order->AppendEnforcers(prpp, pdrgpexpr_enforcers, pexpr->Copy(), enforcing_type_order, expr_handle);
 	if (!pdrgpexpr_enforcers.empty()) {
-		AddEnforcers(expr_handle.Pgexpr(), std::move(pdrgpexpr_enforcers));
+		AddEnforcers(expr_handle.group_expr(), std::move(pdrgpexpr_enforcers));
 	}
 	return FOptimize(enforcing_type_order);
 }
@@ -650,7 +652,7 @@ bool CEngine::FCheckEnforceableProps(CGroupExpression *expr, COptimizationContex
 //		1. The expression satisfies the CTE requirements
 //
 //---------------------------------------------------------------------------
-bool CEngine::FValidCTEAndPartitionProperties(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp) {
+bool CEngine::FValidCTEAndPartitionProperties(CExpressionHandle &exprhdl, CRequiredPhysicalProp *prpp) {
 	// PhysicalOperator* popPhysical = (PhysicalOperator*)exprhdl.Pop();
 	return true;
 	// return popPhysical->FProvidesReqdCTEs(prpp->Pcter());
@@ -668,7 +670,10 @@ bool CEngine::FChildrenOptimized(duckdb::vector<COptimizationContext *> optimiza
 	const ULONG length = optimization_contexts.size();
 	for (ULONG ul = 0; ul < length; ul++) {
 		if (nullptr == optimization_contexts[ul]->BestExpression()) {
-			return false;
+			COptimizationContext *opt = optimization_contexts[ul];
+			LogicalOperatorType type = opt->m_group->m_group_exprs.front()->m_operator->logical_type;
+			throw std::runtime_error("[CEngine::FChildrenOptimized] - child " + LogicalOperatorToString(type) +
+			                         " not optimized.");
 		}
 	}
 	return true;
@@ -714,18 +719,22 @@ bool CEngine::FProhibited(COrderProperty::EPropEnforcingType enforcing_type_orde
 //
 //		NB: Only relational properties are available at this stage to make this decision.
 //---------------------------------------------------------------------------
-bool CEngine::FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPropPlan *prpp, ULONG ul_opt_req) {
+bool CEngine::FCheckRequiredProps(CExpressionHandle &exprhdl, CRequiredPhysicalProp *prpp, ULONG ul_opt_req) {
 	// check if operator provides required columns
 	if (!prpp->FProvidesReqdCols(exprhdl, ul_opt_req)) {
 		return false;
 	}
+
 	PhysicalOperator *pop_physical = (PhysicalOperator *)exprhdl.Pop();
-	// check if sort operator is passed an empty order spec;
-	// this check is required to avoid self-deadlocks, i.e.
-	// sort optimizing same group with the same optimization context;
-	bool f_order_reqd = !prpp->m_sort_order->m_order_spec->IsEmpty();
-	if (!f_order_reqd && PhysicalOperatorType::ORDER_BY == pop_physical->physical_type) {
-		return false;
+	// check if sort operator is passed an empty order spec; this check is required to avoid self-deadlocks, i.e.  sort
+	// optimizing same group with the same optimization context; A variable "is_enforced" is added to PhysicalOrder to
+	// separate the enforced orderby and duckdb generated orderby.
+	if (PhysicalOperatorType::ORDER_BY == pop_physical->physical_type) {
+		PhysicalOrder *orderby = (PhysicalOrder *)pop_physical;
+		bool f_order_reqd = !prpp->m_sort_order->m_order_spec->IsEmpty();
+		if (!f_order_reqd && orderby->is_enforced) {
+			return false;
+		}
 	}
 	return true;
 }

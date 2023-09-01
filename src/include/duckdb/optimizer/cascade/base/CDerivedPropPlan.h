@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDerivedPropPlan.h
+//		CDerivedPhysicalProp.h
 //
 //	@doc:
 //		Derived physical properties
@@ -20,12 +20,12 @@ using namespace gpos;
 
 // fwd declaration
 class COrderSpec;
-class CRequiredPropPlan;
-class CDerivedPropPlan;
+class CRequiredPhysicalProp;
+class CDerivedPhysicalProp;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CDerivedPropPlan
+//		CDerivedPhysicalProp
 //
 //	@doc:
 //		Derived plan properties container.
@@ -35,11 +35,11 @@ class CDerivedPropPlan;
 //		rewindability, partition propagation spec and CTE map.
 //
 //---------------------------------------------------------------------------
-class CDerivedPropPlan : public CDerivedProperty {
+class CDerivedPhysicalProp : public CDerivedProperty {
 public:
-	CDerivedPropPlan();
-	CDerivedPropPlan(const CDerivedPropPlan &) = delete;
-	virtual ~CDerivedPropPlan();
+	CDerivedPhysicalProp();
+	CDerivedPhysicalProp(const CDerivedPhysicalProp &) = delete;
+	virtual ~CDerivedPhysicalProp();
 
 	// derived sort order
 	COrderSpec *m_sort_order;
@@ -60,7 +60,7 @@ public:
 	void Derive(gpopt::CExpressionHandle &pop, CDerivedPropertyContext *pdpctxt) override;
 
 	// short hand for conversion
-	static CDerivedPropPlan *DrvdPlanProperty(CDerivedProperty *pdp);
+	static CDerivedPhysicalProp *DrvdPlanProperty(CDerivedProperty *pdp);
 
 	// cte map
 	// CCTEMap* GetCostModel() const
@@ -71,9 +71,9 @@ public:
 	// hash function
 	virtual ULONG HashValue() const;
 	// equality function
-	virtual ULONG Equals(const CDerivedPropPlan *pdpplan) const;
+	virtual ULONG Equals(const CDerivedPhysicalProp *pdpplan) const;
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CRequiredPropPlan *prpp) const override;
-}; // class CDerivedPropPlan
+	virtual BOOL FSatisfies(const CRequiredPhysicalProp *prpp) const override;
+}; // class CDerivedPhysicalProp
 } // namespace gpopt
 #endif

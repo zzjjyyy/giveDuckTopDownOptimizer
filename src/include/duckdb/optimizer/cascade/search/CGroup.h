@@ -27,8 +27,8 @@ class CDerivedProperty;
 class CDrvdPropCtxtPlan;
 class CGroupProxy;
 class COptimizationContext;
-class CRequiredPropPlan;
-class CRequiredPropRelational;
+class CRequiredPhysicalProp;
+class CRequiredLogicalProp;
 
 // optimization levels in ascending order,
 // under a given optimization context, group expressions in higher levels
@@ -139,7 +139,7 @@ public:
 	// number of group expressions
 	ULONG m_num_exprs;
 	// map of cost lower bounds
-	std::map<CRequiredPropPlan *, double> m_cost_lower_bounds_map;
+	std::map<CRequiredPhysicalProp *, double> m_cost_lower_bounds_map;
 	// number of optimization contexts
 	ULONG_PTR m_num_opt_contexts;
 	// current state
@@ -159,7 +159,7 @@ public:
 	// insert given context into contexts hash table
 	COptimizationContext *PocInsert(COptimizationContext *poc);
 	// lookup the best context across all stages for the given required properties
-	COptimizationContext *PocLookupBest(ULONG ulSearchStages, CRequiredPropPlan *required_properties);
+	COptimizationContext *PocLookupBest(ULONG ulSearchStages, CRequiredPhysicalProp *required_properties);
 
 	// cleanup optimization contexts on destruction
 	void CleanupContexts();
@@ -184,7 +184,7 @@ public:
 	// retrieve next group expression
 	list<CGroupExpression *>::iterator NextGroupExpr(list<CGroupExpression *>::iterator pgexpr_iter);
 	// find the group expression having the best stats promise
-	CGroupExpression *PgexprBestPromise(CRequiredPropRelational *prprelInput);
+	CGroupExpression *PgexprBestPromise(CRequiredLogicalProp *prprelInput);
 	// lookup best expression under given optimization context
 	CGroupExpression *BestExpression(COptimizationContext *poc);
 
@@ -240,7 +240,7 @@ public:
 	// reset link map used in plan enumeration
 	void ResetLinkMap();
 	// compute cost lower bound for the plan satisfying given required properties
-	double CostLowerBound(CRequiredPropPlan *prppInput);
+	double CostLowerBound(CRequiredPhysicalProp *prppInput);
 
 	// matching of pairs of arrays of groups
 	static bool FMatchGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckdb::vector<CGroup *> pdrgpgroupSnd);
@@ -251,7 +251,7 @@ public:
 
 private:
 	// lookup a given context in contexts hash table
-	COptimizationContext *PocLookup(CRequiredPropPlan *prpp, ULONG ulSearchStageIndex);
+	COptimizationContext *PocLookup(CRequiredPhysicalProp *prpp, ULONG ulSearchStageIndex);
 
 	// helper function to add links in child groups
 	void RecursiveBuildTreeMap(

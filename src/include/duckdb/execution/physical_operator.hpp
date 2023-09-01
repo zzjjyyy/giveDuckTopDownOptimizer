@@ -77,7 +77,6 @@ public:
 
 	// create base container of derived properties
 	CDerivedProperty *CreateDerivedProperty() override;
-
 	CRequiredProperty * CreateRequiredProperty() const override;
 
 	virtual bool ParallelOperator() const {
@@ -97,34 +96,19 @@ public:
 	// virtual CCTEMap *PcmDerive() const;
 
 	// order matching type
-	virtual COrderProperty::EOrderMatching OrderMatching(CRequiredPropPlan *, ULONG, vector<CDerivedProperty *>, ULONG);
+	virtual COrderProperty::EOrderMatching OrderMatching(CRequiredPhysicalProp *, ULONG, vector<CDerivedProperty *>, ULONG);
 
 public:
 	static unique_ptr<Expression> ExpressionPassThrough(const PhysicalOperator *op, Expression *expr);
 
 	// return order property enforcing type for this operator
-	virtual COrderProperty::EPropEnforcingType EenforcingTypeOrder(CExpressionHandle &exprhdl,
+	virtual COrderProperty::EPropEnforcingType EnforcingTypeOrder(CExpressionHandle &handle,
 	                                                               vector<BoundOrderByNode> &peo) const;
 
 	// compute required sort order of the n-th child
 	virtual COrderSpec *RequiredSortSpec(CExpressionHandle &handle, COrderSpec *order_spec, ULONG child_index,
 	                                     vector<CDerivedProperty *> children_derived_property,
-	                                     ULONG num_opt_request) const {
-		if (child_index == 0) {
-			auto first_child_cols = children[0]->GetColumnBindings();
-			COrderSpec *res = new COrderSpec();
-			for (auto &child : order_spec->orderby_node) {
-				unique_ptr<Expression> expr = ExpressionPassThrough(this, child.expression.get());
-				if (CUtils::ContainsAll(first_child_cols, expr->getColumnBinding())) {
-					BoundOrderByNode order(child.type, child.null_order, std::move(expr));
-					res->orderby_node.push_back(std::move(order));
-				}
-			}
-			return res;
-		} else {
-			return new COrderSpec();
-		}
-	}
+	                                     ULONG num_opt_request) const;
 
 	virtual bool FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
 	                               ULONG ulOptReq) const {

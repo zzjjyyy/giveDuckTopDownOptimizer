@@ -72,7 +72,7 @@ public:
 	}
 
 	// append enforcers to dynamic array for the given plan properties
-	void AppendEnforcers(CRequiredPropPlan *prpp, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
+	void AppendEnforcers(CRequiredPhysicalProp *prpp, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
 	                     duckdb::unique_ptr<Operator> pexprChild, COrderProperty::EPropEnforcingType epet,
 	                     CExpressionHandle &exprhdl) {
 		if (FEnforce(epet)) {
