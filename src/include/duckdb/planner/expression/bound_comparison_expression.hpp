@@ -38,11 +38,11 @@ public:
 	static LogicalType BindComparison(LogicalType left_type, LogicalType right_type);
 
 public:
-	vector<ColumnBinding> getColumnBinding() override
+	vector<ColumnBinding> GetColumnBinding() override
 	{
 		vector<ColumnBinding> v;
-		v = left->getColumnBinding();
-		vector<ColumnBinding> v1 = right->getColumnBinding();
+		v = left->GetColumnBinding();
+		vector<ColumnBinding> v1 = right->GetColumnBinding();
 		v.insert(v1.begin(), v1.end(), v.end());
 		return v;
 	}

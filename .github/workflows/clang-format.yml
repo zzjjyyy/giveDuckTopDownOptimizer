@@ -10,16 +10,15 @@ jobs:
   cpp-formatting-check:
     name: Cpp Formatting Check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        check:
+          - 'src/include/optimizer/*.{cpp,h}'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+      - name: Run clang-format style check for C/C++ programs.
+        uses: jidicula/clang-format-action@v4.11.0
+        with:
+          clang-format-version: '13'
+          check-path: ${{ matrix.check }}
 
-      - name: Get changed files
-        id: getfile
-        run: |
-          echo "::set-output name=files::$(git diff --name-only --diff-filter=d origin/master | grep -E '\.(cpp|h)$' | xargs)"
-      - name: Run clang-format style check for changed C/C++ programs
-        run: |
-          clang-format -i ${{ steps.getfile.outputs.files }}
-          git diff --exit-code # This will produce an error if any files were changed, thus indicating they weren't formatted properly
-        if: steps.getfile.outputs.files != ''

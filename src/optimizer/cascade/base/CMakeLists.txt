@@ -3,10 +3,10 @@ add_library_unity(
     OBJECT
     CAutoOptCtxt.cpp
     CCostContext.cpp
-    CDrvdProp.cpp
+        CDerivedProperty.cpp
     CDrvdPropCtxtPlan.cpp
-    CDrvdPropPlan.cpp
-    CDrvdPropRelational.cpp
+        CDerivedPropPlan.cpp
+        CDerivedPropRelation.cpp
         COrderProperty.cpp
     CFunctionalDependency.cpp
     CKeyCollection.cpp
@@ -16,7 +16,7 @@ add_library_unity(
     CPropConstraint.cpp
     CQueryContext.cpp
         CRequiredProperty.cpp
-        CRequiredPropPlan.cpp
+        CRequiredPhysicalProp.cpp
     CReqPropRelational.cpp
     CUtils.cpp)
 set(ALL_OBJECT_FILES

@@ -7,19 +7,19 @@ namespace duckdb {
 LogicalFilter::LogicalFilter()
 	: LogicalOperator(LogicalOperatorType::LOGICAL_FILTER)
 {
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_logical_property = new CDerivedLogicalProp();
 	m_group_expression = nullptr;
-	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_derived_physical_property = nullptr;
+	m_required_physical_property = nullptr;
 }
 
 LogicalFilter::LogicalFilter(unique_ptr<Expression> expression)
 	: LogicalOperator(LogicalOperatorType::LOGICAL_FILTER)
 {
-	m_derived_property_relation = new CDrvdPropRelational();
+	m_derived_logical_property = new CDerivedLogicalProp();
 	m_group_expression = nullptr;
-	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_derived_physical_property = nullptr;
+	m_required_physical_property = nullptr;
 	expressions.push_back(std::move(expression));
 	SplitPredicates(expressions);
 }
@@ -93,7 +93,7 @@ Operator* LogicalFilter::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operato
 	CGroupExpression* pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	LogicalFilter* pexpr = new LogicalFilter();
-	pexpr->expressions = std::move(pgexpr->m_pop->expressions);
+	pexpr->expressions = std::move(pgexpr->m_operator->expressions);
 	for(auto &child : pdrgpexpr)
 	{
 		pexpr->AddChild(child->Copy());
@@ -105,13 +105,13 @@ Operator* LogicalFilter::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operato
 
 //---------------------------------------------------------------------------
 //	@function:
-//		LogicalFilter::PxfsCandidates
+//		LogicalFilter::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set * LogicalFilter::PxfsCandidates() const
+CXform_set * LogicalFilter::XformCandidates() const
 {
 	CXform_set * xform_set = new CXform_set();
 	(void) xform_set->set(CXform::ExfSelect2Apply);

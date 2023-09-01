@@ -916,9 +916,9 @@ unique_ptr<Operator> PhysicalHashJoin::Copy() {
 																this->delim_types, this->estimated_cardinality, this->perfect_join_statistics);
 	
 	/* Operator fields */
-	copy->m_derived_property_relation = this->m_derived_property_relation;
-	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
@@ -951,9 +951,9 @@ unique_ptr<Operator> PhysicalHashJoin::CopyWithNewGroupExpression(CGroupExpressi
 																this->delim_types, this->estimated_cardinality, this->perfect_join_statistics);
 	
 	/* Operator fields */
-	copy->m_derived_property_relation = this->m_derived_property_relation;
-	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
@@ -990,9 +990,9 @@ unique_ptr<Operator> PhysicalHashJoin::CopyWithNewChildren(CGroupExpression *pge
 																this->delim_types, this->estimated_cardinality, this->perfect_join_statistics);
 	
 	/* Operator fields */
-	copy->m_derived_property_relation = this->m_derived_property_relation;
-	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}

@@ -11,16 +11,15 @@
 #define GPOPT_CExpressionHandle_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/planner/logical_operator.hpp"
 
-namespace gpopt
-{
+namespace gpopt {
 // fwd declaration
-class CDrvdPropPlan;
+class CDerivedPhysicalProp;
 class CPropConstraint;
 class CCostContext;
 
@@ -37,34 +36,27 @@ using namespace duckdb;
 //		a handle is attached to either an expression or a group expression
 //
 //---------------------------------------------------------------------------
-class CExpressionHandle
-{
+class CExpressionHandle {
 	friend class CExpression;
 
 private:
 	// attached expression
-	Operator* m_pop;
-
-    // attached expression
-    Expression* m_expr;
-
+	Operator *m_pop;
+	// attached expression
+	Expression *m_expr;
 	// attached group expression
-	CGroupExpression* m_pgexpr;
-
+	CGroupExpression *m_pgexpr;
 	// attached cost context
-	CCostContext* m_pcc;
-
+	CCostContext *m_pcc;
 	// derived plan properties of the gexpr attached by a CostContext under
 	// the default CDrvdPropCtxtPlan. See DerivePlanPropsForCostContext()
 	// NB: does NOT support on-demand property derivation
-	CDrvdProp* m_pdpplan;
-
+	CDerivedProperty *m_derived_prop_pplan;
 	// required properties of attached expr/gexpr;
 	// set during required property computation
-	CRequiredProperty * m_prp;
-
+	CRequiredProperty *m_required_property;
 	// array of children's required properties
-	duckdb::vector<CRequiredProperty *> m_pdrgprp;
+	duckdb::vector<CRequiredProperty *> m_children_required_properties;
 
 public:
 	// return an array of stats objects starting from the first stats object referenced by child
@@ -94,20 +86,20 @@ public:
 
 public:
 	// attach handle to a given operator tree
-	void Attach(Operator* pop);
+	void Attach(Operator *pop);
 
 	// attach handle to a given expression
-    void Attach(Expression* expr);
+	void Attach(Expression *expr);
 
 	// attach handle to a given group expression
-	void Attach(CGroupExpression* pgexpr);
+	void Attach(CGroupExpression *pgexpr);
 
 	// attach handle to a given cost context
-	void Attach(CCostContext* pcc);
+	void Attach(CCostContext *pcc);
 
 public:
 	// recursive property derivation,
-	void DeriveProps(CDrvdPropCtxt* pdpctxt);
+	void DeriveProps(CDerivedPropertyContext *pdpctxt);
 
 	// recursive stats derivation
 	// void DeriveStats(IStatisticsArray* stats_ctxt, bool fComputeRootStats = true);
@@ -116,41 +108,41 @@ public:
 	// void DeriveCostContextStats();
 
 	// stats derivation using given properties and context
-	// void DeriveStats(CRequiredPropRelational* prprel, IStatisticsArray* stats_ctxt);
+	// void DeriveStats(CRequiredLogicalProp* prprel, IStatisticsArray* stats_ctxt);
 
 	// derive the properties of the plan carried by attached cost context,
 	// using default CDrvdPropCtxtPlan
 	void DerivePlanPropsForCostContext();
 
 	// initialize required properties container
-	void InitReqdProps(CRequiredProperty * prpInput);
+	void InitReqdProps(CRequiredProperty *prpInput);
 
 	// compute required properties of the n-th child
-	void ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq);
+	void ComputeChildReqdProps(ULONG child_index, duckdb::vector<CDerivedProperty *> derived_property_children, ULONG num_opt_request);
 
 	// copy required properties of the n-th child
-	void CopyChildReqdProps(ULONG child_index, CRequiredProperty * prp);
+	void CopyChildReqdProps(ULONG child_index, CRequiredProperty *prp);
 
 	// compute required columns of the n-th child
-	void ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt);
+	void ComputeChildReqdCols(ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt);
 
 	// required properties computation of all children
-	void ComputeReqdProps(CRequiredProperty * prpInput, ULONG ulOptReq);
+	void ComputeReqdProps(CRequiredProperty *prpInput, ULONG ulOptReq);
 
 	// derived relational props of n-th child
-	CDrvdPropRelational* GetRelationalProperties(ULONG child_index) const;
+	CDerivedLogicalProp *GetRelationalProperties(ULONG child_index) const;
 
 	// derived stats of n-th child
 	// IStatistics* Pstats(ULONG child_index) const;
 
 	// derived plan props of n-th child
-	CDrvdPropPlan* Pdpplan(ULONG child_index) const;
+	CDerivedPhysicalProp *Pdpplan(ULONG child_index) const;
 
 	// derived properties of attached expr/gexpr
-	CDrvdProp* Pdp() const;
+	CDerivedProperty *DerivedProperty() const;
 
 	// derived relational properties of attached expr/gexpr
-	CDrvdPropRelational* GetRelationalProperties() const;
+	CDerivedLogicalProp *GetRelationalProperties() const;
 
 	// stats of attached expr/gexpr
 	// IStatistics* Pstats();
@@ -159,10 +151,10 @@ public:
 	bool FScalarChild(ULONG child_index) const;
 
 	// required relational props of n-th child
-	CRequiredPropRelational * GetReqdRelationalProps(ULONG child_index) const;
+	CRequiredLogicalProp *GetReqdRelationalProps(ULONG child_index) const;
 
 	// required plan props of n-th child
-	CRequiredPropPlan * Prpp(ULONG child_index) const;
+	CRequiredPhysicalProp *RequiredPropPlan(ULONG child_index) const;
 
 	// arity function
 	ULONG Arity(int x = 0) const;
@@ -177,40 +169,36 @@ public:
 	ULONG UlNonScalarChildren() const;
 
 	// accessor for operator
-	Operator* Pop() const;
+	Operator *Pop() const;
 
 	// accessor for child operator
-	Operator* Pop(ULONG child_index) const;
+	Operator *Pop(ULONG child_index) const;
 
 	// accessor for grandchild operator
-	Operator* PopGrandchild(ULONG child_index, ULONG grandchild_index, CCostContext** grandchildContext) const;
+	Operator *PopGrandchild(ULONG child_index, ULONG grandchild_index, CCostContext **grandchildContext) const;
 
 	// accessor for expression
-	Expression* Pexpr() const
-	{
+	Expression *Pexpr() const {
 		return m_expr;
 	}
 
 	// accessor for group expression
-	CGroupExpression* Pgexpr() const
-	{
+	CGroupExpression *group_expr() const {
 		return m_pgexpr;
 	}
 
 	// check for outer references
-	bool HasOuterRefs()
-	{
+	bool HasOuterRefs() {
 		return (0 < DeriveOuterReferences().size());
 	}
 
 	// check for outer references in the given child
-	bool HasOuterRefs(ULONG child_index)
-	{
+	bool HasOuterRefs(ULONG child_index) {
 		return (0 < DeriveOuterReferences(child_index).size());
 	}
 
 	// get next child index based on child optimization order, return true if such index could be found
-	bool FNextChildIndex(ULONG *pulChildIndex  // output: index to be changed
+	bool FNextChildIndex(ULONG *pulChildIndex // output: index to be changed
 	) const;
 
 	// return the index of first child to be optimized
@@ -229,16 +217,16 @@ public:
 	bool FChildrenHaveVolatileFuncScan();
 
 	// return a representative (inexact) scalar child at given index
-	Expression* PexprScalarRepChild(ULONG child_index) const;
+	Expression *PexprScalarRepChild(ULONG child_index) const;
 
 	// return a representative (inexact) scalar expression attached to handle
-	Expression* PexprScalarRep() const;
+	Expression *PexprScalarRep() const;
 
 	// return an exact scalar child at given index or return null if not possible
-	Expression* PexprScalarExactChild(ULONG child_index, bool error_on_null_return = false) const;
+	Expression *PexprScalarExactChild(ULONG child_index, bool error_on_null_return = false) const;
 
 	// return an exact scalar expression attached to handle or null if not possible
-	Expression* PexprScalarExact() const;
+	Expression *PexprScalarExact() const;
 
 	// return the columns used by a logical operator internally as well
 	// as columns used by all its scalar children
@@ -253,31 +241,29 @@ public:
 	duckdb::vector<ColumnBinding> DeriveNotNullColumns();
 	duckdb::vector<ColumnBinding> DeriveNotNullColumns(ULONG child_index);
 
-	bool DeriveHasSubquery()
-	{
+	bool DeriveHasSubquery() {
 		return false;
 	}
-	bool DeriveHasSubquery(ULONG child_index)
-	{
+	bool DeriveHasSubquery(ULONG child_index) {
 		return false;
 	}
 
 	duckdb::vector<ColumnBinding> DeriveCorrelatedApplyColumns();
 	duckdb::vector<ColumnBinding> DeriveCorrelatedApplyColumns(ULONG child_index);
 
-	CKeyCollection* DeriveKeyCollection();
-	CKeyCollection* DeriveKeyCollection(ULONG child_index);
+	CKeyCollection *DeriveKeyCollection();
+	CKeyCollection *DeriveKeyCollection(ULONG child_index);
 
-	CPropConstraint* DerivePropertyConstraint();
-	CPropConstraint* DerivePropertyConstraint(ULONG child_index);
+	CPropConstraint *DerivePropertyConstraint();
+	CPropConstraint *DerivePropertyConstraint(ULONG child_index);
 
 	ULONG DeriveJoinDepth();
 	ULONG DeriveJoinDepth(ULONG child_index);
 
-	duckdb::vector<CFunctionalDependency*> Pdrgpfd();
-	duckdb::vector<CFunctionalDependency*> Pdrgpfd(ULONG child_index);
-};	// class CExpressionHandle
+	duckdb::vector<CFunctionalDependency *> Pdrgpfd();
+	duckdb::vector<CFunctionalDependency *> Pdrgpfd(ULONG child_index);
+}; // class CExpressionHandle
 
-}  // namespace gpopt
+} // namespace gpopt
 
 #endif

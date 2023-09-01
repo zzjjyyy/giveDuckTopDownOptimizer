@@ -10,6 +10,7 @@
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
 #include "duckdb/planner/operator/logical_order.hpp"
+#include "duckdb/planner/operator/logical_projection.hpp"
 
 namespace gpopt {
 using namespace duckdb;
@@ -21,12 +22,12 @@ using namespace duckdb;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CQueryContext::CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPropPlan *property,
+CQueryContext::CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPhysicalProp *property,
                              duckdb::vector<ColumnBinding> col_ids, duckdb::vector<std::string> col_names,
                              bool derive_stats)
     : m_required_plan_property(property), m_required_output_cols(col_ids), m_derivation_stats(derive_stats) {
 	duckdb::vector<ColumnBinding> output_and_ordering_cols;
-	duckdb::vector<ColumnBinding> order_spec = property->m_required_sort_order->m_pos->PcrsUsed();
+	duckdb::vector<ColumnBinding> order_spec = property->m_sort_order->m_order_spec->PcrsUsed();
 	output_and_ordering_cols.insert(output_and_ordering_cols.end(), col_ids.begin(), col_ids.end());
 	output_and_ordering_cols.insert(output_and_ordering_cols.end(), order_spec.begin(), order_spec.end());
 	for (auto &child : col_names) {
@@ -80,19 +81,39 @@ CQueryContext *CQueryContext::QueryContextGenerate(duckdb::unique_ptr<Operator> 
 	duckdb::vector<ColumnBinding> required_cols;
 	duckdb::vector<ColumnBinding> sort_order;
 	// Collect required properties (property_plan) at the top level:
-	COrderSpec *pos = new COrderSpec();
-	// Ensure order meet 'satisfy' matching at the top level
-	if (LogicalOperatorType::LOGICAL_ORDER_BY == expr->logical_type) {
-		duckdb::unique_ptr<LogicalOrder> logical_order = unique_ptr_cast<Operator, LogicalOrder>(std::move(expr));
-		// top level operator is an order by, copy order spec to query context
-		for (auto &child : logical_order->orders) {
-			pos->m_pdrgpoe.emplace_back(child.type, child.null_order, child.expression->Copy());
-		}
-		expr = std::move(logical_order->children[0]);
+	COrderSpec *spec = new COrderSpec();
+
+	// remove orderbys in this logical plan, and add order requirements to the order spec.
+	if (expr->logical_type == LogicalOperatorType::LOGICAL_ORDER_BY) {
+		LogicalOrder *order = (LogicalOrder *)expr.get();
+		for (auto &child : order->orders)
+			spec->order_nodes.emplace_back(child.type, child.null_order, child.expression->Copy());
+		expr = std::move(expr->children[0]);
 	}
-	COrderProperty *order_property = new COrderProperty(pos, COrderProperty::EomSatisfy);
-	CRequiredPropPlan *property_plan = new CRequiredPropPlan(required_cols, order_property);
-	// Finally, create the CQueryContext
-	return new CQueryContext(std::move(expr), property_plan, sort_order, col_names, derive_stats);
+//	for (size_t i = 0; i < expr->children.size(); i++)
+//		RemoveOrderBy(spec, expr.get(), expr->children[i].get(), i);
+
+	// construct the physical property
+	Printer::Print("Logical Plan Without OrderBy\n");
+	((LogicalOperator *)expr.get())->Print();
+	COrderProperty *order_property = new COrderProperty(spec, COrderProperty::EomSatisfy);
+	CRequiredPhysicalProp *physical_property = new CRequiredPhysicalProp(required_cols, order_property);
+
+	return new CQueryContext(std::move(expr), physical_property, sort_order, col_names, derive_stats);
+}
+
+void CQueryContext::RemoveOrderBy(COrderSpec *spec, Operator *parent, Operator *op, size_t child_idx) {
+	if (LogicalOperatorType::LOGICAL_ORDER_BY == op->logical_type) {
+		D_ASSERT(op->children.size() == 1);
+		auto orderby = (LogicalOrder *)op;
+		for (auto &it : orderby->orders) {
+			spec->order_nodes.emplace_back(it.type, it.null_order, it.expression->Copy());
+		}
+		parent->children[child_idx] = std::move(orderby->children[0]);
+		op = parent->children[child_idx].get();
+	}
+
+	for (size_t i = 0; i < op->children.size(); i++)
+		RemoveOrderBy(spec, op, op->children[i].get(), i);
 }
 } // namespace gpopt

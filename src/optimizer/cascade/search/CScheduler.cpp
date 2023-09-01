@@ -6,13 +6,14 @@
 //		Implementation of optimizer job scheduler
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CScheduler.h"
+
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/search/CJobFactory.h"
 #include "duckdb/optimizer/cascade/search/CSchedulerContext.h"
+
 #include <assert.h>
 
-namespace gpopt
-{
+namespace gpopt {
 //---------------------------------------------------------------------------
 //	@function:
 //		CScheduler::CScheduler
@@ -21,17 +22,17 @@ namespace gpopt
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CScheduler::CScheduler(ULONG ulJobs)
-	: m_spjl(ulJobs), m_ulpTotal(0), m_ulpRunning(0), m_ulpQueued(0), m_ulpStatsQueued(0), m_ulpStatsDequeued(0), m_ulpStatsSuspended(0), m_ulpStatsCompleted(0), m_ulpStatsCompletedQueued(0), m_ulpStatsResumed(0)
-{
-	SJobLink* jl = new SJobLink();
-	SIZE_T id_offset = (SIZE_T)(&(jl->m_id)) - (SIZE_T)jl;
-	SIZE_T link_offset = (SIZE_T)(&(jl->m_link)) - (SIZE_T)jl;
-	delete jl;
+CScheduler::CScheduler(ULONG num_jobs)
+    : m_job_links(num_jobs), m_num_total(0), m_num_running(0), m_num_queued(0), m_stats_queued(0), m_stats_dequeued(0),
+      m_stats_suspended(0), m_stats_completed(0), m_stats_completed_queued(0), m_stats_resumed(0) {
+	SJobLink *job_link = new SJobLink();
+	SIZE_T id_offset = (SIZE_T)(&(job_link->m_id)) - (SIZE_T)job_link;
+	SIZE_T link_offset = (SIZE_T)(&(job_link->m_link)) - (SIZE_T)job_link;
+	delete job_link;
 	// initialize pool of job links
-	m_spjl.Init((gpos::ULONG)id_offset);
+	m_job_links.Init((gpos::ULONG)id_offset);
 	// initialize list of waiting new jobs
-	m_listjlWaiting.Init((gpos::ULONG)link_offset);
+	m_todo_jobs.Init((gpos::ULONG)link_offset);
 }
 
 //---------------------------------------------------------------------------
@@ -42,8 +43,7 @@ CScheduler::CScheduler(ULONG ulJobs)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CScheduler::~CScheduler()
-{
+CScheduler::~CScheduler() {
 }
 
 //---------------------------------------------------------------------------
@@ -54,11 +54,10 @@ CScheduler::~CScheduler()
 //		Main job processing task
 //
 //---------------------------------------------------------------------------
-void* CScheduler::Run(void *pv)
-{
-	CSchedulerContext* psc = reinterpret_cast<CSchedulerContext*>(pv);
-	psc->m_psched->ExecuteJobs(psc);
-	return NULL;
+void *CScheduler::Run(void *pv) {
+	CSchedulerContext *scheduler_context = reinterpret_cast<CSchedulerContext *>(pv);
+	scheduler_context->m_scheduler->ExecuteJobs(scheduler_context);
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -70,38 +69,34 @@ void* CScheduler::Run(void *pv)
 //		keeps executing jobs as long as there is work queued;
 //
 //---------------------------------------------------------------------------
-void CScheduler::ExecuteJobs(CSchedulerContext* psc)
-{
-	CJob* pj;
+void CScheduler::ExecuteJobs(CSchedulerContext *psc) {
+	CJob *job;
 	ULONG count = 0;
 	// keep retrieving jobs
-	while (NULL != (pj = PjRetrieve()))
-	{
+	while (nullptr != (job = RetrieveJob())) {
 		// prepare for job execution
-		PreExecute(pj);
+		PreExecute(job);
 		// execute job
-		bool fCompleted = FExecute(pj, psc);
+		bool is_completed = FExecute(job, psc);
 		// process job result
-		switch (EjrPostExecute(pj, fCompleted))
-		{
-			case EjrCompleted:
-				// job is completed
-				Complete(pj);
-				psc->m_pjf->Release(pj);
-				break;
-			case EjrRunnable:
-				// child jobs have completed, job can immediately resume
-				Resume(pj);
-				continue;
-			case EjrSuspended:
-				// job is suspended until child jobs complete
-				Suspend(pj);
-				break;
-			default:
-				assert(false);
+		switch (JobPostExecute(job, is_completed)) {
+		case EjrCompleted:
+			// job is completed
+			Complete(job);
+			psc->m_job_factory->Release(job);
+			break;
+		case EjrRunnable:
+			// child jobs have completed, job can immediately resume
+			Resume(job);
+			continue;
+		case EjrSuspended:
+			// job is suspended until child jobs complete
+			Suspend(job);
+			break;
+		default:
+			assert(false);
 		}
-		if (++count == OPT_SCHED_CFA)
-		{
+		if (++count == OPT_SCHED_CFA) {
 			count = 0;
 		}
 	}
@@ -115,17 +110,15 @@ void CScheduler::ExecuteJobs(CSchedulerContext* psc)
 //		Add new job for execution
 //
 //---------------------------------------------------------------------------
-void CScheduler::Add(CJob* pj, CJob* pjParent)
-{
+void CScheduler::Add(CJob *pj, CJob *pjParent) {
 	// increment ref counter for parent job
-	if (nullptr != pjParent)
-	{
+	if (nullptr != pjParent) {
 		pjParent->IncRefs();
 	}
 	// set current job as parent of its child
 	pj->SetParent(pjParent);
 	// increment total number of jobs
-	m_ulpTotal++;
+	m_num_total++;
 	Schedule(pj);
 }
 
@@ -137,8 +130,7 @@ void CScheduler::Add(CJob* pj, CJob* pjParent)
 //		Resume suspended job
 //
 //---------------------------------------------------------------------------
-void CScheduler::Resume(CJob* pj)
-{
+void CScheduler::Resume(CJob *pj) {
 	Schedule(pj);
 }
 
@@ -150,17 +142,16 @@ void CScheduler::Resume(CJob* pj)
 //		Schedule job for execution
 //
 //---------------------------------------------------------------------------
-void CScheduler::Schedule(CJob* pj)
-{
+void CScheduler::Schedule(CJob *pj) {
 	// get job link
-	SJobLink* pjl = m_spjl.PtRetrieve();
+	SJobLink *pjl = m_job_links.PtRetrieve();
 	pjl->Init(pj);
 	// add to waiting list
-	m_listjlWaiting.Push(pjl);
+	m_todo_jobs.Push(pjl);
 	// increment number of queued jobs
-	m_ulpQueued++;
+	m_num_queued++;
 	// update statistics
-	m_ulpStatsQueued++;
+	m_stats_queued++;
 }
 
 //---------------------------------------------------------------------------
@@ -171,10 +162,9 @@ void CScheduler::Schedule(CJob* pj)
 // 		Prepare for job execution
 //
 //---------------------------------------------------------------------------
-void CScheduler::PreExecute(CJob* pj)
-{
+void CScheduler::PreExecute(CJob *pj) {
 	// increment number of running jobs
-	m_ulpRunning++;
+	m_num_running++;
 	// increment job ref counter
 	pj->IncRefs();
 }
@@ -187,66 +177,55 @@ void CScheduler::PreExecute(CJob* pj)
 //		Execution function using job queue
 //
 //---------------------------------------------------------------------------
-bool CScheduler::FExecute(CJob* pj, CSchedulerContext* psc)
-{
-	bool fCompleted = true;
-	CJobQueue* pjq = pj->Pjq();
+bool CScheduler::FExecute(CJob *pj, CSchedulerContext *psc) {
+	bool is_completed = true;
+	CJobQueue *job_queue = pj->JobQueue();
 	// check if job is associated to a job queue
-	if (NULL == pjq)
-	{
-		fCompleted = pj->FExecute(psc);
-	}
-	else
-	{
-		switch (pjq->EjqrAdd(pj))
-		{
-			case CJobQueue::EjqrMain:
-				// main job, runs job operation
-				fCompleted = pj->FExecute(psc);
-				if (fCompleted)
-				{
-					// notify queued jobs
-					pjq->NotifyCompleted(psc);
-				}
-				else
-				{
-					// task is suspended
-					(void) pj->UlpDecrRefs();
-				}
-				break;
-			case CJobQueue::EjqrQueued:
-				// queued job
-				fCompleted = false;
-				break;
-			case CJobQueue::EjqrCompleted:
-				break;
+	if (nullptr == job_queue) {
+		is_completed = pj->FExecute(psc);
+	} else {
+		switch (job_queue->EjqrAdd(pj)) {
+		case CJobQueue::EjqrMain:
+			// main job, runs job operation
+			is_completed = pj->FExecute(psc);
+			if (is_completed) {
+				// notify queued jobs
+				job_queue->NotifyCompleted(psc);
+			} else {
+				// task is suspended
+				(void)pj->DecrRefs();
+			}
+			break;
+		case CJobQueue::EjqrQueued:
+			// queued job
+			is_completed = false;
+			break;
+		case CJobQueue::EjqrCompleted:
+			break;
 		}
 	}
-	return fCompleted;
+	return is_completed;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CScheduler::EjrPostExecute
+//		CScheduler::JobPostExecute
 //
 //	@doc:
 // 		Process job execution outcome
 //
 //---------------------------------------------------------------------------
-CScheduler::EJobResult CScheduler::EjrPostExecute(CJob* pj, bool fCompleted)
-{
+CScheduler::EJobResult CScheduler::JobPostExecute(CJob *pj, bool is_completed) {
 	// decrement job ref counter
-	ULONG_PTR ulRefs = pj->UlpDecrRefs();
+	ULONG_PTR ulRefs = pj->DecrRefs();
 	// decrement number of running jobs
-	m_ulpRunning--;
+	m_num_running--;
 	// check if job completed
-	if (fCompleted)
-	{
+	if (is_completed) {
 		return EjrCompleted;
 	}
 	// check if all children have completed
-	if (1 == ulRefs)
-	{
+	if (1 == ulRefs) {
 		return EjrRunnable;
 	}
 	return EjrSuspended;
@@ -254,26 +233,24 @@ CScheduler::EJobResult CScheduler::EjrPostExecute(CJob* pj, bool fCompleted)
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CScheduler::PjRetrieve
+//		CScheduler::RetrieveJob
 //
 //	@doc:
 //		Retrieve next runnable job from queue
 //
 //---------------------------------------------------------------------------
-CJob* CScheduler::PjRetrieve()
-{
+CJob *CScheduler::RetrieveJob() {
 	// retrieve runnable job from lists of waiting jobs
-	SJobLink* pjl = m_listjlWaiting.Pop();
-	CJob* pj = nullptr;
-	if (NULL != pjl)
-	{
-		pj = pjl->m_pj;
+	SJobLink *pjl = m_todo_jobs.Pop();
+	CJob *pj = nullptr;
+	if (NULL != pjl) {
+		pj = pjl->m_job;
 		// decrement number of queued jobs
-		m_ulpQueued--;
+		m_num_queued--;
 		// update statistics
-		m_ulpStatsDequeued++;
+		m_stats_dequeued++;
 		// recycle job link
-		m_spjl.Recycle(pjl);
+		m_job_links.Recycle(pjl);
 	}
 	return pj;
 }
@@ -286,9 +263,8 @@ CJob* CScheduler::PjRetrieve()
 //		Transition job to suspended
 //
 //---------------------------------------------------------------------------
-void CScheduler::Suspend(CJob* )
-{
-	m_ulpStatsSuspended++;
+void CScheduler::Suspend(CJob *) {
+	m_stats_suspended++;
 }
 
 //---------------------------------------------------------------------------
@@ -299,12 +275,11 @@ void CScheduler::Suspend(CJob* )
 //		Transition job to completed
 //
 //---------------------------------------------------------------------------
-void CScheduler::Complete(CJob* pj)
-{
+void CScheduler::Complete(CJob *pj) {
 	ResumeParent(pj);
 	// update statistics
-	m_ulpTotal--;
-	m_ulpStatsCompleted++;
+	m_num_total--;
+	m_stats_completed++;
 }
 
 //---------------------------------------------------------------------------
@@ -315,13 +290,12 @@ void CScheduler::Complete(CJob* pj)
 //		Transition queued job to completed
 //
 //---------------------------------------------------------------------------
-void CScheduler::CompleteQueued(CJob* pj)
-{
+void CScheduler::CompleteQueued(CJob *pj) {
 	ResumeParent(pj);
 	// update statistics
-	m_ulpTotal--;
-	m_ulpStatsCompleted++;
-	m_ulpStatsCompletedQueued++;
+	m_num_total--;
+	m_stats_completed++;
+	m_stats_completed_queued++;
 }
 
 //---------------------------------------------------------------------------
@@ -332,19 +306,16 @@ void CScheduler::CompleteQueued(CJob* pj)
 //		Resume parent job
 //
 //---------------------------------------------------------------------------
-void CScheduler::ResumeParent(CJob* pj)
-{
-	CJob* pjParent = pj->PjParent();
-	if (NULL != pjParent)
-	{
+void CScheduler::ResumeParent(CJob *pj) {
+	CJob *pjParent = pj->PJobParent();
+	if (nullptr != pjParent) {
 		// notify parent job
-		if (pj->FResumeParent())
-		{
+		if (pj->FResumeParent()) {
 			// reschedule parent
 			Resume(pjParent);
 			// update statistics
-			m_ulpStatsResumed++;
+			m_stats_resumed++;
 		}
 	}
 }
-}
+} // namespace gpopt

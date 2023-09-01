@@ -37,10 +37,10 @@ public:
 
 public:
 	// required sort order
-	COrderSpec *m_pos;
+	COrderSpec *m_order_spec;
 
 	// order matching type
-	EOrderMatching m_eom;
+	EOrderMatching m_order_match_type;
 
 	// names of order matching types
 	static const CHAR *m_szOrderMatching[EomSentinel];
@@ -63,7 +63,7 @@ public:
 	bool FCompatible(COrderSpec *pos) const;
 
 	// get order enforcing type for the given operator
-	EPropEnforcingType Epet(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, bool fOrderReqd) const;
+	EPropEnforcingType EorderEnforcingType(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, bool fOrderReqd) const;
 
 	// check if operator requires an enforcer under given enforceable property
 	// based on the derived enforcing type
@@ -72,17 +72,17 @@ public:
 	}
 
 	// append enforcers to dynamic array for the given plan properties
-	void AppendEnforcers(CRequiredPropPlan *prpp, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
+	void AppendEnforcers(CRequiredPhysicalProp *prpp, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
 	                     duckdb::unique_ptr<Operator> pexprChild, COrderProperty::EPropEnforcingType epet,
 	                     CExpressionHandle &exprhdl) {
 		if (FEnforce(epet)) {
-			m_pos->AppendEnforcers(exprhdl, prpp, pdrgpexpr, std::move(pexprChild));
+			m_order_spec->AppendEnforcers(exprhdl, prpp, pdrgpexpr, std::move(pexprChild));
 		}
 	}
 
 	// matching function
 	bool Matches(COrderProperty *peo) {
-		return m_eom == peo->m_eom && m_pos->Matches(peo->m_pos);
+		return m_order_match_type == peo->m_order_match_type && m_order_spec->Matches(peo->m_order_spec);
 	}
 
 	// check if operator requires optimization under given enforceable property

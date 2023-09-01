@@ -47,7 +47,7 @@ public:
 		: m_pj(NULL), m_fCompleted(false)
 	{
 		CJob* tmp = new CJob();
-		SIZE_T ptr = (SIZE_T)(&(tmp->m_linkQueue)) - (SIZE_T)tmp;
+		SIZE_T ptr = (SIZE_T)(&(tmp->m_link_queue)) - (SIZE_T)tmp;
 		m_listjQueued.Init((gpos::ULONG)ptr);
 		delete tmp;
 	}

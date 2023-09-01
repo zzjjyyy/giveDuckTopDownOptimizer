@@ -50,10 +50,10 @@ public:
 	}
 
 	// create derived properties container
-	CDrvdProp* PdpCreate() override;
+	CDerivedProperty *CreateDerivedProperty() override;
 
 	// create required properties container
-	CRequiredProperty * PrpCreate() const override;
+	CRequiredProperty *CreateRequiredProperty() const override;
 
 	// match function
 	bool Matches(Operator* op) override;

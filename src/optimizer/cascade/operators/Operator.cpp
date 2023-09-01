@@ -55,7 +55,7 @@ idx_t Operator::EstimateCardinality(ClientContext &context) {
 }
 
 duckdb::vector<CFunctionalDependency *> Operator::DeriveFunctionalDependencies(CExpressionHandle &expression_handle) {
-	return m_derived_property_relation->DeriveFunctionalDependencies(expression_handle);
+	return m_derived_logical_property->DeriveFunctionalDependencies(expression_handle);
 }
 
 //---------------------------------------------------------------------------
@@ -72,8 +72,8 @@ bool Operator::FMatchPattern(CGroupExpression *group_expression) {
 		return true;
 	} else {
 		// match operator id and arity
-		if ((this->logical_type == group_expression->m_pop->logical_type ||
-		     this->physical_type == group_expression->m_pop->physical_type) &&
+		if ((this->logical_type == group_expression->m_operator->logical_type ||
+		     this->physical_type == group_expression->m_operator->physical_type) &&
 		    this->Arity() == group_expression->Arity()) {
 			return true;
 		}
@@ -81,16 +81,16 @@ bool Operator::FMatchPattern(CGroupExpression *group_expression) {
 	return false;
 }
 
-CRequiredPropPlan *Operator::PrppCompute(CRequiredPropPlan *required_properties_input) {
+CRequiredPhysicalProp *Operator::PrppCompute(CRequiredPhysicalProp *required_properties_input) {
 	// derive plan properties
 	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
 	(void)PdpDerive(pdpctxtplan);
 	// decorate nodes with required properties
-	return m_required_plan_property;
+	return m_required_physical_property;
 }
 
-CDrvdProp *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
-	const CDrvdProp::EPropType ept = Ept();
+CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
+	const CDerivedProperty::EPropType ept = Ept();
 	CExpressionHandle expression_handle;
 	expression_handle.Attach(this);
 	// see if suitable prop is already cached. This only applies to plan properties.
@@ -98,13 +98,13 @@ CDrvdProp *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 	if (nullptr == Pdp(ept)) {
 		const ULONG arity = Arity();
 		for (ULONG ul = 0; ul < arity; ul++) {
-			CDrvdProp *pdp = children[ul]->PdpDerive(pdpctxt);
+			CDerivedProperty *pdp = children[ul]->PdpDerive(pdpctxt);
 			// add child props to derivation context
-			CDrvdPropCtxt::AddDerivedProps(pdp, pdpctxt);
+			CDerivedPropertyContext::AddDerivedProps(pdp, pdpctxt);
 		}
 		switch (ept) {
-		case CDrvdProp::EptPlan:
-			m_derived_property_plan = new CDrvdPropPlan();
+		case CDerivedProperty::EptPlan:
+			m_derived_physical_property = new CDerivedPhysicalProp();
 			break;
 		default:
 			break;
@@ -120,8 +120,8 @@ CDrvdProp *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 	return Pdp(ept);
 }
 
-CRequiredPropPlan *Operator::PrppDecorate(CRequiredPropPlan *required_properties_input) {
-	return m_required_plan_property;
+CRequiredPhysicalProp *Operator::PrppDecorate(CRequiredPhysicalProp *required_properties_input) {
+	return m_required_physical_property;
 }
 
 duckdb::unique_ptr<Operator> Operator::Copy() {
@@ -156,32 +156,32 @@ void Operator::CE() {
 	return;
 }
 
-CDrvdProp *Operator::Pdp(const CDrvdProp::EPropType ept) const {
+CDerivedProperty *Operator::Pdp(const CDerivedProperty::EPropType ept) const {
 	switch (ept) {
-	case CDrvdProp::EptRelational:
-		return (CDrvdProp *)m_derived_property_relation;
-	case CDrvdProp::EptPlan:
-		return (CDrvdProp *)m_derived_property_plan;
+	case CDerivedProperty::EptRelational:
+		return (CDerivedProperty *)m_derived_logical_property;
+	case CDerivedProperty::EptPlan:
+		return (CDerivedProperty *)m_derived_physical_property;
 	default:
 		break;
 	}
 	return nullptr;
 }
 
-CDrvdProp::EPropType Operator::Ept() const {
+CDerivedProperty::EPropType Operator::Ept() const {
 	if (FLogical()) {
-		return CDrvdProp::EptRelational;
+		return CDerivedProperty::EptRelational;
 	}
 	if (FPhysical()) {
-		return CDrvdProp::EptPlan;
+		return CDerivedProperty::EptPlan;
 	}
-	return CDrvdProp::EptInvalid;
+	return CDerivedProperty::EptInvalid;
 }
 
 Operator *Operator::PexprRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdrgpexpr,
                                    CDrvdPropCtxtPlan *pdpctxtplan) {
 	CGroupExpression *group_expression = cost_context->m_group_expression;
-	return group_expression->m_pop->SelfRehydrate(cost_context, pdrgpexpr, pdpctxtplan);
+	return group_expression->m_operator->SelfRehydrate(cost_context, pdrgpexpr, pdpctxtplan);
 }
 
 void Operator::ResolveOperatorTypes() {

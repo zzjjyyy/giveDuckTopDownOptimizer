@@ -8,20 +8,17 @@
 //	@doc:
 //		Scheduler interface for execution of optimization jobs
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CScheduler_H
-#define GPOPT_CScheduler_H
+#pragma once
 
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/common/CSyncList.h"
 #include "duckdb/optimizer/cascade/common/CSyncPool.h"
-
 #include "duckdb/optimizer/cascade/search/CJob.h"
 
 #define OPT_SCHED_QUEUED_RUNNING_RATIO 10
-#define OPT_SCHED_CFA 100
+#define OPT_SCHED_CFA                  100
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace gpos;
 
 // prototypes
@@ -52,114 +49,82 @@ class CSchedulerContext;
 //		have any further dependencies.
 //
 //---------------------------------------------------------------------------
-class CScheduler
-{
+class CScheduler {
 	// friend classes
 	friend class CJob;
 
 public:
 	// enum for job execution result
-	enum EJobResult
-	{ EjrRunnable = 0, EjrSuspended, EjrCompleted, EjrSentinel };
+	enum EJobResult { EjrRunnable = 0, EjrSuspended, EjrCompleted, EjrSentinel };
 
 public:
+	explicit CScheduler(ULONG num_jobs);
+	CScheduler(const CScheduler &) = delete;
+	virtual ~CScheduler();
+
 	// job wrapper; used for inserting job to waiting list (lock-free)
-	struct SJobLink
-	{
+	struct SJobLink {
 		// link id, set by sync set
 		ULONG m_id;
-
 		// pointer to job
-		CJob* m_pj;
-
+		CJob *m_job;
 		// slink for list of waiting jobs
 		SLink m_link;
-
 		// initialize link
-		void Init(CJob* pj)
-		{
-			m_pj = pj;
-			m_link.m_prev = m_link.m_next = NULL;
+		void Init(CJob *pj) {
+			m_job = pj;
+			m_link.m_prev = m_link.m_next = nullptr;
 		}
 	};
 
 	// list of jobs waiting to execute
-	CSyncList<SJobLink> m_listjlWaiting;
-
+	CSyncList<SJobLink> m_todo_jobs;
 	// pool of job link objects
-	CSyncPool<SJobLink> m_spjl;
-
+	CSyncPool<SJobLink> m_job_links;
 	// current job counters
-	ULONG_PTR m_ulpTotal;
-	ULONG_PTR m_ulpRunning;
-	ULONG_PTR m_ulpQueued;
-
+	ULONG_PTR m_num_total;
+	ULONG_PTR m_num_running;
+	ULONG_PTR m_num_queued;
 	// stats
-	ULONG_PTR m_ulpStatsQueued;
-	ULONG_PTR m_ulpStatsDequeued;
-	ULONG_PTR m_ulpStatsSuspended;
-	ULONG_PTR m_ulpStatsCompleted;
-	ULONG_PTR m_ulpStatsCompletedQueued;
-	ULONG_PTR m_ulpStatsResumed;
-
-public:
-	// ctor
-	CScheduler(ULONG ulJobs);
-	
-	// no copy ctor
-	CScheduler(const CScheduler &) = delete;
-	
-	// dtor
-	virtual ~CScheduler();
+	ULONG_PTR m_stats_queued;
+	ULONG_PTR m_stats_dequeued;
+	ULONG_PTR m_stats_suspended;
+	ULONG_PTR m_stats_completed;
+	ULONG_PTR m_stats_completed_queued;
+	ULONG_PTR m_stats_resumed;
 
 public:
 	// keep executing jobs (if any)
-	void ExecuteJobs(CSchedulerContext* psc);
-
+	void ExecuteJobs(CSchedulerContext *psc);
 	// process job execution results
-	void ProcessJobResult(CJob* pj, CSchedulerContext* psc, bool fCompleted);
-
+	void ProcessJobResult(CJob *pj, CSchedulerContext *psc, bool fCompleted);
 	// retrieve next job to run
-	CJob* PjRetrieve();
-
+	CJob *RetrieveJob();
 	// schedule job for execution
-	void Schedule(CJob* pj);
-
+	void Schedule(CJob *pj);
 	// prepare for job execution
-	void PreExecute(CJob* pj);
-
+	void PreExecute(CJob *pj);
 	// execute job
-	bool FExecute(CJob* pj, CSchedulerContext* psc);
-
+	bool FExecute(CJob *pj, CSchedulerContext *psc);
 	// process job execution outcome
-	EJobResult EjrPostExecute(CJob* pj, bool fCompleted);
-
+	EJobResult JobPostExecute(CJob *pj, bool fCompleted);
 	// resume parent job
-	void ResumeParent(CJob* pj);
-
+	void ResumeParent(CJob *pj);
 	// check if all jobs have completed
-	bool IsEmpty() const
-	{
-		return (0 == m_ulpTotal);
+	bool IsEmpty() const {
+		return (0 == m_num_total);
 	}
-	
 	// main job processing task
-	static void* Run(void *);
-
+	static void *Run(void *);
 	// transition job to completed
-	void Complete(CJob* pj);
-
+	void Complete(CJob *pj);
 	// transition queued job to completed
-	void CompleteQueued(CJob* pj);
-
+	void CompleteQueued(CJob *pj);
 	// transition job to suspended
-	void Suspend(CJob* pj);
-
+	void Suspend(CJob *pj);
 	// add new job for scheduling
-	void Add(CJob* pj, CJob* pjParent);
-
+	void Add(CJob *pj, CJob *pjParent);
 	// resume suspended job
-	void Resume(CJob* pj);
-};	// class CScheduler
-}  // namespace gpopt
-#endif
+	void Resume(CJob *pj);
+}; // class CScheduler
+} // namespace gpopt

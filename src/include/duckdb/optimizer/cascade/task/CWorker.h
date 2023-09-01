@@ -10,12 +10,11 @@
 
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/common/CList.h"
-#include "duckdb/optimizer/cascade/common/CStackObject.h"
 #include "duckdb/optimizer/cascade/common/CStackDescriptor.h"
+#include "duckdb/optimizer/cascade/common/CStackObject.h"
 #include "duckdb/optimizer/cascade/common/CTimerUser.h"
 
-namespace gpos
-{
+namespace gpos {
 class CTask;
 
 //---------------------------------------------------------------------------
@@ -27,11 +26,10 @@ class CTask;
 //		of control flow such as abort signal etc.
 //
 //---------------------------------------------------------------------------
-class CWorker : public CStackObject
-{
+class CWorker : public CStackObject {
 public:
 	// current task
-	CTask* m_task;
+	CTask *m_task;
 
 	// available stack
 	ULONG m_stack_size;
@@ -42,26 +40,24 @@ public:
 public:
 	// ctor
 	CWorker(ULONG stack_size, ULONG_PTR stack_start);
-	
+
 	// no copy ctor
 	CWorker(const CWorker &) = delete;
-	
+
 	// dtor
 	virtual ~CWorker();
 
 public:
 	// execute single task
-	void Execute(CTask* task);
+	void Execute(CTask *task);
 
 	// stack start accessor
-	inline ULONG_PTR GetStackStart() const
-	{
+	inline ULONG_PTR GetStackStart() const {
 		return m_stack_start;
 	}
 
 	// accessor
-	inline CTask* GetTask() const
-	{
+	inline CTask *GetTask() const {
 		return m_task;
 	}
 
@@ -69,10 +65,10 @@ public:
 	SLink m_link;
 
 	// lookup worker in worker pool manager
-	static CWorker* Self();
+	static CWorker *Self();
 
 	// host system callback function to report abort requests
 	static bool (*abort_requested_by_system)(void);
-};	// class CWorker
-}  // namespace gpos
+}; // class CWorker
+} // namespace gpos
 #endif

@@ -1,8 +1,9 @@
 #include "duckdb/execution/operator/projection/physical_projection.hpp"
-#include "duckdb/parallel/thread_context.hpp"
+
 #include "duckdb/execution/expression_executor.hpp"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
+#include "duckdb/parallel/thread_context.hpp"
 #include "duckdb/planner/expression/bound_reference_expression.hpp"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
 
 namespace duckdb
 {
@@ -91,11 +92,11 @@ Operator* PhysicalProjection::SelfRehydrate(CCostContext* pcc, duckdb::vector<Op
 	CGroupExpression* pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	duckdb::vector<unique_ptr<Expression>> v;
-    for(auto &child : ((PhysicalProjection*)pgexpr->m_pop.get())->select_list)
+    for(auto &child : ((PhysicalProjection*)pgexpr->m_operator.get())->select_list)
     {
         v.push_back(child->Copy());
     }
-	PhysicalProjection* pexpr = new PhysicalProjection(((PhysicalProjection*)pgexpr->m_pop.get())->types, std::move(v), ((PhysicalProjection*)pgexpr->m_pop.get())->estimated_cardinality);
+	PhysicalProjection* pexpr = new PhysicalProjection(((PhysicalProjection*)pgexpr->m_operator.get())->types, std::move(v), ((PhysicalProjection*)pgexpr->m_operator.get())->estimated_cardinality);
 	for(auto &child : pdrgpexpr)
 	{
 		pexpr->AddChild(child->Copy());
@@ -120,9 +121,9 @@ duckdb::unique_ptr<Operator> PhysicalProjection::Copy()
 	result->v_column_binding = this->v_column_binding;
 	
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();
@@ -153,9 +154,9 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGro
 	result->v_column_binding = this->v_column_binding;
 
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();
@@ -185,9 +186,9 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewChildren(CGroupExpre
 	result->v_column_binding = this->v_column_binding;
 
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if(nullptr != this->estimated_props)
 	{
 		result->estimated_props = this->estimated_props->Copy();

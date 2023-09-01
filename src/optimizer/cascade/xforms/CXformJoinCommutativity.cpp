@@ -73,9 +73,9 @@ void CXformJoinCommutativity::Transform(CXformContext* pxfctxt, CXformResult* px
 	pexprAlt->right_projection_map = popJoin->left_projection_map;
 	
 	/* Operator fields */
-	pexprAlt->m_derived_property_relation = popJoin->m_derived_property_relation;
-	pexprAlt->m_derived_property_plan = popJoin->m_derived_property_plan;
-	pexprAlt->m_required_plan_property = popJoin->m_required_plan_property;
+	pexprAlt->m_derived_logical_property = popJoin->m_derived_logical_property;
+	pexprAlt->m_derived_physical_property = popJoin->m_derived_physical_property;
+	pexprAlt->m_required_physical_property = popJoin->m_required_physical_property;
 	if (nullptr != popJoin->estimated_props) {
 		pexprAlt->estimated_props = popJoin->estimated_props->Copy();
 	}

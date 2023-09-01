@@ -9,7 +9,7 @@
 
 #include "duckdb/common/enums/physical_operator_type.hpp"
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CFunctionalDependency.h"
 #include "duckdb/optimizer/cascade/base/CKeyCollection.h"
 #include "duckdb/optimizer/cascade/base/CRequiredProperty.h"
@@ -22,8 +22,9 @@ using namespace gpos;
 class Operator;
 class CCostContext;
 class CGroupExpression;
-class CDrvdPropPlan;
-class CDrvdPropRelational;
+class CDerivedPhysicalProp;
+class CDerivedLogicalProp;
+class CRequiredLogicalProp;
 class CDrvdPropCtxtPlan;
 class CPropConstraint;
 
@@ -52,11 +53,13 @@ public:
 	// --------------------------- ORCA ------------------------
 	CGroupExpression *m_group_expression;
 	//! derived relational properties
-	CDrvdPropRelational *m_derived_property_relation;
+	CDerivedLogicalProp *m_derived_logical_property;
 	//! derived properties of the carried plan
-	CDrvdPropPlan *m_derived_property_plan;
+	CDerivedPhysicalProp *m_derived_physical_property;
+	//! required relational properties
+	CRequiredLogicalProp *m_required_logical_property;
 	//! required plan properties
-	CRequiredPropPlan *m_required_plan_property;
+	CRequiredPhysicalProp *m_required_physical_property;
 	double m_cost;
 
 	// --------------------------- DuckDB ----------------------
@@ -84,7 +87,7 @@ public:
 		D_ASSERT(child);
 		children.emplace_back(std::move(child));
 	}
-	
+
 	//! Return a vector of the types that will be returned by this operator
 	const duckdb::vector<LogicalType> &GetTypes() const {
 		return types;
@@ -97,7 +100,7 @@ public:
 	static Operator *PexprRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdrgpexpr,
 	                                CDrvdPropCtxtPlan *pdpctxtplan);
 	// get the suitable derived property type based on operator
-	CDrvdProp::EPropType Ept() const;
+	CDerivedProperty::EPropType Ept() const;
 
 	ULONG Arity(int x = 0) const {
 		if (x == 0) {
@@ -108,15 +111,15 @@ public:
 		return children.size();
 	}
 	// get expression's derived property given its type
-	CDrvdProp *Pdp(const CDrvdProp::EPropType ept) const;
+	CDerivedProperty *Pdp(const CDerivedProperty::EPropType ept) const;
 
 	duckdb::vector<CFunctionalDependency *> DeriveFunctionalDependencies(CExpressionHandle &expression_handle);
 
-	CRequiredPropPlan *PrppCompute(CRequiredPropPlan *required_properties_input);
+	CRequiredPhysicalProp *PrppCompute(CRequiredPhysicalProp *required_properties_input);
 
-	CRequiredPropPlan *PrppDecorate(CRequiredPropPlan *required_properties_input);
+	CRequiredPhysicalProp *PrppDecorate(CRequiredPhysicalProp *required_properties_input);
 
-	CDrvdProp *PdpDerive(CDrvdPropCtxtPlan *pdpctxtL = nullptr);
+	CDerivedProperty *PdpDerive(CDrvdPropCtxtPlan *pdpctxtL = nullptr);
 
 	bool FMatchPattern(CGroupExpression *group_expression);
 	// hash function
@@ -146,9 +149,14 @@ public:
 		return nullptr;
 	}
 	//! create container for derived properties
-	virtual CDrvdProp *PdpCreate() {
+	virtual CDerivedProperty *CreateDerivedProperty() {
 		return nullptr;
 	}
+	//! create container for required properties
+	virtual CRequiredProperty *CreateRequiredProperty() const {
+		return nullptr;
+	}
+
 	//! is operator logical?
 	virtual bool FLogical() const {
 		return ((logical_type != LogicalOperatorType::LOGICAL_INVALID) &&
@@ -171,10 +179,6 @@ public:
 	//! sensitivity to order of inputs
 	virtual bool FInputOrderSensitive() {
 		return false;
-	};
-	//! create container for required properties
-	virtual CRequiredProperty *PrpCreate() const {
-		return nullptr;
 	};
 	//! match function, abstract to enforce an implementation for each new operator
 	virtual bool Matches(Operator *pop) {

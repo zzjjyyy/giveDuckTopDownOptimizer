@@ -9,7 +9,7 @@
 #define CQueryContext_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 #include "duckdb/optimizer/cascade/base/CRequiredPropRelational.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/planner/logical_operator.hpp"
@@ -44,13 +44,13 @@ namespace gpopt {
 //---------------------------------------------------------------------------
 class CQueryContext {
 public:
-	CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPropPlan *property, duckdb::vector<ColumnBinding> col_ids,
-	              duckdb::vector<std::string> col_names, bool derive_stats);
+	CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPhysicalProp *property,
+	              duckdb::vector<ColumnBinding> col_ids, duckdb::vector<std::string> col_names, bool derive_stats);
 	CQueryContext(const CQueryContext &) = delete;
 	virtual ~CQueryContext();
 
 	// required plan properties in optimizer's produced plan
-	CRequiredPropPlan *m_required_plan_property;
+	CRequiredPhysicalProp *m_required_plan_property;
 
 	// required array of output columns
 	duckdb::vector<ColumnBinding> m_required_output_cols;
@@ -87,6 +87,10 @@ public:
 	//---------------------------------------------------------------------------
 	static CQueryContext *QueryContextGenerate(duckdb::unique_ptr<Operator> expr, duckdb::vector<ULONG *> col_ids,
 	                                           duckdb::vector<std::string> col_names, bool derive_stats);
+
+private:
+	static void RemoveOrderBy(COrderSpec *spec, Operator *parent, Operator *op, size_t child_idx);
+
 }; // class CQueryContext
 } // namespace gpopt
 #endif

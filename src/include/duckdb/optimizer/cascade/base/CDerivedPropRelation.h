@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDrvdPropRelational.h
+//		CDerivedLogicalProp.h
 //
 //	@doc:
 //		Derived logical properties
@@ -9,27 +9,27 @@
 #define GPOPT_CDrvdPropRelational_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/planner/expression.hpp"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CFunctionalDependency.h"
 #include "duckdb/optimizer/cascade/base/CPropConstraint.h"
 #include "duckdb/planner/column_binding.hpp"
+#include "duckdb/planner/expression.hpp"
+
 #include <bitset>
 
 using namespace gpos;
 
-namespace gpopt
-{
+namespace gpopt {
 // fwd declaration
 class CExpressionHandle;
-class CRequiredPropPlan;
+class CRequiredPhysicalProp;
 class CKeyCollection;
 class CPropConstraint;
 class CPartInfo;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CDrvdPropRelational
+//		CDerivedLogicalProp
 //
 //	@doc:
 //		Derived logical properties container.
@@ -40,48 +40,52 @@ class CPartInfo;
 //		of an expression.
 //
 //---------------------------------------------------------------------------
-class CDrvdPropRelational : public CDrvdProp
-{
+class CDerivedLogicalProp : public CDerivedProperty {
 public:
 	// See member variables (below) with the same name for description on what
 	// the property types respresent
-	enum EDrvdPropType
-	{
-		EdptPcrsOutput = 0, EdptPcrsOuter, EdptPcrsNotNull, EdptPcrsCorrelatedApply, EdptPkc, EdptPdrgpfd, EdptMaxCard, EdptPpc, EdptPfp, EdptJoinDepth, EdptTableDescriptor, EdptSentinel
+	enum EDrvdPropType {
+		EdptPcrsOutput = 0,
+		EdptPcrsOuter,
+		EdptPcrsNotNull,
+		EdptPcrsCorrelatedApply,
+		EdptPkc,
+		EdptPdrgpfd,
+		EdptMaxCard,
+		EdptPpc,
+		EdptPfp,
+		EdptJoinDepth,
+		EdptTableDescriptor,
+		EdptSentinel
 	};
 
 public:
+	CDerivedLogicalProp();
+	CDerivedLogicalProp(const CDerivedLogicalProp &) = delete;
+	virtual ~CDerivedLogicalProp();
+
 	// bitset representing whether property has been derived
 	bitset<EdptSentinel> m_is_prop_derived;
 
 	// output columns
-	duckdb::vector<ColumnBinding> m_pcrsOutput;
-
+	duckdb::vector<ColumnBinding> m_output_cols;
 	// columns not defined in the underlying operator tree
-	duckdb::vector<ColumnBinding> m_pcrsOuter;
-
+	duckdb::vector<ColumnBinding> m_outer_cols;
 	// output columns that do not allow null values
-	duckdb::vector<ColumnBinding> m_pcrsNotNull;
-
+	duckdb::vector<ColumnBinding> m_not_null_cols;
 	// columns from the inner child of a correlated-apply expression that can be used above the apply expression
-	duckdb::vector<ColumnBinding> m_pcrsCorrelatedApply;
-
+	duckdb::vector<ColumnBinding> m_correlated_apply_cols;
 	// key collection
-	CKeyCollection* m_pkc;
-
+	CKeyCollection *m_collection;
 	// functional dependencies
-	duckdb::vector<CFunctionalDependency*> m_pdrgpfd;
-
+	duckdb::vector<CFunctionalDependency *> m_fun_deps;
 	// join depth (number of relations in underlying tree)
-	ULONG m_ulJoinDepth;
-
+	ULONG m_join_depth;
 	// constraint property
-	CPropConstraint* m_ppc;
-
+	CPropConstraint *m_prop_constraint;
 	// true if all logical operators in the group are of type CLogicalDynamicGet,
 	// and the dynamic get has partial indexes
-	bool m_fHasPartialIndexes;
-
+	bool m_has_partial_indexes;
 	// Have all the properties been derived?
 	//
 	// NOTE1: This is set ONLY when Derive() is called. If all the properties
@@ -97,10 +101,10 @@ public:
 
 public:
 	// helper for getting applicable FDs from child
-	static duckdb::vector<CFunctionalDependency*> DeriveChildFunctionalDependencies(ULONG child_index, CExpressionHandle &exprhdl);
-
+	static duckdb::vector<CFunctionalDependency *> DeriveChildFunctionalDependencies(ULONG child_index,
+	                                                                                 CExpressionHandle &exprhdl);
 	// helper for creating local FDs
-	static duckdb::vector<CFunctionalDependency*> DeriveLocalFunctionalDependencies(CExpressionHandle &exprhdl);
+	static duckdb::vector<CFunctionalDependency *> DeriveLocalFunctionalDependencies(CExpressionHandle &exprhdl);
 
 public:
 	// output columns
@@ -116,43 +120,32 @@ public:
 	duckdb::vector<ColumnBinding> DeriveCorrelatedApplyColumns(CExpressionHandle &);
 
 	// key collection
-	CKeyCollection* DeriveKeyCollection(CExpressionHandle &);
+	CKeyCollection *DeriveKeyCollection(CExpressionHandle &);
 
 	// functional dependencies
-	duckdb::vector<CFunctionalDependency*> DeriveFunctionalDependencies(CExpressionHandle &);
+	duckdb::vector<CFunctionalDependency *> DeriveFunctionalDependencies(CExpressionHandle &);
 
 	// join depth
 	ULONG DeriveJoinDepth(CExpressionHandle &);
 
 	// constraint property
-	CPropConstraint* DerivePropertyConstraint(CExpressionHandle &);
+	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &);
 
 	// has partial indexes
 	bool DeriveHasPartialIndexes(CExpressionHandle &);
 
 public:
-	// ctor
-	CDrvdPropRelational();
-
-	// copy ctor
-	CDrvdPropRelational(const CDrvdPropRelational &) = delete;
-
-	// dtor
-	virtual ~CDrvdPropRelational();
-
 	// type of properties
-	EPropType Ept() override
-	{
+	EPropType PropertyType() override {
 		return EptRelational;
 	}
 
-	bool IsComplete() const override
-	{
+	bool IsComplete() const override {
 		return m_is_complete;
 	}
 
 	// derivation function
-	void Derive(CExpressionHandle& exprhdl, CDrvdPropCtxt* pdpctxt) override;
+	void Derive(CExpressionHandle &exprhdl, CDerivedPropertyContext *pdpctxt) override;
 
 	// output columns
 	duckdb::vector<ColumnBinding> GetOutputColumns() const;
@@ -167,22 +160,22 @@ public:
 	duckdb::vector<ColumnBinding> GetCorrelatedApplyColumns() const;
 
 	// key collection
-	CKeyCollection* GetKeyCollection() const;
+	CKeyCollection *GetKeyCollection() const;
 
 	// functional dependencies
-	duckdb::vector<CFunctionalDependency*> GetFunctionalDependencies() const;
+	duckdb::vector<CFunctionalDependency *> GetFunctionalDependencies() const;
 
 	// join depth
 	ULONG GetJoinDepth() const;
 
 	// constraint property
-	CPropConstraint* GetPropertyConstraint() const;
+	CPropConstraint *GetPropertyConstraint() const;
 
 	// shorthand for conversion
-	static CDrvdPropRelational* GetRelationalProperties(CDrvdProp* pdp);
+	static CDerivedLogicalProp *GetRelationalProperties(CDerivedProperty *pdp);
 
 	// check for satisfying required plan properties
-	bool FSatisfies(const CRequiredPropPlan *prpp) const override;
-};	// class CDrvdPropRelational
-}  // namespace gpopt
+	bool FSatisfies(const CRequiredPhysicalProp *prop_plan) const override;
+}; // class CDerivedLogicalProp
+} // namespace gpopt
 #endif

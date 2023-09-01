@@ -30,6 +30,16 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 class CGroupExpression {
 public:
+	// dummy ctor; used for creating invalid gexpr
+	CGroupExpression()
+	    : m_id(GPOPT_INVALID_GEXPR_ID), m_xform_id_origin(CXform::ExfInvalid), m_intermediate(false),
+	      m_estate(estUnexplored), m_eol(EolLow) {
+	}
+	CGroupExpression(duckdb::unique_ptr<Operator> op, duckdb::vector<CGroup *> groups, CXform::EXformId xform_id,
+	                 CGroupExpression *group_expr_origin, bool is_intermediate);
+	CGroupExpression(const CGroupExpression &) = delete;
+	virtual ~CGroupExpression();
+
 	// states of a group expression
 	enum EState { estUnexplored, estExploring, estExplored, estImplementing, estImplemented, estSentinel };
 	// circular dependency state
@@ -38,22 +48,12 @@ public:
 	typedef unordered_map<ULONG, CCostContext *> CostContextMap;
 
 public:
-	// dummy ctor; used for creating invalid gexpr
-	CGroupExpression()
-	    : m_id(GPOPT_INVALID_GEXPR_ID), m_xform_id_origin(CXform::ExfInvalid), m_intermediate(false),
-	      m_estate(estUnexplored), m_eol(EolLow) {
-	}
-	CGroupExpression(duckdb::unique_ptr<Operator> op, duckdb::vector<CGroup *> groups, CXform::EXformId xform_id,
-	                 CGroupExpression *group_expr_origin, bool fIntermediate);
-	CGroupExpression(const CGroupExpression &) = delete;
-	virtual ~CGroupExpression();
-
 	// expression id
 	ULONG m_id;
 	// duplicate group expression
 	CGroupExpression *m_duplicate_group_expr;
 	// operator class
-	duckdb::unique_ptr<Operator> m_pop;
+	duckdb::unique_ptr<Operator> m_operator;
 	// array of child groups
 	duckdb::vector<CGroup *> m_child_groups;
 	// sorted array of children groups for faster comparison
@@ -110,12 +110,12 @@ public:
 	// check if cost context already exists in group expression hash table
 	bool FCostContextExists(COptimizationContext *poc, duckdb::vector<COptimizationContext *> optimization_contexts);
 	// compute and store expression's cost under a given context
-	CCostContext *PccComputeCost(COptimizationContext *poc, ULONG optimization_request_num,
-	                             duckdb::vector<COptimizationContext *> optimization_contexts, bool fPruned,
+	CCostContext *PccComputeCost(COptimizationContext *opt_context, ULONG opt_request_num,
+	                             duckdb::vector<COptimizationContext *> opt_contexts, bool is_pruned,
 	                             double cost_lower_bound);
 	// compute a cost lower bound for plans, rooted by current group expression, and satisfying the given required
 	// properties
-	double CostLowerBound(CRequiredPropPlan *input_required_prop_plan, CCostContext *child_cost_context,
+	double CostLowerBound(CRequiredPhysicalProp *input_required_prop_plan, CCostContext *child_cost_context,
 	                      ULONG child_index);
 	// initialize group expression
 	void Init(CGroup *pgroup, ULONG id);
@@ -134,8 +134,8 @@ public:
 		// during optimization, the operator returns the duplicate group;
 		// in exploration and implementation the group may contain
 		// group expressions that have not been processed yet;
-		if (0 == pgroup->m_ulGExprs) {
-			return pgroup->m_pgroupDuplicate;
+		if (0 == pgroup->m_num_exprs) {
+			return pgroup->m_group_for_duplicate_groups;
 		}
 		return pgroup;
 	};
@@ -157,7 +157,7 @@ public:
 	bool FMatchNonScalarChildren(CGroupExpression *group_expr) const;
 	// hash function
 	ULONG HashValue() const {
-		return HashValue(m_pop.get(), m_child_groups);
+		return HashValue(m_operator.get(), m_child_groups);
 	}
 	// static hash function for operator and group references
 	static ULONG HashValue(Operator *pop, duckdb::vector<CGroup *> groups);
@@ -193,5 +193,8 @@ public:
 	static const CGroupExpression M_INVALID_GROUP_EXPR;
 
 	virtual bool ContainsCircularDependencies();
+
+
+
 }; // class CGroupExpression
 } // namespace gpopt

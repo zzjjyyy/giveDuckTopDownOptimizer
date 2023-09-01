@@ -6,16 +6,18 @@
 //		Implementation of cost context
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/base/CCostContext.h"
+
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/io/COstreamString.h"
-#include "duckdb/optimizer/cascade/string/CWStringDynamic.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropPlan.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtRelational.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropPlan.h"
 #include "duckdb/optimizer/cascade/base/COptCtxt.h"
 #include "duckdb/optimizer/cascade/cost/ICostModel.h"
+#include "duckdb/optimizer/cascade/io/COstreamString.h"
 #include "duckdb/optimizer/cascade/optimizer/COptimizerConfig.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
+#include "duckdb/optimizer/cascade/string/CWStringDynamic.h"
+
 #include <cstdlib>
 
 using namespace gpopt;
@@ -28,15 +30,12 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CCostContext::CCostContext(COptimizationContext* poc, ULONG ulOptReq, CGroupExpression* pgexpr)
-	:m_cost(GPOPT_INVALID_COST), m_estate(estUncosted), m_group_expression(pgexpr), m_group_expr_for_stats(nullptr),
-      m_derived_prop_plan(nullptr), m_optimization_request_num(ulOptReq), m_fPruned(false), m_poc(poc)
-{
-	if(m_group_expression != nullptr)
-	{
-		CGroupExpression* pgexprForStats = m_group_expression->m_group->PgexprBestPromise(m_group_expression);
-		if (nullptr != pgexprForStats)
-		{
+CCostContext::CCostContext(COptimizationContext *poc, ULONG ulOptReq, CGroupExpression *pgexpr)
+    : m_cost(GPOPT_INVALID_COST), m_estate(estUncosted), m_group_expression(pgexpr), m_group_expr_for_stats(nullptr),
+      m_derived_prop_plan(nullptr), m_optimization_request_num(ulOptReq), m_fPruned(false), m_poc(poc) {
+	if (m_group_expression != nullptr) {
+		CGroupExpression *pgexprForStats = m_group_expression->m_group->BestPromiseGroupExpr(m_group_expression);
+		if (nullptr != pgexprForStats) {
 			m_group_expr_for_stats = pgexprForStats;
 		}
 	}
@@ -50,8 +49,7 @@ CCostContext::CCostContext(COptimizationContext* poc, ULONG ulOptReq, CGroupExpr
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CCostContext::~CCostContext()
-{
+CCostContext::~CCostContext() {
 }
 
 //---------------------------------------------------------------------------
@@ -66,8 +64,7 @@ CCostContext::~CCostContext()
 //		selection in some other part of the plan
 //
 //---------------------------------------------------------------------------
-bool CCostContext::FNeedsNewStats() const
-{
+bool CCostContext::FNeedsNewStats() const {
 	return true;
 }
 
@@ -79,16 +76,14 @@ bool CCostContext::FNeedsNewStats() const
 //		Derive properties of the plan carried by cost context
 //
 //---------------------------------------------------------------------------
-void CCostContext::DerivePlanProps()
-{
-	if (nullptr == m_derived_prop_plan)
-	{
+void CCostContext::DerivePlanProps() {
+	if (nullptr == m_derived_prop_plan) {
 		// derive properties of the plan carried by cost context
-		CExpressionHandle exprhdl;
-		exprhdl.Attach(this);
-		exprhdl.DerivePlanPropsForCostContext();
-		CDrvdPropPlan* pdpplan = CDrvdPropPlan::Pdpplan(exprhdl.Pdp());
-		m_derived_prop_plan = pdpplan;
+		CExpressionHandle handle;
+		handle.Attach(this);
+		handle.DerivePlanPropsForCostContext();
+		CDerivedPhysicalProp *plan_property = CDerivedPhysicalProp::DrvdPlanProperty(handle.DerivedProperty());
+		m_derived_prop_plan = plan_property;
 	}
 }
 
@@ -100,11 +95,9 @@ void CCostContext::DerivePlanProps()
 //		Comparison operator
 //
 //---------------------------------------------------------------------------
-bool CCostContext::operator==(const CCostContext &cc) const
-{
+bool CCostContext::operator==(const CCostContext &cc) const {
 	return Equals(cc, *this);
 }
-
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -114,15 +107,15 @@ bool CCostContext::operator==(const CCostContext &cc) const
 //		Check validity by comparing derived and required properties
 //
 //---------------------------------------------------------------------------
-bool CCostContext::IsValid()
-{
+bool CCostContext::IsValid() {
 	// obtain relational properties from group
-	CDrvdPropRelational* pdprel = CDrvdPropRelational::GetRelationalProperties(m_group_expression->m_group->m_pdp);
+	CDerivedLogicalProp *prop_relation =
+	    CDerivedLogicalProp::GetRelationalProperties(m_group_expression->m_group->m_derived_properties);
 	// derive plan properties
 	DerivePlanProps();
 	// checking for required properties satisfaction
-	bool fValid = m_poc->m_prpp->FSatisfied(pdprel, m_derived_prop_plan);
-	return fValid;
+	bool is_valid = m_poc->m_required_plan_properties->FSatisfied(prop_relation, m_derived_prop_plan);
+	return is_valid;
 }
 
 //---------------------------------------------------------------------------
@@ -136,8 +129,8 @@ bool CCostContext::IsValid()
 //		context in output argument
 //
 //---------------------------------------------------------------------------
-void CCostContext::BreakCostTiesForJoinPlans(CCostContext* pccFst, CCostContext* pccSnd, CCostContext** ppccPrefered, bool* pfTiesResolved)
-{
+void CCostContext::BreakCostTiesForJoinPlans(CCostContext *pccFst, CCostContext *pccSnd, CCostContext **ppccPrefered,
+                                             bool *pfTiesResolved) {
 	// for two join plans with the same estimated rows in both children,
 	// prefer the plan that has smaller tree depth on the inner side,
 	// this is because a smaller tree depth means that row estimation
@@ -146,35 +139,33 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext* pccFst, CCostContext*
 	// to have more reliable statistics on this side
 	*pfTiesResolved = false;
 	*ppccPrefered = nullptr;
-	double dRowsOuterFst = pccFst->m_optimization_contexts[0]->m_pccBest->m_cost;
-	double dRowsInnerFst = pccFst->m_optimization_contexts[1]->m_pccBest->m_cost;
-	if (dRowsOuterFst != dRowsInnerFst)
-	{
+	double dRowsOuterFst = pccFst->m_optimization_contexts[0]->m_best_cost_context->m_cost;
+	double dRowsInnerFst = pccFst->m_optimization_contexts[1]->m_best_cost_context->m_cost;
+	if (dRowsOuterFst != dRowsInnerFst) {
 		// two children of first plan have different row estimates
 		return;
 	}
-	double dRowsOuterSnd = pccSnd->m_optimization_contexts[0]->m_pccBest->m_cost;
-	double dRowsInnerSnd = pccSnd->m_optimization_contexts[1]->m_pccBest->m_cost;
-	if (dRowsOuterSnd != dRowsInnerSnd)
-	{
+	double dRowsOuterSnd = pccSnd->m_optimization_contexts[0]->m_best_cost_context->m_cost;
+	double dRowsInnerSnd = pccSnd->m_optimization_contexts[1]->m_best_cost_context->m_cost;
+	if (dRowsOuterSnd != dRowsInnerSnd) {
 		// two children of second plan have different row estimates
 		return;
 	}
-	if (dRowsInnerFst != dRowsInnerSnd)
-	{
+	if (dRowsInnerFst != dRowsInnerSnd) {
 		// children of first plan have different row estimates compared to second plan
 		return;
 	}
 	// both plans have equal estimated rows for both children, break tie based on join depth
 	*pfTiesResolved = true;
-	ULONG ulOuterJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->m_group_expression)[0]->m_pdp)->GetJoinDepth();
-	ULONG ulInnerJoinDepthFst = CDrvdPropRelational::GetRelationalProperties((*pccFst->m_group_expression)[1]->m_pdp)->GetJoinDepth();
-	if (ulInnerJoinDepthFst < ulOuterJoinDepthFst)
-	{
+	ULONG ulOuterJoinDepthFst =
+	    CDerivedLogicalProp::GetRelationalProperties((*pccFst->m_group_expression)[0]->m_derived_properties)
+	        ->GetJoinDepth();
+	ULONG ulInnerJoinDepthFst =
+	    CDerivedLogicalProp::GetRelationalProperties((*pccFst->m_group_expression)[1]->m_derived_properties)
+	        ->GetJoinDepth();
+	if (ulInnerJoinDepthFst < ulOuterJoinDepthFst) {
 		*ppccPrefered = pccFst;
-	}
-	else
-	{
+	} else {
 		*ppccPrefered = pccSnd;
 	}
 }
@@ -188,17 +179,14 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext* pccFst, CCostContext*
 //		based on cost?
 //
 //---------------------------------------------------------------------------
-bool CCostContext::FBetterThan(CCostContext* pcc) const
-{
+bool CCostContext::FBetterThan(CCostContext *pcc) const {
 	double dCostDiff = (m_cost - pcc->m_cost);
-	if (dCostDiff < 0.0)
-	{
+	if (dCostDiff < 0.0) {
 		// if current context has a strictly smaller cost, then it is preferred
 		return true;
 	}
 
-	if (dCostDiff > 0.0)
-	{
+	if (dCostDiff > 0.0) {
 		// if current context has a strictly larger cost, then it is not preferred
 		return false;
 	}
@@ -208,15 +196,15 @@ bool CCostContext::FBetterThan(CCostContext* pcc) const
 	// RULE 1: break ties in cost of join plans,
 	// if both plans have the same estimated rows for both children, prefer
 	// the plan with deeper outer child
-	if (CUtils::FPhysicalJoin(Pgexpr()->Pop()) && CUtils::FPhysicalJoin(pcc->Pgexpr()->Pop()))
+	if (CUtils::FPhysicalJoin(Pgexpr()->Pop()) && CUtils::FPhysicalJoin(pcc->group_expr()->Pop()))
 	{
-		CONST_COSTCTXT_PTR pccPrefered = nullptr;
-		bool fSuccess = false;
-		BreakCostTiesForJoinPlans(this, pcc, &pccPrefered, &fSuccess);
-		if (fSuccess)
-		{
-			return (this == pccPrefered);
-		}
+	    CONST_COSTCTXT_PTR pccPrefered = nullptr;
+	    bool fSuccess = false;
+	    BreakCostTiesForJoinPlans(this, pcc, &pccPrefered, &fSuccess);
+	    if (fSuccess)
+	    {
+	        return (this == pccPrefered);
+	    }
 	}
 	*/
 	return false;
@@ -251,18 +239,16 @@ bool CCostContext::FBetterThan(CCostContext* pcc) const
 //		of external parameters' values
 //
 //---------------------------------------------------------------------------
-double CCostContext::CostCompute(duckdb::vector<double> pdrgpcostChildren)
-{
-	if(!this->m_group_expression->m_pop->has_estimated_cardinality) {
-		this->m_group_expression->m_pop->CE();
+double CCostContext::CostCompute(duckdb::vector<double> pdrgpcostChildren) {
+	if (!this->m_group_expression->m_operator->has_estimated_cardinality) {
+		this->m_group_expression->m_operator->CE();
 	}
-	if(m_optimization_contexts.size() == 0) {
-		return static_cast<double>(this->m_group_expression->m_pop->estimated_cardinality);
-	} 
-	else if(m_optimization_contexts.size() == 1) {
-		return pdrgpcostChildren[0] + this->m_group_expression->m_pop->estimated_cardinality;
+	if (m_optimization_contexts.size() == 0) {
+		return static_cast<double>(this->m_group_expression->m_operator->estimated_cardinality);
+	} else if (m_optimization_contexts.size() == 1) {
+		return pdrgpcostChildren[0] + this->m_group_expression->m_operator->estimated_cardinality;
+	} else {
+		return pdrgpcostChildren[0] + 1.2 * pdrgpcostChildren[1] +
+		       this->m_group_expression->m_operator->estimated_cardinality;
 	}
-	else {
-		return pdrgpcostChildren[0] + 1.2 * pdrgpcostChildren[1] + this->m_group_expression->m_pop->estimated_cardinality;
-	} 
 }

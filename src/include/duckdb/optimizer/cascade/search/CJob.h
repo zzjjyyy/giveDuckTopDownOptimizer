@@ -5,14 +5,12 @@
 //	@doc:
 //		Interface class for optimization job abstraction
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CJob_H
-#define GPOPT_CJob_H
+#pragma once
 
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/common/CList.h"
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace gpos;
 
 // prototypes
@@ -31,7 +29,7 @@ class CSchedulerContext;
 //		class such that each job is given a unique id.
 //
 //		Job Dependencies:
-//		Each job has one parent given by the member variable CJob::m_pjParent.
+//		Each job has one parent given by the member variable CJob::m_parent_jobs.
 //		Thus, the dependency graph that defines dependencies is effectively a
 //		tree.	The root optimization is scheduled in CEngine::ScheduleMainJob()
 //
@@ -39,12 +37,12 @@ class CSchedulerContext;
 //		job cannot proceed as long as there is one or more dependent jobs that
 //		are not finished yet.  Pausing a child job does not also allow the
 //		parent job to proceed. The number of job dependencies (children) is
-//		maintained by the member variable CJob::m_ulpRefs. The increment and
+//		maintained by the member variable CJob::m_reference_cnt. The increment and
 //		decrement of number of children are atomic operations performed by
-//		CJob::IncRefs() and CJob::UlpDecrRefs() functions, respectively.
+//		CJob::IncRefs() and CJob::DecrRefs() functions, respectively.
 //
 //		Job Queue:
-//		Each job maintains a job queue CJob::m_pjq of other identical jobs that
+//		Each job maintains a job queue CJob::m_job_queue of other identical jobs that
 //		are created while a given job is executing. For example, when exploring
 //		a group, a group exploration job J1 would be executing. Concurrently,
 //		another group exploration job J2 (for the same group) may be triggered
@@ -64,7 +62,7 @@ class CSchedulerContext;
 //		Each job defines two enumerations: EState to define the different
 //		states during job execution and EEvent to define the different events
 //		that cause moving from one state to another. These two enumerations are
-//		used to define job state machine m_jsm, which is an object of
+//		used to define job state machine m_job_state_machine, which is an object of
 //		CJobStateMachine class. Note that the states, events and state machines
 //		are job-specific. This is why each job class has its own definitions of
 //		the job states, events & state machine.
@@ -74,8 +72,7 @@ class CSchedulerContext;
 //		about how job are scheduled.
 //
 //---------------------------------------------------------------------------
-class CJob
-{
+class CJob {
 	// friends
 	friend class CJobFactory;
 	friend class CJobQueue;
@@ -83,138 +80,106 @@ class CJob
 
 public:
 	// job type
-	enum EJobType
-	{ EjtTest = 0, EjtGroupOptimization, EjtGroupImplementation, EjtGroupExploration, EjtGroupExpressionOptimization, EjtGroupExpressionImplementation, EjtGroupExpressionExploration, EjtTransformation, EjtInvalid, EjtSentinel = EjtInvalid };
+	enum EJobType {
+		EjtTest = 0,
+		EjtGroupOptimization,
+		EjtGroupImplementation,
+		EjtGroupExploration,
+		EjtGroupExpressionOptimization,
+		EjtGroupExpressionImplementation,
+		EjtGroupExpressionExploration,
+		EjtTransformation,
+		EjtInvalid,
+		EjtSentinel = EjtInvalid
+	};
 
 public:
+	CJob() : m_parent_jobs(nullptr), m_job_queue(nullptr), m_reference_cnt(0), m_id(0), m_is_initialized(false) {
+	}
+	CJob(const CJob &) = delete;
+	virtual ~CJob() = default;
+
 	// parent job
-	CJob* m_pjParent;
-
+	CJob *m_parent_jobs;
 	// assigned job queue
-	CJobQueue* m_pjq;
-
+	CJobQueue *m_job_queue;
 	// reference counter
-	ULONG_PTR m_ulpRefs;
-
+	ULONG_PTR m_reference_cnt;
 	// job id - set by job factory
 	ULONG m_id;
-
 	// job type
-	EJobType m_ejt;
-
+	EJobType m_job_type;
 	// flag indicating if job is initialized
-	bool m_fInit;
+	bool m_is_initialized;
+	// link for job queueing
+	SLink m_link_queue;
 
 public:
-	// ctor
-	CJob()
-		: m_pjParent(NULL), m_pjq(NULL), m_ulpRefs(0), m_id(0), m_fInit(false)
-	{
-	}
-	
-	// private copy ctor
-	CJob(const CJob &) = delete;
-	
-	// dtor
-	virtual ~CJob()
-	{
-	}
+	// notify parent of job completion;
+	// return true if parent is runnable;
+	bool FResumeParent() const;
 
-public:
 	//-------------------------------------------------------------------
 	// Interface for CJobFactory
 	//-------------------------------------------------------------------
 	// set type
-	void SetJobType(EJobType ejt)
-	{
-		m_ejt = ejt;
+	void SetJobType(EJobType ejt) {
+		m_job_type = ejt;
 	}
 
 	//-------------------------------------------------------------------
 	// Interface for CScheduler
 	//-------------------------------------------------------------------
 	// parent accessor
-	CJob* PjParent() const
-	{
-		return m_pjParent;
+	CJob *PJobParent() const {
+		return m_parent_jobs;
 	}
-
 	// set parent
-	void SetParent(CJob* pj)
-	{
-		m_pjParent = pj;
+	void SetParent(CJob *pj) {
+		m_parent_jobs = pj;
 	}
-
 	// increment reference counter
-	void IncRefs()
-	{
-		m_ulpRefs++;
+	void IncRefs() {
+		m_reference_cnt++;
 	}
-
 	// decrement reference counter
-	ULONG_PTR UlpDecrRefs()
-	{
-		return m_ulpRefs--;
+	ULONG_PTR DecrRefs() {
+		return m_reference_cnt--;
 	}
-
-	// notify parent of job completion;
-	// return true if parent is runnable;
-	bool FResumeParent() const;
-	
 	// id accessor
-	ULONG Id() const
-	{
+	ULONG Id() const {
 		return m_id;
 	}
-
-	// reset job
-	virtual void Reset();
-
 	// check if job is initialized
-	bool FInit() const
-	{
-		return m_fInit;
+	bool FInit() const {
+		return m_is_initialized;
 	}
-
 	// mark job as initialized
-	void SetInit()
-	{
-		m_fInit = true;
+	void SetInit() {
+		m_is_initialized = true;
+	}
+	// type accessor
+	EJobType JobType() const {
+		return m_job_type;
+	}
+	// job queue accessor
+	CJobQueue *JobQueue() const {
+		return m_job_queue;
+	}
+	// set job queue
+	void SetJobQueue(CJobQueue *pjq) {
+		m_job_queue = pjq;
 	}
 
 public:
+	// reset job
+	virtual void Reset();
 	// actual job execution given a scheduling context
 	// returns true if job completes, false if it is suspended
-	virtual bool FExecute(CSchedulerContext* psc)
-	{
+	virtual bool FExecute(CSchedulerContext *psc) {
 		return true;
 	}
-
-	// type accessor
-	EJobType Ejt() const
-	{
-		return m_ejt;
-	}
-
-	// job queue accessor
-	CJobQueue* Pjq() const
-	{
-		return m_pjq;
-	}
-
-	// set job queue
-	void SetJobQueue(CJobQueue* pjq)
-	{
-		m_pjq = pjq;
-	}
-
 	// cleanup internal state
-	virtual void Cleanup()
-	{
-	}
-
-	// link for job queueing
-	SLink m_linkQueue;
-};	// class CJob
-}  // namespace gpopt
-#endif
+	virtual void Cleanup() {};
+}; // class CJob
+} // namespace gpopt

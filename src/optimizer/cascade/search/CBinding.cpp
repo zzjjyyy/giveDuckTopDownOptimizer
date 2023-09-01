@@ -19,7 +19,7 @@ using namespace std;
 namespace gpopt {
 //---------------------------------------------------------------------------
 //	@function:
-//		CBinding::PgexprNext
+//		CBinding::NextGroupExpr
 //
 //	@doc:
 //		Move cursor within a group (initialize if NULL)
@@ -30,8 +30,8 @@ list<CGroupExpression *>::iterator CBinding::PgexprNext(CGroup *pgroup, CGroupEx
 	if (NULL == pgexpr) {
 		return gp.PgexprFirst();
 	}
-	auto itr = std::find(gp.m_pgroup->m_listGExprs.begin(), gp.m_pgroup->m_listGExprs.end(), pgexpr);
-	if (pgroup->m_fScalar) {
+	auto itr = std::find(gp.m_pgroup->m_group_exprs.begin(), gp.m_pgroup->m_group_exprs.end(), pgexpr);
+	if (pgroup->m_is_scalar) {
 		return ++itr;
 	}
 	// for non-scalar group, we only consider logical expressions in bindings
@@ -70,12 +70,12 @@ Operator *CBinding::PexprExpandPattern(Operator *pexprPattern, ULONG ulPos, ULON
 //
 //---------------------------------------------------------------------------
 Operator *CBinding::PexprFinalize(CGroupExpression *pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr) {
-	pgexpr->m_pop->children.clear();
+	pgexpr->m_operator->children.clear();
 	for (auto &child : pdrgpexpr) {
-		pgexpr->m_pop->AddChild(std::move(child));
+		pgexpr->m_operator->AddChild(std::move(child));
 	}
-	pgexpr->m_pop->m_cost = GPOPT_INVALID_COST;
-	return pgexpr->m_pop.get();
+	pgexpr->m_operator->m_cost = GPOPT_INVALID_COST;
+	return pgexpr->m_operator.get();
 }
 
 //---------------------------------------------------------------------------
@@ -94,15 +94,15 @@ Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPatter
 	}
 	if (pexprPattern->FPattern() && ((CPattern *)pexprPattern)->FLeaf()) {
 		// return immediately; no deep extraction for leaf patterns
-		return pgexpr->m_pop.get();
+		return pgexpr->m_operator.get();
 	}
 	// for a scalar operator, there is always only one group expression in it's
 	// group. scalar operators are required to derive the scalar properties only
-	// and no xforms are applied to them (i.e no PxfsCandidates in scalar op)
+	// and no xforms are applied to them (i.e no XformCandidates in scalar op)
 	// specifically which will generate equivalent scalar operators in the same group.
 	// so, if a scalar op been extracted once, there is no need to explore
 	// all the child bindings, as the scalar properites will remain the same.
-	if (NULL != pexprLast && pgexpr->m_group->m_fScalar) {
+	if (NULL != pexprLast && pgexpr->m_group->m_is_scalar) {
 		return NULL;
 	}
 	duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr;
@@ -226,7 +226,7 @@ Operator *CBinding::PexprExtract(CGroup *pgroup, Operator *pexprPattern, Operato
 	CGroupExpression *pgexpr = NULL;
 	list<CGroupExpression *>::iterator itr;
 	if (NULL != pexprLast) {
-		itr = find(pgroup->m_listGExprs.begin(), pgroup->m_listGExprs.end(), pexprLast->m_group_expression);
+		itr = find(pgroup->m_group_exprs.begin(), pgroup->m_group_exprs.end(), pexprLast->m_group_expression);
 		pgexpr = *itr;
 	} else {
 		// init cursor
@@ -254,7 +254,7 @@ Operator *CBinding::PexprExtract(CGroup *pgroup, Operator *pexprPattern, Operato
 		itr = PgexprNext(pgroup, pgexpr);
 		pgexpr = *itr;
 		pexprStart = nullptr;
-	} while (pgroup->m_listGExprs.end() != itr);
+	} while (pgroup->m_group_exprs.end() != itr);
 	// group exhausted
 	return NULL;
 }

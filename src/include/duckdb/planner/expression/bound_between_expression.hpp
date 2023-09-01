@@ -45,13 +45,13 @@ public:
 	}
 
 public:
-	vector<ColumnBinding> getColumnBinding() override
+	vector<ColumnBinding> GetColumnBinding() override
 	{
 		vector<ColumnBinding> v;
-		v = input->getColumnBinding();
-		vector<ColumnBinding> v1 = lower->getColumnBinding();
+		v = input->GetColumnBinding();
+		vector<ColumnBinding> v1 = lower->GetColumnBinding();
 		v.insert(v1.begin(), v1.end(), v.end());
-		vector<ColumnBinding> v2 = upper->getColumnBinding();
+		vector<ColumnBinding> v2 = upper->GetColumnBinding();
 		v.insert(v2.begin(), v2.end(), v.end());
 		return v;
 	}

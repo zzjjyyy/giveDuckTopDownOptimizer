@@ -42,7 +42,7 @@ Operator* LogicalTopN::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*
 {
 	CGroupExpression* pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
-	LogicalTopN* tmp = (LogicalTopN*)pgexpr->m_pop.get();
+	LogicalTopN* tmp = (LogicalTopN*)pgexpr->m_operator.get();
 	LogicalTopN* pexpr = new LogicalTopN(tmp->orders, tmp->limit, tmp->offset);
 	for(auto &child : pdrgpexpr)
 	{
@@ -55,13 +55,13 @@ Operator* LogicalTopN::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CLogicalLimit::PxfsCandidates
+//		CLogicalLimit::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set * LogicalTopN::PxfsCandidates() const
+CXform_set * LogicalTopN::XformCandidates() const
 {
 	CXform_set * xform_set = new CXform_set();
 	(void) xform_set->set(CXform::ExfImplementLimit);

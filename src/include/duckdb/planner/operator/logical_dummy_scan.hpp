@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/planner/logical_operator.hpp"
 
 namespace duckdb {
@@ -21,10 +21,10 @@ public:
 	explicit LogicalDummyScan(idx_t table_index)
 	    : LogicalOperator(LogicalOperatorType::LOGICAL_DUMMY_SCAN), table_index(table_index) {
 		logical_type = LogicalOperatorType::LOGICAL_DUMMY_SCAN;
-		m_derived_property_relation = new CDrvdPropRelational();
+		m_derived_logical_property = new CDerivedLogicalProp();
 		m_group_expression = nullptr;
-		m_derived_property_plan = nullptr;
-		m_required_plan_property = nullptr;
+		m_derived_physical_property = nullptr;
+		m_required_physical_property = nullptr;
 	}
 
 	idx_t table_index;
@@ -55,7 +55,7 @@ public:
 		return 1;
 	}
 
-	CXform_set *PxfsCandidates() const override;
+	CXform_set *XformCandidates() const override;
 
 	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 

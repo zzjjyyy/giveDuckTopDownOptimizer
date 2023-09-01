@@ -3,15 +3,15 @@
 #include "duckdb/catalog/catalog_entry/table_catalog_entry.hpp"
 #include "duckdb/common/string_util.hpp"
 #include "duckdb/function/table/table_scan.hpp"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/optimizer/cascade/base/CUtils.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
 #include "duckdb/planner/expression/bound_conjunction_expression.hpp"
 #include "duckdb/planner/filter/conjunction_filter.hpp"
 #include "duckdb/transaction/transaction.hpp"
 
-#include <utility>
 #include <cstdlib>
+#include <utility>
 
 namespace duckdb {
 using namespace gpopt;
@@ -185,13 +185,13 @@ ULONG PhysicalTableScan::HashValue() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		PhysicalTableScan::EpetOrder
+//		PhysicalTableScan::EnforcingTypeOrder
 //
 //	@doc:
 //		Return the enforcing type for order property based on this operator
 //
 //---------------------------------------------------------------------------
-COrderProperty::EPropEnforcingType PhysicalTableScan::EpetOrder(CExpressionHandle &exprhdl,
+COrderProperty::EPropEnforcingType PhysicalTableScan::EnforcingTypeOrder(CExpressionHandle &exprhdl,
                                                             vector<BoundOrderByNode> &peo) const {
 	return COrderProperty::EpetRequired;
 }
@@ -265,9 +265,9 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::Copy() {
 	result->v_column_binding = this->v_column_binding;
 
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		result->estimated_props = this->estimated_props->Copy();
 	}
@@ -303,9 +303,9 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::CopyWithNewGroupExpression(CGrou
 	result->v_column_binding = this->v_column_binding;
 	
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		result->estimated_props = this->estimated_props->Copy();
 	}
@@ -343,9 +343,9 @@ PhysicalTableScan::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<
 	result->v_column_binding = this->v_column_binding;
 
 	/* Operator fields */
-	result->m_derived_property_relation = this->m_derived_property_relation;
-	result->m_derived_property_plan = this->m_derived_property_plan;
-	result->m_required_plan_property = this->m_required_plan_property;
+	result->m_derived_logical_property = this->m_derived_logical_property;
+	result->m_derived_physical_property = this->m_derived_physical_property;
+	result->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		result->estimated_props = this->estimated_props->Copy();
 	}

@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CRequiredPropPlan.h
+//		CRequiredPhysicalProp.h
 //
 //	@doc:
 //		Derived required relational properties
@@ -18,39 +18,39 @@ using namespace duckdb;
 using namespace gpos;
 
 // forward declaration
-class CDrvdPropRelational;
-class CDrvdPropPlan;
+class CDerivedLogicalProp;
+class CDerivedPhysicalProp;
 class COrderProperty;
 class CExpressionHandle;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CRequiredPropPlan
+//		CRequiredPhysicalProp
 //
 //	@doc:
 //		Required plan properties container.
 //
 //---------------------------------------------------------------------------
-class CRequiredPropPlan : public CRequiredProperty {
+class CRequiredPhysicalProp : public CRequiredProperty {
 public:
 	// required columns
-	duckdb::vector<ColumnBinding> m_required_cols;
+	duckdb::vector<ColumnBinding> m_cols;
 	// required sort order
-	COrderProperty *m_required_sort_order;
+	COrderProperty *m_sort_order;
 
 public:
 	// default ctor
-	CRequiredPropPlan() : m_required_sort_order(NULL) {
+	CRequiredPhysicalProp() : m_sort_order(nullptr) {
 	}
 
 	// ctor
-	CRequiredPropPlan(duckdb::vector<ColumnBinding> pcrs, COrderProperty *peo);
+	CRequiredPhysicalProp(duckdb::vector<ColumnBinding> pcrs, COrderProperty *peo);
 
 	// copy ctor
-	CRequiredPropPlan(const CRequiredPropPlan &other) = delete;
+	CRequiredPhysicalProp(const CRequiredPhysicalProp &other) = delete;
 
 	// dtor
-	virtual ~CRequiredPropPlan();
+	virtual ~CRequiredPhysicalProp();
 
 	// type of properties
 	virtual bool FPlan() const override {
@@ -58,44 +58,44 @@ public:
 	}
 
 	// required properties computation function
-	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-	                     duckdb::vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) override;
+	virtual void Compute(CExpressionHandle &expr_handle, CRequiredProperty *property, ULONG child_index,
+	                     duckdb::vector<CDerivedProperty *> children_derived_prop, ULONG num_opt_request) override;
 
 	// required columns computation function
 	void ComputeReqdCols(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-	                     duckdb::vector<CDrvdProp *> pdrgpdpCtxt);
+	                     duckdb::vector<CDerivedProperty *> pdrgpdpCtxt);
 
 	// equality function
-	bool Equals(CRequiredPropPlan *prpp) const;
+	bool Equals(CRequiredPhysicalProp *prpp) const;
 
 	// hash function
 	ULONG HashValue() const;
 
 	// check if plan properties are satisfied by the given derived properties
-	bool FSatisfied(CDrvdPropRelational *pdprel, CDrvdPropPlan *pdpplan) const;
+	bool FSatisfied(CDerivedLogicalProp *rel, CDerivedPhysicalProp *plan) const;
 
 	// check if plan properties are compatible with the given derived properties
-	bool FCompatible(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, CDrvdPropRelational *pdprel,
-	                 CDrvdPropPlan *pdpplan) const;
+	bool FCompatible(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, CDerivedLogicalProp *pdprel,
+	                 CDerivedPhysicalProp *pdpplan) const;
 
 	// check if expression attached to handle provides required columns by all plan properties
 	bool FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG ulOptReq) const;
 
 	// shorthand for conversion
-	static CRequiredPropPlan *Prpp(CRequiredProperty *prp) {
-		return (CRequiredPropPlan *)prp;
+	static CRequiredPhysicalProp *Prpp(CRequiredProperty *prp) {
+		return (CRequiredPhysicalProp *)prp;
 	}
 
 	// generate empty required properties
-	static CRequiredPropPlan *PrppEmpty();
+	static CRequiredPhysicalProp *PrppEmpty();
 
 	// hash function used for cost bounding
-	static ULONG UlHashForCostBounding(CRequiredPropPlan *prpp);
+	static ULONG UlHashForCostBounding(CRequiredPhysicalProp *prpp);
 
 	// equality function used for cost bounding
-	static bool FEqualForCostBounding(CRequiredPropPlan *prppFst, CRequiredPropPlan *prppSnd);
+	static bool FEqualForCostBounding(CRequiredPhysicalProp *prppFst, CRequiredPhysicalProp *prppSnd);
 	// map input required and derived plan properties into new required plan properties
-	// static CRequiredPropPlan* PrppRemapForCTE(CRequiredPropPlan *prppInput, CDrvdPropPlan *pdpplanInput);
-}; // class CRequiredPropPlan
+	// static CRequiredPhysicalProp* PrppRemapForCTE(CRequiredPhysicalProp *prppInput, CDerivedPhysicalProp *pdpplanInput);
+}; // class CRequiredPhysicalProp
 } // namespace gpopt
 #endif

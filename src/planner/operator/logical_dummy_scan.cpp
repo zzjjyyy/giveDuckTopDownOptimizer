@@ -19,13 +19,13 @@ vector<idx_t> LogicalDummyScan::GetTableIndex() const {
 
 //---------------------------------------------------------------------------
 //	@function:
-//		LogicalDummyScan::PxfsCandidates
+//		LogicalDummyScan::XformCandidates
 //
 //	@doc:
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set *LogicalDummyScan::PxfsCandidates() const {
+CXform_set *LogicalDummyScan::XformCandidates() const {
 	CXform_set *xform_set = new CXform_set();
 	(void)xform_set->set(CXform::ExfDummyScanImplementation);
 	return xform_set;
@@ -52,9 +52,9 @@ Operator *LogicalDummyScan::SelfRehydrate(CCostContext *cost_context, duckdb::ve
 
 unique_ptr<Operator> LogicalDummyScan::Copy() {
 	unique_ptr<LogicalDummyScan> result = make_uniq<LogicalDummyScan>(table_index);
-	result->m_derived_property_relation = m_derived_property_relation;
-	result->m_derived_property_plan = m_derived_property_plan;
-	result->m_required_plan_property = m_required_plan_property;
+	result->m_derived_logical_property = m_derived_logical_property;
+	result->m_derived_physical_property = m_derived_physical_property;
+	result->m_required_physical_property = m_required_physical_property;
 	if (nullptr != estimated_props) {
 		result->estimated_props = estimated_props->Copy();
 	}

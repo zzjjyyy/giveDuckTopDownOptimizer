@@ -8,7 +8,7 @@
 #include "duckdb/optimizer/cascade/search/CGroup.h"
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtRelational.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
@@ -32,9 +32,8 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-SContextLink::SContextLink(CCostContext* pccParent, ULONG child_index, COptimizationContext* poc)
-	: m_pccParent(pccParent), m_ulChildIndex(child_index), m_poc(poc)
-{
+SContextLink::SContextLink(CCostContext *pccParent, ULONG child_index, COptimizationContext *poc)
+    : m_parent_cost_context(pccParent), m_ulChildIndex(child_index), m_poc(poc) {
 }
 
 //---------------------------------------------------------------------------
@@ -45,8 +44,7 @@ SContextLink::SContextLink(CCostContext* pccParent, ULONG child_index, COptimiza
 //		Dtor
 //
 //---------------------------------------------------------------------------
-SContextLink::~SContextLink()
-{
+SContextLink::~SContextLink() {
 }
 
 //---------------------------------------------------------------------------
@@ -57,25 +55,18 @@ SContextLink::~SContextLink()
 //		Equality function
 //
 //---------------------------------------------------------------------------
-bool SContextLink::operator==(const SContextLink &pclink2) const
-{
+bool SContextLink::operator==(const SContextLink &pclink2) const {
 	bool fEqualChildIndexes = (this->m_ulChildIndex == pclink2.m_ulChildIndex);
 	bool fEqual = false;
-	if (fEqualChildIndexes)
-	{
-		if (nullptr == this->m_pccParent || nullptr == pclink2.m_pccParent)
-		{
-			fEqual = (nullptr == this->m_pccParent && nullptr == pclink2.m_pccParent);
-		}
-		else
-		{
-			fEqual = (*this->m_pccParent == *pclink2.m_pccParent);
+	if (fEqualChildIndexes) {
+		if (nullptr == this->m_parent_cost_context || nullptr == pclink2.m_parent_cost_context) {
+			fEqual = (nullptr == this->m_parent_cost_context && nullptr == pclink2.m_parent_cost_context);
+		} else {
+			fEqual = (*this->m_parent_cost_context == *pclink2.m_parent_cost_context);
 		}
 	}
-	if (fEqual)
-	{
-		if (nullptr == this->m_poc || nullptr == pclink2.m_poc)
-		{
+	if (fEqual) {
+		if (nullptr == this->m_poc || nullptr == pclink2.m_poc) {
 			return (nullptr == this->m_poc && nullptr == pclink2.m_poc);
 		}
 		return COptimizationContext::Equals(*this->m_poc, *pclink2.m_poc);
@@ -92,8 +83,10 @@ bool SContextLink::operator==(const SContextLink &pclink2) const
 //
 //---------------------------------------------------------------------------
 CGroup::CGroup(bool fScalar)
-	: m_id(GPOPT_INVALID_GROUP_ID), m_fScalar(fScalar), m_pdp(nullptr), m_pexprScalarRep(nullptr), m_pexprScalarRepIsExact(false), m_pccDummy(nullptr), m_pgroupDuplicate(nullptr), m_ulGExprs(0), m_ulpOptCtxts(0), m_estate(estUnexplored), m_eolMax(EolLow), m_fHasNewLogicalOperators(false)
-{
+    : m_id(GPOPT_INVALID_GROUP_ID), m_is_scalar(fScalar), m_derived_properties(nullptr), m_scalar_expr(nullptr),
+      m_is_scalar_expr_exact(false), m_dummy_cost_context(nullptr), m_group_for_duplicate_groups(nullptr),
+      m_num_exprs(0), m_num_opt_contexts(0), m_estate(estUnexplored), m_max_opt_level(EolLow),
+      m_has_new_logical_operators(false) {
 }
 
 //---------------------------------------------------------------------------
@@ -104,25 +97,22 @@ CGroup::CGroup(bool fScalar)
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CGroup::~CGroup()
-{
+CGroup::~CGroup() {
 	// cleaning-up group expressions
-	list<CGroupExpression*>::iterator pgexpr_iter = m_listGExprs.begin();
-	CGroupExpression* pgexpr = *pgexpr_iter;
-	while (nullptr != pgexpr)
-	{
+	list<CGroupExpression *>::iterator pgexpr_iter = m_group_exprs.begin();
+	CGroupExpression *pgexpr = *pgexpr_iter;
+	while (nullptr != pgexpr) {
 		pgexpr_iter++;
-		CGroupExpression* pgexprNext = *pgexpr_iter;
+		CGroupExpression *pgexprNext = *pgexpr_iter;
 		pgexpr->CleanupContexts();
 		pgexpr = pgexprNext;
 	}
 	// cleaning-up duplicate expressions
-	pgexpr_iter = m_listDupGExprs.begin();
+	pgexpr_iter = m_duplicate_group_exprs.begin();
 	pgexpr = *pgexpr_iter;
-	while (nullptr != pgexpr)
-	{
+	while (nullptr != pgexpr) {
 		pgexpr_iter++;
-		CGroupExpression* pgexprNext = *pgexpr_iter;
+		CGroupExpression *pgexprNext = *pgexpr_iter;
 		pgexpr->CleanupContexts();
 		pgexpr = pgexprNext;
 	}
@@ -139,19 +129,17 @@ CGroup::~CGroup()
 //		 optimization context
 //
 //---------------------------------------------------------------------------
-void CGroup::UpdateBestCost(COptimizationContext* poc, CCostContext* pcc)
-{
-	CGroup::ShtOC::iterator itr;
-	COptimizationContext* pocFound = nullptr;
+void CGroup::UpdateBestCost(COptimizationContext *poc, CCostContext *pcc) {
+	CGroup::opt_context_hashmap_t::iterator itr;
+	COptimizationContext *pocFound = nullptr;
 	{
 		// scope for accessor
 		itr = m_sht.find(poc->HashValue());
 		pocFound = itr->second;
 	}
 	// update best cost context
-	CCostContext* pccBest = pocFound->m_pccBest;
-	if (GPOPT_INVALID_COST != pcc->m_cost && (nullptr == pccBest || pcc->FBetterThan(pccBest)))
-	{
+	CCostContext *pccBest = pocFound->m_best_cost_context;
+	if (GPOPT_INVALID_COST != pcc->m_cost && (nullptr == pccBest || pcc->FBetterThan(pccBest))) {
 		pocFound->SetBest(pcc);
 	}
 }
@@ -164,16 +152,16 @@ void CGroup::UpdateBestCost(COptimizationContext* poc, CCostContext* pcc)
 //		Lookup a given context in contexts hash table
 //
 //---------------------------------------------------------------------------
-COptimizationContext* CGroup::PocLookup(CRequiredPropPlan * prpp, ULONG ulSearchStageIndex)
-{
+COptimizationContext *CGroup::PocLookup(CRequiredPhysicalProp *prpp, ULONG search_stage_index) {
 	duckdb::vector<ColumnBinding> v;
-	COptimizationContext* poc = new COptimizationContext(this, prpp, new CRequiredPropRelational(v), ulSearchStageIndex);
-	COptimizationContext* pocFound = nullptr;
+	COptimizationContext *poc =
+	    new COptimizationContext(this, prpp, new CRequiredLogicalProp(v), search_stage_index);
+	COptimizationContext *poc_found = nullptr;
 	{
 		auto itr = m_sht.find(poc->HashValue());
-		pocFound = itr->second;
+		poc_found = itr->second;
 	}
-	return pocFound;
+	return poc_found;
 }
 
 //---------------------------------------------------------------------------
@@ -185,25 +173,21 @@ COptimizationContext* CGroup::PocLookup(CRequiredPropPlan * prpp, ULONG ulSearch
 //		properties
 //
 //---------------------------------------------------------------------------
-COptimizationContext* CGroup::PocLookupBest(ULONG ulSearchStages, CRequiredPropPlan * prpp)
-{
-	COptimizationContext* pocBest = nullptr;
-	CCostContext* pccBest= nullptr;
-	for (ULONG ul = 0; ul < ulSearchStages; ul++)
-	{
-		COptimizationContext* pocCurrent = PocLookup(prpp, ul);
-		if (nullptr == pocCurrent)
-		{
+COptimizationContext *CGroup::PocLookupBest(ULONG ul_search_stages, CRequiredPhysicalProp *required_properties) {
+	COptimizationContext *poc_best = nullptr;
+	CCostContext *pcc_best = nullptr;
+	for (ULONG ul = 0; ul < ul_search_stages; ul++) {
+		COptimizationContext *poc_current = PocLookup(required_properties, ul);
+		if (nullptr == poc_current) {
 			continue;
 		}
-		CCostContext* pccCurrent = pocCurrent->m_pccBest;
-		if (nullptr == pccBest || (nullptr != pccCurrent && pccCurrent->FBetterThan(pccBest)))
-		{
-			pocBest = pocCurrent;
-			pccBest = pccCurrent;
+		CCostContext *pcc_current = poc_current->m_best_cost_context;
+		if (nullptr == pcc_best || (nullptr != pcc_current && pcc_current->FBetterThan(pcc_best))) {
+			poc_best = poc_current;
+			pcc_best = pcc_current;
 		}
 	}
-	return pocBest;
+	return poc_best;
 }
 
 //---------------------------------------------------------------------------
@@ -214,16 +198,13 @@ COptimizationContext* CGroup::PocLookupBest(ULONG ulSearchStages, CRequiredPropP
 //		Lookup a context by id
 //
 //---------------------------------------------------------------------------
-COptimizationContext* CGroup::Ppoc(ULONG id) const
-{
-	COptimizationContext* poc = nullptr;
+COptimizationContext *CGroup::Ppoc(ULONG id) const {
+	COptimizationContext *poc = nullptr;
 	auto iter = m_sht.begin();
-	while (iter != m_sht.end())
-	{
+	while (iter != m_sht.end()) {
 		{
 			poc = iter->second;
-			if (poc->m_id == id)
-			{
+			if (poc->m_id == id) {
 				return poc;
 			}
 			++iter;
@@ -242,34 +223,30 @@ COptimizationContext* CGroup::Ppoc(ULONG id) const
 //		return either the inserted or the existing matching context
 //
 //---------------------------------------------------------------------------
-COptimizationContext* CGroup::PocInsert(COptimizationContext* poc)
-{
+COptimizationContext *CGroup::PocInsert(COptimizationContext *poc) {
 	auto itr = m_sht.find(poc->HashValue());
-	if (m_sht.end() == itr)
-	{
-		poc->SetId((ULONG) UlpIncOptCtxts());
+	if (m_sht.end() == itr) {
+		poc->SetId((ULONG)IncreaseOptContextsNumber());
 		m_sht.insert(make_pair(poc->HashValue(), poc));
 		return poc;
 	}
-	COptimizationContext* pocFound = itr->second;
+	COptimizationContext *pocFound = itr->second;
 	return pocFound;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGroup::PgexprBest
+//		CGroup::BestExpression
 //
 //	@doc:
 //		Lookup best group expression under optimization context
 //
 //---------------------------------------------------------------------------
-CGroupExpression* CGroup::PgexprBest(COptimizationContext* poc)
-{
+CGroupExpression *CGroup::BestExpression(COptimizationContext *poc) {
 	auto itr = m_sht.find(poc->HashValue());
-	COptimizationContext* pocFound = itr->second;
-	if (nullptr != pocFound)
-	{
-		return pocFound->PgexprBest();
+	COptimizationContext *poc_found = itr->second;
+	if (nullptr != poc_found) {
+		return poc_found->BestExpression();
 	}
 	return nullptr;
 }
@@ -283,8 +260,7 @@ CGroupExpression* CGroup::PgexprBest(COptimizationContext* poc)
 //		separated from constructor to avoid synchronization issues
 //
 //---------------------------------------------------------------------------
-void CGroup::SetId(ULONG id)
-{
+void CGroup::SetId(ULONG id) {
 	m_id = id;
 }
 
@@ -296,9 +272,8 @@ void CGroup::SetId(ULONG id)
 //		Initialize group's properties
 //
 //---------------------------------------------------------------------------
-void CGroup::InitProperties(CDrvdProp* pdp)
-{
-	m_pdp = pdp;
+void CGroup::InitProperties(CDerivedProperty *pdp) {
+	m_derived_properties = pdp;
 }
 
 //---------------------------------------------------------------------------
@@ -309,8 +284,7 @@ void CGroup::InitProperties(CDrvdProp* pdp)
 //		Set group state;
 //
 //---------------------------------------------------------------------------
-void CGroup::SetState(EState estNewState)
-{
+void CGroup::SetState(EState estNewState) {
 	m_estate = estNewState;
 }
 
@@ -322,13 +296,11 @@ void CGroup::SetState(EState estNewState)
 //		Hash function for group identification
 //
 //---------------------------------------------------------------------------
-ULONG CGroup::HashValue() const
-{
+ULONG CGroup::HashValue() const {
 	ULONG id = m_id;
-	if (FDuplicateGroup() && 0 == m_ulGExprs)
-	{
+	if (FDuplicateGroup() && 0 == m_num_exprs) {
 		// group has been merged into another group
-		id = m_pgroupDuplicate->m_id;
+		id = m_group_for_duplicate_groups->m_id;
 	}
 	return gpos::HashValue<ULONG>(&id);
 }
@@ -341,16 +313,13 @@ ULONG CGroup::HashValue() const
 //		Insert group expression
 //
 //---------------------------------------------------------------------------
-void CGroup::Insert(CGroupExpression* pgexpr)
-{
-	m_listGExprs.emplace_back(pgexpr);
-	if (pgexpr->m_pop->FLogical())
-	{
-		m_fHasNewLogicalOperators = true;
+void CGroup::Insert(CGroupExpression *pgexpr) {
+	m_group_exprs.emplace_back(pgexpr);
+	if (pgexpr->m_operator->FLogical()) {
+		m_has_new_logical_operators = true;
 	}
-	if (pgexpr->OptimizationLevel() > m_eolMax)
-	{
-		m_eolMax = pgexpr->OptimizationLevel();
+	if (pgexpr->OptimizationLevel() > m_max_opt_level) {
+		m_max_opt_level = pgexpr->OptimizationLevel();
 	}
 }
 
@@ -362,36 +331,33 @@ void CGroup::Insert(CGroupExpression* pgexpr)
 //		Move duplicate group expression to duplicates list
 //
 //---------------------------------------------------------------------------
-void CGroup::MoveDuplicateGExpr(CGroupExpression* pgexpr)
-{
-	m_listGExprs.remove(pgexpr);
-	m_ulGExprs--;
-	m_listDupGExprs.emplace_back(pgexpr);
+void CGroup::MoveDuplicateGExpr(CGroupExpression *pgexpr) {
+	m_group_exprs.remove(pgexpr);
+	m_num_exprs--;
+	m_duplicate_group_exprs.emplace_back(pgexpr);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGroup::PgexprFirst
+//		CGroup::FirstGroupExpr
 //
 //	@doc:
 //		Retrieve first expression in group
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression*>::iterator CGroup::PgexprFirst()
-{
-	return m_listGExprs.begin();
+list<CGroupExpression *>::iterator CGroup::FirstGroupExpr() {
+	return m_group_exprs.begin();
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGroup::PgexprNext
+//		CGroup::NextGroupExpr
 //
 //	@doc:
 //		Retrieve next expression in group
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression*>::iterator CGroup::PgexprNext(list<CGroupExpression*>::iterator pgexpr_iter)
-{
+list<CGroupExpression *>::iterator CGroup::NextGroupExpr(list<CGroupExpression *>::iterator pgexpr_iter) {
 	return pgexpr_iter++;
 }
 
@@ -403,15 +369,12 @@ list<CGroupExpression*>::iterator CGroup::PgexprNext(list<CGroupExpression*>::it
 //		Determine whether two arrays of groups are equivalent
 //
 //---------------------------------------------------------------------------
-bool CGroup::FMatchGroups(duckdb::vector<CGroup*> pdrgpgroupFst, duckdb::vector<CGroup*> pdrgpgroupSnd)
-{
+bool CGroup::FMatchGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckdb::vector<CGroup *> pdrgpgroupSnd) {
 	ULONG arity = pdrgpgroupFst.size();
-	for (ULONG i = 0; i < arity; i++)
-	{
-		CGroup* pgroupFst = pdrgpgroupFst[i];
-		CGroup* pgroupSnd = pdrgpgroupSnd[i];
-		if (pgroupFst != pgroupSnd && !FDuplicateGroups(pgroupFst, pgroupSnd))
-		{
+	for (ULONG i = 0; i < arity; i++) {
+		CGroup *pgroupFst = pdrgpgroupFst[i];
+		CGroup *pgroupSnd = pdrgpgroupSnd[i];
+		if (pgroupFst != pgroupSnd && !FDuplicateGroups(pgroupFst, pgroupSnd)) {
 			return false;
 		}
 	}
@@ -426,24 +389,19 @@ bool CGroup::FMatchGroups(duckdb::vector<CGroup*> pdrgpgroupFst, duckdb::vector<
 //		 Matching of pairs of arrays of groups while skipping scalar groups
 //
 //---------------------------------------------------------------------------
-bool CGroup::FMatchNonScalarGroups(duckdb::vector<CGroup*> pdrgpgroupFst, duckdb::vector<CGroup*> pdrgpgroupSnd)
-{
-	if (pdrgpgroupFst.size() != pdrgpgroupSnd.size())
-	{
+bool CGroup::FMatchNonScalarGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckdb::vector<CGroup *> pdrgpgroupSnd) {
+	if (pdrgpgroupFst.size() != pdrgpgroupSnd.size()) {
 		return false;
 	}
 	ULONG arity = pdrgpgroupFst.size();
-	for (ULONG i = 0; i < arity; i++)
-	{
-		CGroup* pgroupFst = pdrgpgroupFst[i];
-		CGroup* pgroupSnd = pdrgpgroupSnd[i];
-		if (pgroupFst->m_fScalar)
-		{
+	for (ULONG i = 0; i < arity; i++) {
+		CGroup *pgroupFst = pdrgpgroupFst[i];
+		CGroup *pgroupSnd = pdrgpgroupSnd[i];
+		if (pgroupFst->m_is_scalar) {
 			// skip scalar groups
 			continue;
 		}
-		if (pgroupFst != pgroupSnd && !FDuplicateGroups(pgroupFst, pgroupSnd))
-		{
+		if (pgroupFst != pgroupSnd && !FDuplicateGroups(pgroupFst, pgroupSnd)) {
 			return false;
 		}
 	}
@@ -458,11 +416,11 @@ bool CGroup::FMatchNonScalarGroups(duckdb::vector<CGroup*> pdrgpgroupFst, duckdb
 //		Determine whether two groups are equivalent
 //
 //---------------------------------------------------------------------------
-bool CGroup::FDuplicateGroups(CGroup* pgroupFst, CGroup* pgroupSnd)
-{
-	CGroup* pgroupFstDup = pgroupFst->m_pgroupDuplicate;
-	CGroup* pgroupSndDup = pgroupSnd->m_pgroupDuplicate;
-	return (pgroupFst == pgroupSnd) || (pgroupFst == pgroupSndDup) || (pgroupSnd == pgroupFstDup) || (nullptr != pgroupFstDup && nullptr != pgroupSndDup && pgroupFstDup == pgroupSndDup);
+bool CGroup::FDuplicateGroups(CGroup *pgroupFst, CGroup *pgroupSnd) {
+	CGroup *pgroupFstDup = pgroupFst->m_group_for_duplicate_groups;
+	CGroup *pgroupSndDup = pgroupSnd->m_group_for_duplicate_groups;
+	return (pgroupFst == pgroupSnd) || (pgroupFst == pgroupSndDup) || (pgroupSnd == pgroupFstDup) ||
+	       (nullptr != pgroupFstDup && nullptr != pgroupSndDup && pgroupFstDup == pgroupSndDup);
 }
 
 //---------------------------------------------------------------------------
@@ -473,27 +431,20 @@ bool CGroup::FDuplicateGroups(CGroup* pgroupFst, CGroup* pgroupSnd)
 //		Add duplicate group
 //
 //---------------------------------------------------------------------------
-void CGroup::AddDuplicateGrp(CGroup* pgroup)
-{
+void CGroup::AddDuplicateGrp(CGroup *pgroup) {
 	// add link following monotonic ordering of group IDs
-	CGroup* pgroupSrc = this;
-	CGroup* pgroupDest = pgroup;
-	if (this->m_id > pgroup->m_id)
-	{
+	CGroup *pgroupSrc = this;
+	CGroup *pgroupDest = pgroup;
+	if (this->m_id > pgroup->m_id) {
 		std::swap(pgroupSrc, pgroupDest);
 	}
 	// keep looping until we add link
-	while (pgroupSrc->m_pgroupDuplicate != pgroupDest)
-	{
-		if (nullptr == pgroupSrc->m_pgroupDuplicate)
-		{
-			pgroupSrc->m_pgroupDuplicate = pgroupDest;
-		}
-		else
-		{
-			pgroupSrc = pgroupSrc->m_pgroupDuplicate;
-			if (pgroupSrc->m_id > pgroupDest->m_id)
-			{
+	while (pgroupSrc->m_group_for_duplicate_groups != pgroupDest) {
+		if (nullptr == pgroupSrc->m_group_for_duplicate_groups) {
+			pgroupSrc->m_group_for_duplicate_groups = pgroupDest;
+		} else {
+			pgroupSrc = pgroupSrc->m_group_for_duplicate_groups;
+			if (pgroupSrc->m_id > pgroupDest->m_id) {
 				std::swap(pgroupSrc, pgroupDest);
 			}
 		}
@@ -508,19 +459,16 @@ void CGroup::AddDuplicateGrp(CGroup* pgroup)
 //		Resolve master duplicate group
 //
 //---------------------------------------------------------------------------
-void CGroup::ResolveDuplicateMaster()
-{
-	if (!FDuplicateGroup())
-	{
+void CGroup::ResolveDuplicateMaster() {
+	if (!FDuplicateGroup()) {
 		return;
 	}
-	CGroup* pgroupTarget = m_pgroupDuplicate;
-	while (nullptr != pgroupTarget->m_pgroupDuplicate)
-	{
-		pgroupTarget = pgroupTarget->m_pgroupDuplicate;
+	CGroup *pgroupTarget = m_group_for_duplicate_groups;
+	while (nullptr != pgroupTarget->m_group_for_duplicate_groups) {
+		pgroupTarget = pgroupTarget->m_group_for_duplicate_groups;
 	}
 	// update reference to target group
-	m_pgroupDuplicate = pgroupTarget;
+	m_group_for_duplicate_groups = pgroupTarget;
 }
 
 //---------------------------------------------------------------------------
@@ -531,22 +479,19 @@ void CGroup::ResolveDuplicateMaster()
 //		Merge group with its duplicate - not thread-safe
 //
 //---------------------------------------------------------------------------
-void CGroup::MergeGroup()
-{
-	if (!FDuplicateGroup())
-	{
+void CGroup::MergeGroup() {
+	if (!FDuplicateGroup()) {
 		return;
 	}
 	// resolve target group
 	ResolveDuplicateMaster();
-	CGroup* pgroupTarget = m_pgroupDuplicate;
+	CGroup *pgroupTarget = m_group_for_duplicate_groups;
 	// move group expressions from this group to target
-	while (!m_listGExprs.empty())
-	{
-		CGroupExpression* pgexpr = m_listGExprs.front();
-		m_listGExprs.pop_front();
-		m_ulGExprs--;
-		pgexpr->Reset(pgroupTarget, pgroupTarget->m_ulGExprs++);
+	while (!m_group_exprs.empty()) {
+		CGroupExpression *pgexpr = m_group_exprs.front();
+		m_group_exprs.pop_front();
+		m_num_exprs--;
+		pgexpr->Reset(pgroupTarget, pgroupTarget->m_num_exprs++);
 		pgroupTarget->Insert(pgexpr);
 	}
 }
@@ -561,19 +506,19 @@ void CGroup::MergeGroup()
 //
 //
 //---------------------------------------------------------------------------
-void CGroup::CreateDummyCostContext()
-{
-	CGroupExpression* pgexprFirst;
+void CGroup::CreateDummyCostContext() {
+	CGroupExpression *pgexprFirst;
 	{
 		CGroupProxy gp(this);
 		pgexprFirst = *(gp.PgexprFirst());
 	}
 	duckdb::vector<ColumnBinding> v;
-	COptimizationContext* poc = new COptimizationContext(this, CRequiredPropPlan::PrppEmpty(), new CRequiredPropRelational(v), 0);
-	m_pccDummy = new CCostContext(poc, 0, pgexprFirst);
-	m_pccDummy->SetState(CCostContext::estCosting);
-	m_pccDummy->SetCost(0.0);
-	m_pccDummy->SetState(CCostContext::estCosted);
+	COptimizationContext *poc =
+	    new COptimizationContext(this, CRequiredPhysicalProp::PrppEmpty(), new CRequiredLogicalProp(v), 0);
+	m_dummy_cost_context = new CCostContext(poc, 0, pgexprFirst);
+	m_dummy_cost_context->SetState(CCostContext::estCosting);
+	m_dummy_cost_context->SetCost(0.0);
+	m_dummy_cost_context->SetState(CCostContext::estCosted);
 }
 
 //---------------------------------------------------------------------------
@@ -588,35 +533,30 @@ void CGroup::CreateDummyCostContext()
 //
 //
 //---------------------------------------------------------------------------
-void CGroup::RecursiveBuildTreeMap(COptimizationContext* poc, CCostContext* pccParent, CGroupExpression* pgexprCurrent, ULONG child_index, CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> *ptmap)
-{
-	duckdb::vector<CCostContext*> pdrgpcc = pgexprCurrent->LookupAllMatchedCostContexts(poc);
+void CGroup::RecursiveBuildTreeMap(
+    COptimizationContext *poc, CCostContext *pccParent, CGroupExpression *pgexprCurrent, ULONG child_index,
+    CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> *ptmap) {
+	duckdb::vector<CCostContext *> pdrgpcc = pgexprCurrent->LookupAllMatchedCostContexts(poc);
 	const ULONG ulCCSize = pdrgpcc.size();
-	if (0 == ulCCSize)
-	{
+	if (0 == ulCCSize) {
 		// current group expression has no valid implementations of optimization context
 		return;
 	}
 	// iterate over all valid implementations of given optimization context
-	for (ULONG ulCC = 0; ulCC < ulCCSize; ulCC++)
-	{
-		CCostContext* pccCurrent = pdrgpcc[ulCC];
-		if (nullptr != pccParent)
-		{
+	for (ULONG ulCC = 0; ulCC < ulCCSize; ulCC++) {
+		CCostContext *pccCurrent = pdrgpcc[ulCC];
+		if (nullptr != pccParent) {
 			// link parent cost context to child cost context
 			ptmap->Insert(pccParent, child_index, pccCurrent);
 		}
-		duckdb::vector<COptimizationContext*> pdrgpoc = pccCurrent->m_optimization_contexts;
-		if (0 != pdrgpoc.size())
-		{
+		duckdb::vector<COptimizationContext *> pdrgpoc = pccCurrent->m_optimization_contexts;
+		if (0 != pdrgpoc.size()) {
 			// process children recursively
 			const ULONG arity = pgexprCurrent->Arity();
-			for (ULONG ul = 0; ul < arity; ul++)
-			{
-				CGroup* pgroupChild = (*pgexprCurrent)[ul];
-				COptimizationContext* pocChild = nullptr;
-				if (!pgroupChild->m_fScalar)
-				{
+			for (ULONG ul = 0; ul < arity; ul++) {
+				CGroup *pgroupChild = (*pgexprCurrent)[ul];
+				COptimizationContext *pocChild = nullptr;
+				if (!pgroupChild->m_is_scalar) {
 					pocChild = pdrgpoc[ul];
 				}
 				pgroupChild->BuildTreeMap(pocChild, pccCurrent, ul, ptmap);
@@ -636,42 +576,37 @@ void CGroup::RecursiveBuildTreeMap(COptimizationContext* poc, CCostContext* pccP
 //
 //
 //---------------------------------------------------------------------------
-void CGroup::BuildTreeMap(COptimizationContext* poc, CCostContext* pccParent, ULONG child_index, CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals>* ptmap)
-{
+void CGroup::BuildTreeMap(
+    COptimizationContext *poc, CCostContext *pccParent, ULONG child_index,
+    CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> *ptmap) {
 	// check if link has been processed before,
 	// this is crucial to eliminate unnecessary recursive calls
 	SContextLink pclink(pccParent, child_index, poc);
-	if (m_plinkmap.find(pclink.HashValue()) != m_plinkmap.end())
-	{
+	if (m_link_map.find(pclink.HashValue()) != m_link_map.end()) {
 		// link is already processed
 		return;
 	}
-	list<CGroupExpression*>::iterator itr;
+	list<CGroupExpression *>::iterator itr;
 	// start with first non-logical group expression
-	CGroupExpression* pgexprCurrent = nullptr;
+	CGroupExpression *pgexprCurrent = nullptr;
 	{
 		CGroupProxy gp(this);
-		itr = gp.m_pgroup->m_listGExprs.begin();
+		itr = gp.m_pgroup->m_group_exprs.begin();
 		itr = gp.PgexprSkipLogical(itr);
 		pgexprCurrent = *itr;
 	}
-	while (m_listGExprs.end() != itr)
-	{
-		if (pgexprCurrent->m_pop->FPhysical())
-		{
+	while (m_group_exprs.end() != itr) {
+		if (pgexprCurrent->m_operator->FPhysical()) {
 			// create links recursively
 			RecursiveBuildTreeMap(poc, pccParent, pgexprCurrent, child_index, ptmap);
-		}
-		else
-		{
+		} else {
 			// this is a scalar group, link parent cost context to group's dummy context
-			ptmap->Insert(pccParent, child_index, m_pccDummy);
+			ptmap->Insert(pccParent, child_index, m_dummy_cost_context);
 			// recursively link group's dummy context to child contexts
 			const ULONG arity = pgexprCurrent->Arity();
-			for (ULONG ul = 0; ul < arity; ul++)
-			{
-				CGroup* pgroupChild = (*pgexprCurrent)[ul];
-				pgroupChild->BuildTreeMap(nullptr, m_pccDummy, ul, ptmap);
+			for (ULONG ul = 0; ul < arity; ul++) {
+				CGroup *pgroupChild = (*pgexprCurrent)[ul];
+				pgroupChild->BuildTreeMap(nullptr, m_dummy_cost_context, ul, ptmap);
 			}
 		}
 		// move to next non-logical group expression
@@ -682,35 +617,32 @@ void CGroup::BuildTreeMap(COptimizationContext* poc, CCostContext* pccParent, UL
 		}
 	}
 	// remember processed links to avoid re-processing them later
-	m_plinkmap.insert(make_pair(pclink.HashValue(), true));
+	m_link_map.insert(make_pair(pclink.HashValue(), true));
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGroup::PgexprBestPromise
+//		CGroup::BestPromiseGroupExpr
 //
 //	@doc:
 //		Find group expression with best stats promise and the
 //		same children as given expression
 //
 //---------------------------------------------------------------------------
-CGroupExpression* CGroup::PgexprBestPromise(CGroupExpression* pgexprToMatch)
-{
+CGroupExpression *CGroup::BestPromiseGroupExpr(CGroupExpression *pgexprToMatch) {
 	duckdb::vector<ColumnBinding> v;
-	CGroupExpression* pgexprCurrent = nullptr;
-	CGroupExpression* pgexprBest = nullptr;
-	list<CGroupExpression*>::iterator itr;
+	CGroupExpression *pgexprCurrent = nullptr;
+	CGroupExpression *pgexprBest = nullptr;
+	list<CGroupExpression *>::iterator itr;
 	// get first logical group expression
 	{
 		CGroupProxy gp(this);
-		itr = gp.m_pgroup->m_listGExprs.begin();
+		itr = gp.m_pgroup->m_group_exprs.begin();
 		itr = gp.PgexprNextLogical(itr);
 		pgexprCurrent = *itr;
 	}
-	while (m_listGExprs.end() != itr)
-	{
-		if (pgexprCurrent->FMatchNonScalarChildren(pgexprToMatch))
-		{
+	while (m_group_exprs.end() != itr) {
+		if (pgexprCurrent->FMatchNonScalarChildren(pgexprToMatch)) {
 			pgexprBest = pgexprCurrent;
 		}
 		// move to next logical group expression
@@ -733,13 +665,11 @@ CGroupExpression* CGroup::PgexprBestPromise(CGroupExpression* pgexprToMatch)
 //		resetting state is not thread-safe
 //
 //---------------------------------------------------------------------------
-void CGroup::ResetGroupState()
-{
+void CGroup::ResetGroupState() {
 	// reset group expression states
-	list<CGroupExpression*>::iterator pgexpr_iter = m_listGExprs.begin();
-	while (m_listGExprs.end() != pgexpr_iter)
-	{
-		CGroupExpression* pgexpr = *pgexpr_iter;
+	list<CGroupExpression *>::iterator pgexpr_iter = m_group_exprs.begin();
+	while (m_group_exprs.end() != pgexpr_iter) {
+		CGroupExpression *pgexpr = *pgexpr_iter;
 		pgexpr->ResetState();
 		pgexpr_iter++;
 	}
@@ -759,9 +689,8 @@ void CGroup::ResetGroupState()
 //		this operation is not thread safe
 //
 //---------------------------------------------------------------------------
-void CGroup::ResetLinkMap()
-{
-	m_plinkmap.clear();
+void CGroup::ResetLinkMap() {
+	m_link_map.clear();
 }
 
 //---------------------------------------------------------------------------
@@ -772,11 +701,10 @@ void CGroup::ResetLinkMap()
 //		Reset group job queues;
 //
 //---------------------------------------------------------------------------
-void CGroup::ResetGroupJobQueues()
-{
+void CGroup::ResetGroupJobQueues() {
 	CGroupProxy gp(this);
-	m_jqExploration.Reset();
-	m_jqImplementation.Reset();
+	m_explore_job_queue.Reset();
+	m_impl_job_queue.Reset();
 }
 
 //---------------------------------------------------------------------------
@@ -788,36 +716,31 @@ void CGroup::ResetGroupJobQueues()
 //		in current group, and satisfying the given required properties
 //
 //---------------------------------------------------------------------------
-double CGroup::CostLowerBound(CRequiredPropPlan * prppInput)
-{
-	auto iter = m_pcostmap.find(prppInput);
+double CGroup::CostLowerBound(CRequiredPhysicalProp *prppInput) {
+	auto iter = m_cost_lower_bounds_map.find(prppInput);
 	double pcostLowerBound = GPOPT_INFINITE_COST;
-	if (m_pcostmap.end() != iter)
-	{
+	if (m_cost_lower_bounds_map.end() != iter) {
 		pcostLowerBound = iter->second;
 		return pcostLowerBound;
 	}
 	double costLowerBound = GPOPT_INFINITE_COST;
 	// start with first non-logical group expression
-	CGroupExpression* pgexprCurrent = nullptr;
-	list<CGroupExpression*>::iterator itr;
+	CGroupExpression *pgexprCurrent = nullptr;
+	list<CGroupExpression *>::iterator itr;
 	{
 		CGroupProxy gp(this);
-		itr = gp.m_pgroup->m_listGExprs.begin();
+		itr = gp.m_pgroup->m_group_exprs.begin();
 		itr = gp.PgexprSkipLogical(itr);
 		pgexprCurrent = *itr;
 	}
-	while (m_listGExprs.end() != itr)
-	{
+	while (m_group_exprs.end() != itr) {
 		// considering an enforcer introduces a deadlock here since its child is
 		// the same group that contains it,
 		// since an enforcer must reside on top of another operator from the same
 		// group, it cannot produce a better cost lower-bound and can be skipped here
-		if (!CUtils::FEnforcer(pgexprCurrent->m_pop.get()))
-		{
+		if (!CUtils::FEnforcer(pgexprCurrent->m_operator.get())) {
 			double costLowerBoundGExpr = pgexprCurrent->CostLowerBound(prppInput, nullptr, gpos::ulong_max);
-			if (costLowerBoundGExpr < costLowerBound)
-			{
+			if (costLowerBoundGExpr < costLowerBound) {
 				costLowerBound = costLowerBoundGExpr;
 			}
 		}
@@ -828,6 +751,6 @@ double CGroup::CostLowerBound(CRequiredPropPlan * prppInput)
 			pgexprCurrent = *itr;
 		}
 	}
-	m_pcostmap.insert(map<CRequiredPropPlan *, double>::value_type(prppInput, costLowerBound));
+	m_cost_lower_bounds_map.insert(map<CRequiredPhysicalProp *, double>::value_type(prppInput, costLowerBound));
 	return costLowerBound;
 }

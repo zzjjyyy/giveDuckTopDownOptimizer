@@ -45,13 +45,13 @@ public:
 
 public:
 	// ---------------------------- ORCA -------------------------------------
-	CRequiredProperty *PrpCreate() const override;
-
 	ULONG DeriveJoinDepth(CExpressionHandle &exprhdl) override;
 
 	ULONG HashValue() const override;
 
-	CDrvdProp *PdpCreate() override;
+	CDerivedProperty *CreateDerivedProperty() override;
+
+	CRequiredProperty *CreateRequiredProperty() const override;
 
 	static CKeyCollection *PkcDeriveKeysPassThru(CExpressionHandle &expression_handle, ULONG ulChild);
 
@@ -62,9 +62,11 @@ public:
 	CKeyCollection *DeriveKeyCollection(CExpressionHandle &exprhdl) override;
 
 	// Transformations: it outputs the candidate set of xforms
-	virtual CXform_set *PxfsCandidates() const {
+	virtual CXform_set *XformCandidates() const {
 		return nullptr;
 	}
+
+	void CloneORCAInfo(LogicalOperator *op);
 
 	// ---------------------------- DuckDB -------------------------------------
 

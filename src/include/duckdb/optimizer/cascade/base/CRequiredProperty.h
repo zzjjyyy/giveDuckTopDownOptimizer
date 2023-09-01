@@ -10,7 +10,7 @@
 
 #include "duckdb/common/vector.hpp"
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdProp.h"
+#include "duckdb/optimizer/cascade/base/CDerivedProperty.h"
 
 #include <memory>
 
@@ -85,7 +85,7 @@ public:
 
 	// required properties computation function
 	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-	                     duckdb::vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptRe) = 0;
+	                     duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptRe) = 0;
 }; // class CRequiredProperty
 } // namespace gpopt
 #endif

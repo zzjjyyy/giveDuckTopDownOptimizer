@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDrvdProp.h
+//		CDerivedProperty.h
 //
 //	@doc:
 //		Base class for all derived properties
@@ -10,26 +10,25 @@
 
 #include "duckdb/optimizer/cascade/base.h"
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace gpos;
 
 // fwd declarations
 class CExpressionHandle;
 class Operator;
-class CDrvdPropCtxt;
-class CRequiredPropPlan;
+class CDerivedPropertyContext;
+class CRequiredPhysicalProp;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CDrvdProp
+//		CDerivedProperty
 //
 //	@doc:
 //		Abstract base class for all derived properties. Individual property
-//		components are added separately. CDrvdProp is memory pool-agnostic.
+//		components are added separately. CDerivedProperty is memory pool-agnostic.
 //
 //		All derived property classes implement a pure virtual function
-//		CDrvdProp::Derive(). This function is responsible for filling in the
+//		CDerivedProperty::Derive(). This function is responsible for filling in the
 //		different properties in the property container. For example
 //		CDrvdPropScalar::Derive() fills in used and defined columns in the
 //		current scalar property container.
@@ -52,42 +51,30 @@ class CRequiredPropPlan;
 //		CExpressionHandle::DeriveProps().
 //
 //---------------------------------------------------------------------------
-class CDrvdProp
-{
+class CDerivedProperty {
 public:
 	// types of derived properties
-	enum EPropType
-	{
-		EptRelational, EptPlan, EptScalar, EptInvalid, EptSentinel = EptInvalid
-	};
-
-private:
-	// private copy ctor
-	CDrvdProp(const CDrvdProp &);
+	enum EPropType { EptRelational, EptPlan, EptScalar, EptInvalid, EptSentinel = EptInvalid };
 
 public:
-	// ctor
-	CDrvdProp();
-
-	// dtor
-	virtual ~CDrvdProp()
-	{
+	CDerivedProperty();
+	virtual ~CDerivedProperty() {
 	}
 
 	// type of properties
-	virtual EPropType Ept() = 0;
-
+	virtual EPropType PropertyType() = 0;
 	// derivation function
-	virtual void Derive(CExpressionHandle& pop, CDrvdPropCtxt* pdpctxt) = 0;
-
+	virtual void Derive(CExpressionHandle &pop, CDerivedPropertyContext *pdpctxt) = 0;
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CRequiredPropPlan * prpp) const = 0;
-
-	virtual BOOL IsComplete() const
-	{
+	virtual BOOL FSatisfies(const CRequiredPhysicalProp *prpp) const = 0;
+	virtual BOOL IsComplete() const {
 		return true;
 	}
 
-};	// class CDrvdProp
-}  // namespace gpopt
+private:
+	// private copy ctor
+	CDerivedProperty(const CDerivedProperty &);
+
+}; // class CDerivedProperty
+} // namespace gpopt
 #endif

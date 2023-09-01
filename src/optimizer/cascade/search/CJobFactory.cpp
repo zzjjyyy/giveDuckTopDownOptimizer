@@ -21,13 +21,15 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CJobFactory::CJobFactory(ULONG ulJobs)
-	: m_ulJobs(ulJobs), m_pspjGroupOptimization(nullptr), m_pspjGroupImplementation(nullptr), m_pspjGroupExploration(nullptr), m_pspjGroupExpressionOptimization(nullptr), m_pspjGroupExpressionImplementation(nullptr), m_pspjGroupExpressionExploration(nullptr), m_pspjTransformation(nullptr)
+CJobFactory::CJobFactory(ULONG num_jobs)
+	: m_num_jobs(num_jobs), m_group_opt_jobs(nullptr), m_group_impl_jobs(nullptr), m_group_explore_jobs(nullptr),
+      m_group_expr_opt_jobs(nullptr), m_group_expr_impl_jobs(nullptr), m_group_expr_explore_jobs(nullptr),
+      m_transform_jobs(nullptr)
 {
 	// initialize factories to be used first
-	Release(PjCreate(CJob::EjtGroupExploration));
-	Release(PjCreate(CJob::EjtGroupExpressionExploration));
-	Release(PjCreate(CJob::EjtTransformation));
+	Release(CreateJob(CJob::EjtGroupExploration));
+	Release(CreateJob(CJob::EjtGroupExpressionExploration));
+	Release(CreateJob(CJob::EjtTransformation));
 }
 
 //---------------------------------------------------------------------------
@@ -44,46 +46,46 @@ CJobFactory::~CJobFactory()
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CJobFactory::PjCreate
+//		CJobFactory::CreateJob
 //
 //	@doc:
 //		Create job of specific type
 //
 //---------------------------------------------------------------------------
-CJob* CJobFactory::PjCreate(CJob::EJobType ejt)
+CJob* CJobFactory::CreateJob(CJob::EJobType job_type)
 {
 	CJob* pj;
-	switch (ejt)
+	switch (job_type)
 	{
 		case CJob::EjtTest:
 			break;
 		case CJob::EjtGroupOptimization:
-			pj = PtRetrieve<CJobGroupOptimization>(m_pspjGroupOptimization);
+			pj = PtRetrieve<CJobGroupOptimization>(m_group_opt_jobs);
 			break;
 		case CJob::EjtGroupImplementation:
-			pj = PtRetrieve<CJobGroupImplementation>(m_pspjGroupImplementation);
+			pj = PtRetrieve<CJobGroupImplementation>(m_group_impl_jobs);
 			break;
 		case CJob::EjtGroupExploration:
-			pj = PtRetrieve<CJobGroupExploration>(m_pspjGroupExploration);
+			pj = PtRetrieve<CJobGroupExploration>(m_group_explore_jobs);
 			break;
 		case CJob::EjtGroupExpressionOptimization:
-			pj = PtRetrieve<CJobGroupExpressionOptimization>(m_pspjGroupExpressionOptimization);
+			pj = PtRetrieve<CJobGroupExpressionOptimization>(m_group_expr_opt_jobs);
 			break;
 		case CJob::EjtGroupExpressionImplementation:
-			pj = PtRetrieve<CJobGroupExpressionImplementation>(m_pspjGroupExpressionImplementation);
+			pj = PtRetrieve<CJobGroupExpressionImplementation>(m_group_expr_impl_jobs);
 			break;
 		case CJob::EjtGroupExpressionExploration:
-			pj = PtRetrieve<CJobGroupExpressionExploration>(m_pspjGroupExpressionExploration);
+			pj = PtRetrieve<CJobGroupExpressionExploration>(m_group_expr_explore_jobs);
 			break;
 		case CJob::EjtTransformation:
-			pj = PtRetrieve<CJobTransformation>(m_pspjTransformation);
+			pj = PtRetrieve<CJobTransformation>(m_transform_jobs);
 			break;
 		case CJob::EjtInvalid:
 			GPOS_ASSERT(!"Invalid job type");
 	}
 	// prepare task
 	pj->Reset();
-	pj->SetJobType(ejt);
+	pj->SetJobType(job_type);
 	return pj;
 }
 
@@ -95,32 +97,32 @@ CJob* CJobFactory::PjCreate(CJob::EJobType ejt)
 //		Release completed job
 //
 //---------------------------------------------------------------------------
-void CJobFactory::Release(CJob* pj)
+void CJobFactory::Release(CJob*job)
 {
-	switch (pj->Ejt())
+	switch (job->JobType())
 	{
 		case CJob::EjtTest:
 			break;
 		case CJob::EjtGroupOptimization:
-			Release(CJobGroupOptimization::PjConvert(pj), m_pspjGroupOptimization);
+			Release(CJobGroupOptimization::ConvertJob(job), m_group_opt_jobs);
 			break;
 		case CJob::EjtGroupImplementation:
-			Release(CJobGroupImplementation::PjConvert(pj), m_pspjGroupImplementation);
+			Release(CJobGroupImplementation::ConvertJob(job), m_group_impl_jobs);
 			break;
 		case CJob::EjtGroupExploration:
-			Release(CJobGroupExploration::PjConvert(pj), m_pspjGroupExploration);
+			Release(CJobGroupExploration::ConvertJob(job), m_group_explore_jobs);
 			break;
 		case CJob::EjtGroupExpressionOptimization:
-			Release(CJobGroupExpressionOptimization::PjConvert(pj), m_pspjGroupExpressionOptimization);
+			Release(CJobGroupExpressionOptimization::ConvertJob(job), m_group_expr_opt_jobs);
 			break;
 		case CJob::EjtGroupExpressionImplementation:
-			Release(CJobGroupExpressionImplementation::PjConvert(pj), m_pspjGroupExpressionImplementation);
+			Release(CJobGroupExpressionImplementation::PjConvert(job), m_group_expr_impl_jobs);
 			break;
 		case CJob::EjtGroupExpressionExploration:
-			Release(CJobGroupExpressionExploration::PjConvert(pj), m_pspjGroupExpressionExploration);
+			Release(CJobGroupExpressionExploration::PjConvert(job), m_group_expr_explore_jobs);
 			break;
 		case CJob::EjtTransformation:
-			Release(CJobTransformation::PjConvert(pj), m_pspjTransformation);
+			Release(CJobTransformation::PjConvert(job), m_transform_jobs);
 			break;
 		default:
 			GPOS_ASSERT(!"Invalid job type");
@@ -135,34 +137,34 @@ void CJobFactory::Release(CJob* pj)
 //		Truncate the container for the specific job type
 //
 //---------------------------------------------------------------------------
-void CJobFactory::Truncate(CJob::EJobType ejt)
+void CJobFactory::Truncate(CJob::EJobType job_type)
 {
 	// need to suspend cancellation while truncating job pool
 	{
-		switch (ejt)
+		switch (job_type)
 		{
 			case CJob::EjtTest:
 				break;
 			case CJob::EjtGroupOptimization:
-				TruncatePool(m_pspjGroupOptimization);
+				TruncatePool(m_group_opt_jobs);
 				break;
 			case CJob::EjtGroupImplementation:
-				TruncatePool(m_pspjGroupImplementation);
+				TruncatePool(m_group_impl_jobs);
 				break;
 			case CJob::EjtGroupExploration:
-				TruncatePool(m_pspjGroupExploration);
+				TruncatePool(m_group_explore_jobs);
 				break;
 			case CJob::EjtGroupExpressionOptimization:
-				TruncatePool(m_pspjGroupExpressionOptimization);
+				TruncatePool(m_group_expr_opt_jobs);
 				break;
 			case CJob::EjtGroupExpressionImplementation:
-				TruncatePool(m_pspjGroupExpressionImplementation);
+				TruncatePool(m_group_expr_impl_jobs);
 				break;
 			case CJob::EjtGroupExpressionExploration:
-				TruncatePool(m_pspjGroupExpressionExploration);
+				TruncatePool(m_group_expr_explore_jobs);
 				break;
 			case CJob::EjtTransformation:
-				TruncatePool(m_pspjTransformation);
+				TruncatePool(m_transform_jobs);
 				break;
 			case CJob::EjtInvalid:
 				GPOS_ASSERT(!"Invalid job type");

@@ -25,7 +25,7 @@ using namespace gpopt;
 void CJobGroup::Init(CGroup* pgroup)
 {
 	m_pgroup = pgroup;
-	m_pgexprLastScheduled = m_pgroup->m_listGExprs.end();
+	m_last_scheduled_expr = m_pgroup->m_group_exprs.end();
 }
 
 
@@ -42,14 +42,14 @@ list<CGroupExpression*>::iterator CJobGroup::PgexprFirstUnschedNonLogical()
 	list<CGroupExpression*>::iterator itr;
 	{
 		CGroupProxy gp(m_pgroup);
-		if (m_pgroup->m_listGExprs.end() == m_pgexprLastScheduled)
+		if (m_pgroup->m_group_exprs.end() == m_last_scheduled_expr)
 		{
 			// get first group expression
-			itr = gp.PgexprSkipLogical(m_pgroup->m_listGExprs.begin());
+			itr = gp.PgexprSkipLogical(m_pgroup->m_group_exprs.begin());
 		}
 		else
 		{
-			itr = m_pgexprLastScheduled;
+			itr = m_last_scheduled_expr;
 			// get group expression next to last scheduled one
 			itr = gp.PgexprSkipLogical(++itr);
 		}
@@ -70,15 +70,15 @@ list<CGroupExpression*>::iterator CJobGroup::PgexprFirstUnschedLogical()
 	list<CGroupExpression*>::iterator itr;
 	{
 		CGroupProxy gp(m_pgroup);
-		if (m_pgroup->m_listGExprs.end() == m_pgexprLastScheduled)
+		if (m_pgroup->m_group_exprs.end() == m_last_scheduled_expr)
 		{
 			// get first group expression
-			itr = m_pgroup->m_listGExprs.begin();
+			itr = m_pgroup->m_group_exprs.begin();
 		}
 		else
 		{
 			// get group expression next to last scheduled one
-			itr = m_pgexprLastScheduled;
+			itr = m_last_scheduled_expr;
 			++itr;
 		}
 	}

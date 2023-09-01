@@ -1,111 +1,102 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CDrvdPropPlan.cpp
+//		CDerivedPhysicalProp.cpp
 //
 //	@doc:
 //		Derived plan properties
 //---------------------------------------------------------------------------
-#include "duckdb/optimizer/cascade/base/CDrvdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropPlan.h"
 
 #include "duckdb/execution/physical_operator.hpp"
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/base/CDrvdPropCtxtPlan.h"
 #include "duckdb/optimizer/cascade/base/COrderProperty.h"
-#include "duckdb/optimizer/cascade/base/CRequiredPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CRequiredPhysicalProp.h"
 
-namespace gpopt
-{
+namespace gpopt {
 using namespace duckdb;
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDrvdPropPlan::CDrvdPropPlan
+//		CDerivedPhysicalProp::CDerivedPhysicalProp
 //
 //	@doc:
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CDrvdPropPlan::CDrvdPropPlan()
-	: m_pos(NULL)
-{
+CDerivedPhysicalProp::CDerivedPhysicalProp() : m_sort_order(NULL) {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDrvdPropPlan::~CDrvdPropPlan
+//		CDerivedPhysicalProp::CDerivedPropPlanlan
 //
 //	@doc:
 //		Dtor
 //
 //---------------------------------------------------------------------------
-CDrvdPropPlan::~CDrvdPropPlan()
-{
+CDerivedPhysicalProp::~CDerivedPhysicalProp() {
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDrvdPropPlan::Derive
+//		CDerivedPhysicalProp::Derive
 //
 //	@doc:
 //		Derive plan props
 //
 //---------------------------------------------------------------------------
-void CDrvdPropPlan::Derive(gpopt::CExpressionHandle& exprhdl, CDrvdPropCtxt* pdpctxt)
-{
+void CDerivedPhysicalProp::Derive(gpopt::CExpressionHandle &exprhdl, CDerivedPropertyContext *pdpctxt) {
 	// call property derivation functions on the operator
-	m_pos = ((PhysicalOperator*)exprhdl.Pop())->PosDerive(exprhdl);
+	m_sort_order = ((PhysicalOperator *)exprhdl.Pop())->PosDerive(exprhdl);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDrvdPropPlan::Pdpplan
+//		CDerivedPhysicalProp::DrvdPlanProperty
 //
 //	@doc:
 //		Short hand for conversion
 //
 //---------------------------------------------------------------------------
-CDrvdPropPlan* CDrvdPropPlan::Pdpplan(CDrvdProp* pdp)
-{
-	return (CDrvdPropPlan*)pdp;
+CDerivedPhysicalProp *CDerivedPhysicalProp::DrvdPlanProperty(CDerivedProperty *pdp) {
+	return (CDerivedPhysicalProp *)pdp;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDrvdPropPlan::FSatisfies
+//		CDerivedPhysicalProp::FSatisfies
 //
 //	@doc:
 //		Check for satisfying required properties
 //
 //---------------------------------------------------------------------------
-BOOL CDrvdPropPlan::FSatisfies(const CRequiredPropPlan *prpp) const
-{
-	return m_pos->FSatisfies(prpp->m_required_sort_order->m_pos);
+BOOL CDerivedPhysicalProp::FSatisfies(const CRequiredPhysicalProp *prop_plan) const {
+	return m_sort_order->FSatisfies(prop_plan->m_sort_order->m_order_spec);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDrvdPropPlan::HashValue
+//		CDerivedPhysicalProp::HashValue
 //
 //	@doc:
 //		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG CDrvdPropPlan::HashValue() const
-{
-	ULONG ulHash = m_pos->HashValue();
+ULONG CDerivedPhysicalProp::HashValue() const {
+	ULONG ulHash = m_sort_order->HashValue();
 	return ulHash;
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CDrvdPropPlan::Equals
+//		CDerivedPhysicalProp::Equals
 //
 //	@doc:
 //		Equality function
 //
 //---------------------------------------------------------------------------
-ULONG CDrvdPropPlan::Equals(const CDrvdPropPlan *pdpplan) const
-{
-	return m_pos->Matches(pdpplan->m_pos);
+ULONG CDerivedPhysicalProp::Equals(const CDerivedPhysicalProp *pdpplan) const {
+	return m_sort_order->Matches(pdpplan->m_sort_order);
 }
-}
+} // namespace gpopt

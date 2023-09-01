@@ -19,8 +19,7 @@ class FieldWriter;
 //! A BoundColumnRef expression represents a ColumnRef expression that was bound to an actual table and column index. It
 //! is not yet executable, however. The ColumnBindingResolver transforms the BoundColumnRefExpressions into
 //! BoundExpressions, which refer to indexes into the physical chunks that pass through the executor.
-class BoundColumnRefExpression : public Expression
-{
+class BoundColumnRefExpression : public Expression {
 public:
 	static constexpr const ExpressionClass TYPE = ExpressionClass::BOUND_COLUMN_REF;
 
@@ -35,12 +34,10 @@ public:
 	idx_t depth;
 
 public:
-	bool IsScalar() const override
-	{
+	bool IsScalar() const override {
 		return false;
 	}
-	bool IsFoldable() const override
-	{
+	bool IsFoldable() const override {
 		return false;
 	}
 
@@ -55,8 +52,7 @@ public:
 	static unique_ptr<Expression> Deserialize(ExpressionDeserializationState &state, FieldReader &reader);
 
 public:
-	vector<ColumnBinding> getColumnBinding() override
-	{
+	vector<ColumnBinding> GetColumnBinding() override {
 		vector<ColumnBinding> v;
 		v.emplace_back(binding);
 		return v;

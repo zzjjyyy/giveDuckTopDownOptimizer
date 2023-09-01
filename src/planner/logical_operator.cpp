@@ -20,9 +20,8 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type) {
 	/* Operator fields */
 	logical_type = type;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDrvdPropRelational();
-	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_derived_logical_property = new CDerivedLogicalProp();
+	m_required_logical_property = new CRequiredLogicalProp();
 	m_cost = GPOPT_INVALID_COST;
 	estimated_cardinality = 0;
 	has_estimated_cardinality = false;
@@ -33,9 +32,8 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type, vector<unique_ptr<Exp
 	logical_type = type;
 	has_estimated_cardinality = false;
 	m_group_expression = nullptr;
-	m_derived_property_relation = new CDrvdPropRelational();
-	m_derived_property_plan = nullptr;
-	m_required_plan_property = nullptr;
+	m_derived_logical_property = new CDerivedLogicalProp();
+	m_required_logical_property = new CRequiredLogicalProp();
 	m_cost = GPOPT_INVALID_COST;
 	estimated_cardinality = 0;
 	this->expressions = std::move(expressions);
@@ -43,10 +41,6 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type, vector<unique_ptr<Exp
 }
 
 LogicalOperator::~LogicalOperator() {
-}
-
-CRequiredProperty *LogicalOperator::PrpCreate() const {
-	return new CRequiredPropRelational();
 }
 
 vector<ColumnBinding> LogicalOperator::GetColumnBindings() {
@@ -343,8 +337,20 @@ unique_ptr<LogicalOperator> LogicalOperator::Copy(ClientContext &context) const 
 	return op_copy;
 }
 
-CDrvdProp *LogicalOperator::PdpCreate() {
-	return new CDrvdPropRelational();
+CDerivedProperty *LogicalOperator::CreateDerivedProperty() {
+	if (m_derived_logical_property == nullptr) {
+		return new CDerivedLogicalProp();
+	}
+
+	return m_derived_logical_property;
+}
+
+CRequiredProperty *LogicalOperator::CreateRequiredProperty() const {
+	if (m_required_logical_property == nullptr) {
+		return new CRequiredLogicalProp();
+	}
+
+	return m_required_logical_property;
 }
 
 //---------------------------------------------------------------------------
@@ -430,7 +436,7 @@ CPropConstraint *LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionH
 	arity = expression_handle.Arity(1);
 	for (ULONG ul = 0; ul < arity; ul++) {
 		Expression *expression_scalar = expression_handle.PexprScalarExactChild(ul);
-		vector<ColumnBinding> v = expression_scalar->getColumnBinding();
+		vector<ColumnBinding> v = expression_scalar->GetColumnBinding();
 		vector<vector<ColumnBinding>> pdrgpcrs_child;
 		pdrgpcrs_child = CUtils::AddEquivClassToArray(v, pdrgpcrs_child);
 		if (nullptr != expression_scalar) {
@@ -442,5 +448,27 @@ CPropConstraint *LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionH
 	}
 	Expression *pcnstr_new = new BoundConjunctionExpression(ExpressionType::CONJUNCTION_AND);
 	return new CPropConstraint(pdrgpcrs, pcnstr_new);
+}
+
+void LogicalOperator::CloneORCAInfo(LogicalOperator *op) {
+	op->m_derived_logical_property = m_derived_logical_property;
+	op->m_derived_physical_property = m_derived_physical_property;
+	op->m_required_physical_property = m_required_physical_property;
+	if (nullptr != estimated_props) {
+		op->estimated_props = estimated_props->Copy();
+	}
+	op->types = types;
+	op->estimated_cardinality = estimated_cardinality;
+	for (auto &child : expressions) {
+		op->expressions.push_back(child->Copy());
+	}
+	op->has_estimated_cardinality = has_estimated_cardinality;
+	op->logical_type = logical_type;
+	op->physical_type = physical_type;
+	for (auto &child : children) {
+		op->AddChild(child->Copy());
+	}
+	op->m_group_expression = m_group_expression;
+	op->m_cost = m_cost;
 }
 } // namespace duckdb

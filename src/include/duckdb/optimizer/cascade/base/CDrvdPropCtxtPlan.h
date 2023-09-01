@@ -11,8 +11,8 @@
 #define GPOPT_CDrvdPropCtxtPlan_H
 
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropCtxt.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropPlan.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropertyContext.h"
 
 using namespace gpos;
 
@@ -27,8 +27,7 @@ namespace gpopt
 //		derivation of plan properties
 //
 //---------------------------------------------------------------------------
-class CDrvdPropCtxtPlan : public CDrvdPropCtxt
-{
+class CDrvdPropCtxtPlan : public CDerivedPropertyContext {
 public:
 	// ctor
 	CDrvdPropCtxtPlan(bool fUpdateCTEMap = true);
@@ -41,14 +40,14 @@ public:
 
 public:
 	// copy function
-	CDrvdPropCtxt* PdpctxtCopy() const override;
+	CDerivedPropertyContext * PdpctxtCopy() const override;
 
 	// add props to context
-	void AddProps(CDrvdProp* pdp) override;
+	void AddProps(CDerivedProperty * pdp) override;
 
 public:
 	// conversion function
-	static CDrvdPropCtxtPlan* PdpctxtplanConvert(CDrvdPropCtxt* pdpctxt)
+	static CDrvdPropCtxtPlan* PdpctxtplanConvert(CDerivedPropertyContext * pdpctxt)
 	{
 		return reinterpret_cast<CDrvdPropCtxtPlan*>(pdpctxt);
 	}

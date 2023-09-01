@@ -76,7 +76,8 @@ public:
 	                                                GlobalOperatorState &gstate, OperatorState &state) const;
 
 	// create base container of derived properties
-	CDrvdProp *PdpCreate() override;
+	CDerivedProperty *CreateDerivedProperty() override;
+	CRequiredProperty * CreateRequiredProperty() const override;
 
 	virtual bool ParallelOperator() const {
 		return false;
@@ -95,33 +96,19 @@ public:
 	// virtual CCTEMap *PcmDerive() const;
 
 	// order matching type
-	virtual COrderProperty::EOrderMatching Eom(CRequiredPropPlan *, ULONG, vector<CDrvdProp *>, ULONG);
+	virtual COrderProperty::EOrderMatching OrderMatching(CRequiredPhysicalProp *, ULONG, vector<CDerivedProperty *>, ULONG);
 
 public:
-	static unique_ptr<Expression> ExpressionPassThrough(const PhysicalOperator* op, Expression* expr);
+	static unique_ptr<Expression> ExpressionPassThrough(const PhysicalOperator *op, Expression *expr);
 
 	// return order property enforcing type for this operator
-	virtual COrderProperty::EPropEnforcingType EpetOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const;
+	virtual COrderProperty::EPropEnforcingType EnforcingTypeOrder(CExpressionHandle &handle,
+	                                                               vector<BoundOrderByNode> &peo) const;
 
 	// compute required sort order of the n-th child
-	virtual COrderSpec *PosRequired(CExpressionHandle &exprhdl, COrderSpec *posRequired, ULONG child_index,
-	                                vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) const {
-		if (child_index == 0) {
-			auto first_child_cols = children[0]->GetColumnBindings();
-			COrderSpec* res = new COrderSpec();
-			for (auto &child : posRequired->m_pdrgpoe) {
-				unique_ptr<Expression> expr = ExpressionPassThrough(this, child.expression.get());
-				if (CUtils::ContainsAll(first_child_cols, 
-										expr->getColumnBinding())) {
-					BoundOrderByNode order(child.type, child.null_order, std::move(expr));
-					res->m_pdrgpoe.push_back(std::move(order));
-				}
-			}
-			return res;
-		} else {
-			return new COrderSpec();
-		}
-	}
+	virtual COrderSpec *RequiredSortSpec(CExpressionHandle &handle, COrderSpec *order_spec, ULONG child_index,
+	                                     vector<CDerivedProperty *> children_derived_property,
+	                                     ULONG num_opt_request) const;
 
 	virtual bool FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
 	                               ULONG ulOptReq) const {
@@ -220,11 +207,10 @@ public:
 
 	// compute required output columns of the n-th child
 	virtual vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
-	                                           ULONG child_index, vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) {
+	                                           ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt,
+	                                           ULONG ulOptReq) {
 		return children[child_index]->GetColumnBindings();
 	}
-
-	CRequiredProperty *PrpCreate() const override;
 
 	bool FUnaryProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired) const;
 

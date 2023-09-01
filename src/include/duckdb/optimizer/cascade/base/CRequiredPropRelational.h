@@ -1,6 +1,6 @@
 //---------------------------------------------------------------------------
 //	@filename:
-//		CRequiredPropRelational.h
+//		CRequiredLogicalProp.h
 //
 //	@doc:
 //		Derived required relational properties
@@ -23,29 +23,29 @@ class CColRefSet;
 
 //---------------------------------------------------------------------------
 //	@class:
-//		CRequiredPropRelational
+//		CRequiredLogicalProp
 //
 //	@doc:
 //		Required relational properties container.
 //
 //---------------------------------------------------------------------------
-class CRequiredPropRelational : public CRequiredProperty {
+class CRequiredLogicalProp : public CRequiredProperty {
 public:
 	// required stat columns
 	duckdb::vector<ColumnBinding> m_pcrsStat;
 
 public:
 	// default ctor
-	CRequiredPropRelational();
+	CRequiredLogicalProp();
 	
 	// private copy ctor
-	CRequiredPropRelational(const CRequiredPropRelational &) = delete;
+	CRequiredLogicalProp(const CRequiredLogicalProp &) = delete;
 	
 	// ctor
-	explicit CRequiredPropRelational(duckdb::vector<ColumnBinding> pcrs);
+	explicit CRequiredLogicalProp(duckdb::vector<ColumnBinding> pcrs);
 
 	// dtor
-	virtual ~CRequiredPropRelational();
+	virtual ~CRequiredLogicalProp();
 
 	// type of properties
 	virtual bool FRelational() const override
@@ -60,17 +60,17 @@ public:
 	}
 
 	// required properties computation function
-	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDrvdProp*> pdrgpdpCtxt, ULONG ulOptReq) override;
+	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty * prpInput, ULONG child_index, duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
 
 	// return difference from given properties
-	CRequiredPropRelational * PrprelDifference(CRequiredPropRelational * prprel);
+	CRequiredLogicalProp * PrprelDifference(CRequiredLogicalProp * prprel);
 
 	// return true if property container is empty
 	bool IsEmpty() const;
 
 	// shorthand for conversion
-	static CRequiredPropRelational * GetReqdRelationalProps(CRequiredProperty * prp);
-};	// class CRequiredPropRelational
+	static CRequiredLogicalProp * GetReqdRelationalProps(CRequiredProperty * prp);
+};	// class CRequiredLogicalProp
 
 }  // namespace gpopt
 

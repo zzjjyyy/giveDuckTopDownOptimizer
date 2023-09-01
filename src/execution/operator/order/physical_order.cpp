@@ -15,11 +15,11 @@ namespace duckdb {
 PhysicalOrder::PhysicalOrder(vector<LogicalType> types, vector<BoundOrderByNode> orders, vector<idx_t> projections,
                              idx_t estimated_cardinality)
     : PhysicalOperator(PhysicalOperatorType::ORDER_BY, std::move(types), estimated_cardinality),
-      orders(std::move(orders)), projections(std::move(projections)) {
+      orders(std::move(orders)), projections(std::move(projections)), is_enforced(true) {
 }
 
-COrderProperty::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &exprhdl,
-                                                        vector<BoundOrderByNode> &peo) const {
+COrderProperty::EPropEnforcingType PhysicalOrder::EnforcingTypeOrder(CExpressionHandle &exprhdl,
+                                                                     vector<BoundOrderByNode> &peo) const {
 	bool compactible = true;
 	for (size_t ul = 0; ul < peo.size(); ul++) {
 		bool flag = false;
@@ -43,8 +43,8 @@ COrderProperty::EPropEnforcingType PhysicalOrder::EpetOrder(CExpressionHandle &e
 	return COrderProperty::EpetProhibited;
 }
 
-COrderSpec *PhysicalOrder::PosRequired(CExpressionHandle &exprhdl, COrderSpec *pos_required, ULONG child_index,
-                                       vector<CDrvdProp *> pdrgpdp_ctxt, ULONG ul_opt_req) const {
+COrderSpec *PhysicalOrder::RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *pos_required, ULONG child_index,
+                                            vector<CDerivedProperty *> pdrgpdp_ctxt, ULONG ul_opt_req) const {
 	// sort operator is order-establishing and does not require child to deliver
 	// any sort order; we return an empty sort order as child requirement
 	return new COrderSpec();
@@ -68,22 +68,23 @@ vector<ColumnBinding> PhysicalOrder::GetColumnBindings() {
 //
 //---------------------------------------------------------------------------
 vector<ColumnBinding> PhysicalOrder::PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrs_required,
-                                                  ULONG child_index, vector<CDrvdProp *> pdrgpdp_ctxt, ULONG ul_opt_req) {
+                                                  ULONG child_index, vector<CDerivedProperty *> pdrgpdp_ctxt,
+                                                  ULONG ul_opt_req) {
 	vector<ColumnBinding> pcrs_sort;
 	for (auto &child : orders) {
-		vector<ColumnBinding> cell = child.expression->getColumnBinding();
+		vector<ColumnBinding> cell = child.expression->GetColumnBinding();
 		pcrs_sort.insert(pcrs_sort.end(), cell.begin(), cell.end());
 	}
 	/* Union of sort cols and required output cols */
-	for(auto &child : pcrs_required) {
+	for (auto &child : pcrs_required) {
 		bool FAdd = true;
-		for(auto &subchild : pcrs_sort) {
-			if(child == subchild) {
+		for (auto &subchild : pcrs_sort) {
+			if (child == subchild) {
 				FAdd = false;
 				break;
 			}
 		}
-		if(FAdd) {
+		if (FAdd) {
 			pcrs_sort.push_back(child);
 		}
 	}
@@ -107,7 +108,7 @@ Operator *PhysicalOrder::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operato
 	}
 	cost = pcc->CostCompute(pdrgpcost);
 	vector<BoundOrderByNode> v_orders;
-	for(auto &child : this->orders) {
+	for (auto &child : this->orders) {
 		v_orders.emplace_back(child.Copy());
 	}
 	PhysicalOrder *pexpr = new PhysicalOrder(types, std::move(v_orders), projections, 0);
@@ -119,25 +120,25 @@ Operator *PhysicalOrder::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operato
 unique_ptr<Operator> PhysicalOrder::Copy() {
 	/* PhysicalOrder fields */
 	vector<BoundOrderByNode> v_orders;
-	for(auto &child : this->orders) {
+	for (auto &child : this->orders) {
 		v_orders.emplace_back(child.Copy());
 	}
 	unique_ptr<PhysicalOrder> copy = make_uniq<PhysicalOrder>(this->types, std::move(v_orders), this->projections, 0);
-	
+
 	/* PhysicalOperator fields */
 	copy->m_total_opt_requests = this->m_total_opt_requests;
-	
+
 	/* Operator fields */
-	copy->m_derived_property_relation = this->m_derived_property_relation;
-	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
 	copy->types = this->types;
 	copy->estimated_cardinality = this->estimated_cardinality;
 	copy->has_estimated_cardinality = this->has_estimated_cardinality;
-	for(auto &child : this->children) {
+	for (auto &child : this->children) {
 		copy->AddChild(child->Copy());
 	}
 	copy->m_group_expression = this->m_group_expression;
@@ -145,28 +146,28 @@ unique_ptr<Operator> PhysicalOrder::Copy() {
 	return copy;
 }
 
-unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression* pgexpr) {
+unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
 	/* PhysicalOrder fields */
 	vector<BoundOrderByNode> v_orders;
-	for(auto &child : this->orders) {
+	for (auto &child : this->orders) {
 		v_orders.emplace_back(child.Copy());
 	}
 	unique_ptr<PhysicalOrder> copy = make_uniq<PhysicalOrder>(this->types, std::move(v_orders), this->projections, 0);
-	
+
 	/* PhysicalOperator fields */
 	copy->m_total_opt_requests = this->m_total_opt_requests;
-	
+
 	/* Operator fields */
-	copy->m_derived_property_relation = this->m_derived_property_relation;
-	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
 	copy->types = this->types;
 	copy->estimated_cardinality = this->estimated_cardinality;
 	copy->has_estimated_cardinality = this->has_estimated_cardinality;
-	for(auto &child : this->children) {
+	for (auto &child : this->children) {
 		copy->AddChild(child->Copy());
 	}
 	copy->m_group_expression = pgexpr;
@@ -174,30 +175,29 @@ unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression*
 	return copy;
 }
 
-unique_ptr<Operator> PhysicalOrder::CopyWithNewChildren(CGroupExpression* pgexpr,
-															vector<unique_ptr<Operator>> pdrgpexpr,
-															double cost) {
+unique_ptr<Operator> PhysicalOrder::CopyWithNewChildren(CGroupExpression *pgexpr,
+                                                        vector<unique_ptr<Operator>> pdrgpexpr, double cost) {
 	/* PhysicalOrder fields */
 	vector<BoundOrderByNode> v_orders;
-	for(auto &child : this->orders) {
+	for (auto &child : this->orders) {
 		v_orders.emplace_back(child.Copy());
 	}
 	unique_ptr<PhysicalOrder> copy = make_uniq<PhysicalOrder>(this->types, std::move(v_orders), this->projections, 0);
-	
+
 	/* PhysicalOperator fields */
 	copy->m_total_opt_requests = this->m_total_opt_requests;
-	
+
 	/* Operator fields */
-	copy->m_derived_property_relation = this->m_derived_property_relation;
-	copy->m_derived_property_plan = this->m_derived_property_plan;
-	copy->m_required_plan_property = this->m_required_plan_property;
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
 	if (nullptr != this->estimated_props) {
 		copy->estimated_props = this->estimated_props->Copy();
 	}
 	copy->types = this->types;
 	copy->estimated_cardinality = this->estimated_cardinality;
 	copy->has_estimated_cardinality = this->has_estimated_cardinality;
-	for(auto &child : pdrgpexpr) {
+	for (auto &child : pdrgpexpr) {
 		copy->AddChild(std::move(child));
 	}
 	copy->m_group_expression = pgexpr;
@@ -206,9 +206,9 @@ unique_ptr<Operator> PhysicalOrder::CopyWithNewChildren(CGroupExpression* pgexpr
 }
 
 void PhysicalOrder::CE() {
-	if(this->has_estimated_cardinality)
+	if (this->has_estimated_cardinality)
 		return;
-	if(!this->children[0]->has_estimated_cardinality) {
+	if (!this->children[0]->has_estimated_cardinality) {
 		this->children[0]->CE();
 	}
 	this->has_estimated_cardinality = true;

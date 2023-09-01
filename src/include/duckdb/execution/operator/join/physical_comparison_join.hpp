@@ -33,7 +33,7 @@ public:
 	                                         ColumnDataScanState &scan_state);
 
 	vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
-	                                    ULONG child_index, vector<CDrvdProp *> pdrgpdpCtxt, ULONG ulOptReq) override;
+	                                    ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
 
 	void CE() override;
 };

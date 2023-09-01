@@ -5,26 +5,24 @@
 //	@doc:
 //		Memo lookup table for dynamic programming
 //---------------------------------------------------------------------------
-#ifndef GPOPT_CMemo_H
-#define GPOPT_CMemo_H
+#pragma once
 
 #include "duckdb/optimizer/cascade/base.h"
 #include "duckdb/optimizer/cascade/common/CSyncList.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
+
 #include <list>
 
-using namespace std;
-
-namespace gpopt
-{
+namespace gpopt {
 class CGroup;
-class CDrvdProp;
+class CDerivedProperty;
 class CDrvdPropCtxtPlan;
 class CMemoProxy;
 class COptimizationContext;
 
 // memo tree map definition
-typedef CTreeMap<CCostContext, gpopt::Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> MemoTreeMap;
+typedef CTreeMap<CCostContext, gpopt::Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals>
+    MemoTreeMap;
 
 using namespace gpos;
 
@@ -36,99 +34,71 @@ using namespace gpos;
 //		Dynamic programming table
 //
 //---------------------------------------------------------------------------
-class CMemo
-{
+class CMemo {
 public:
-	// id counter for groups
-	ULONG m_aul;
-
-	// root group
-	CGroup* m_pgroupRoot;
-
-	// number of groups
-	ULONG_PTR m_ulpGrps;
-
-	// tree map of member group expressions
-	MemoTreeMap* m_pmemotmap;
-
-	// list of groups
-	list<CGroup*> m_listGroups;
-
-	// hashtable of all group expressions
-	unordered_map<ULONG, CGroupExpression*> m_sht;
-
-	// add new group
-	void Add(CGroup* pgroup, Operator* pexprOrigin);
-
-	// rehash all group expressions after group merge - not thread-safe
-	bool FRehash();
-
-	// helper for inserting group expression in target group
-	CGroup* PgroupInsert(CGroup* pgroupTarget, CGroupExpression* pgexpr, Operator* pexprOrigin, bool fNewGroup);
-
-	// helper to check if a new group needs to be created
-	bool FNewGroup(CGroup** ppgroupTarget, CGroupExpression* pgexpr, bool fScalar);
-
-public:
-	// ctor
 	explicit CMemo();
-	
-	// no copy ctor
 	CMemo(const CMemo &) = delete;
-	
-	// dtor
 	~CMemo();
 
-	// return root group
-	CGroup* PgroupRoot() const
-	{
-		return m_pgroupRoot;
-	}
+	// id counter for groups
+	ULONG m_id_counter;
+	// root group
+	CGroup *m_root;
+	// number of groups
+	ULONG_PTR m_num_groups;
+	// tree map of member group expressions
+	MemoTreeMap *m_tree_map;
+	// list of groups
+	list<CGroup *> m_groups_list;
+	// hashtable of all group expressions
+	unordered_map<ULONG, CGroupExpression *> group_expr_hashmap;
 
-	// return number of groups
-	ULONG_PTR UlpGroups() const
-	{
-		return m_ulpGrps;
-	}
-
-	// return total number of group expressions
-	ULONG UlGrpExprs();
-
-	// return number of duplicate groups
-	ULONG UlDuplicateGroups();
-
-	// mark groups as duplicates
-	void MarkDuplicates(CGroup* pgroupFst, CGroup* pgroupSnd);
-
-	// return tree map
-	MemoTreeMap* Pmemotmap() const
-	{
-		return m_pmemotmap;
-	}
-
+public:
 	// set root group
-	void SetRoot(CGroup* pgroup);
-
+	void SetRoot(CGroup *group);
+	// return root group
+	CGroup *GroupRoot() const {
+		return m_root;
+	}
 	// insert group expression into hash table
-	CGroup* PgroupInsert(CGroup* pgroupTarget, CGroupExpression* pgexpr);
-
-	// extract a plan that delivers the given required properties
-	duckdb::unique_ptr<Operator> PexprExtractPlan(CGroup* pgroupRoot, CRequiredPropPlan * prppInput, ULONG ulSearchStages);
-
+	CGroup *GroupInsert(CGroup *group_target, CGroupExpression *group_expr);
+	// mark groups as duplicates
+	void MarkDuplicates(CGroup *left, CGroup *right);
 	// merge duplicate groups
 	void GroupMerge();
-
 	// reset states of all memo groups
 	void ResetGroupStates();
+	// extract a plan that delivers the given required properties
+	duckdb::unique_ptr<Operator> ExtractPlan(CGroup *root, CRequiredPhysicalProp *required_property, ULONG search_stage);
 
-	// derive stats when no stats not present for the group
-	void DeriveStatsIfAbsent();
+	// return number of groups
+	ULONG_PTR NumGroups() const {
+		return m_num_groups;
+	}
+	// return total number of group expressions
+	ULONG NumExprs();
+	// return number of duplicate groups
+	ULONG NumDuplicateGroups();
 
 	// build tree map
-	void BuildTreeMap(COptimizationContext* poc);
-
+	void BuildTreeMap(COptimizationContext *poc);
 	// reset tree map
 	void ResetTreeMap();
-};	// class CMemo
-}  // namespace gpopt
-#endif
+	// return tree map
+	MemoTreeMap *TreeMap() const {
+		return m_tree_map;
+	}
+
+private:
+	// add new group
+	void Add(CGroup *group, Operator *expr_origin);
+	// helper for inserting group expression in target group
+	CGroup *GroupInsert(CGroup *target_group, CGroupExpression *group_expr, Operator *expr_origin, bool is_new);
+	// helper to check if a new group needs to be created
+	bool FNewGroup(CGroup **target_group, CGroupExpression *group_expr, bool is_scalar);
+	// rehash all group expressions after group merge - not thread-safe
+	bool FRehash();
+	// derive stats when no stats not present for the group
+	void DeriveStatsIfAbsent();
+}; // class CMemo
+} // namespace gpopt

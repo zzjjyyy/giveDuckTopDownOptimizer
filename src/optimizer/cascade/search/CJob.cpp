@@ -23,10 +23,10 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 void CJob::Reset()
 {
-	m_pjParent = NULL;
-	m_pjq = NULL;
-	m_ulpRefs = 0;
-	m_fInit = false;
+	m_parent_jobs = NULL;
+	m_job_queue = NULL;
+	m_reference_cnt = 0;
+	m_is_initialized = false;
 }
 
 //---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ void CJob::Reset()
 BOOL CJob::FResumeParent() const
 {
 	// decrement parent's ref counter
-	ULONG_PTR ulpRefs = m_pjParent->UlpDecrRefs();
+	ULONG_PTR ulpRefs = m_parent_jobs->DecrRefs();
 	// check if job should be resumed
 	return (1 == ulpRefs);
 }

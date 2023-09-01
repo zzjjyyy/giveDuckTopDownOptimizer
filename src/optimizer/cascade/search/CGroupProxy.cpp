@@ -6,8 +6,9 @@
 //		Implementation of proxy object for group access
 //---------------------------------------------------------------------------
 #include "duckdb/optimizer/cascade/search/CGroupProxy.h"
+
 #include "duckdb/optimizer/cascade/base.h"
-#include "duckdb/optimizer/cascade/base/CDrvdPropRelational.h"
+#include "duckdb/optimizer/cascade/base/CDerivedPropRelation.h"
 #include "duckdb/optimizer/cascade/base/COptimizationContext.h"
 #include "duckdb/optimizer/cascade/search/CGroup.h"
 #include "duckdb/optimizer/cascade/search/CGroupExpression.h"
@@ -50,7 +51,7 @@ CGroupProxy::~CGroupProxy()
 //---------------------------------------------------------------------------
 void CGroupProxy::Insert(CGroupExpression* pgexpr)
 {
-	pgexpr->Init(m_pgroup, m_pgroup->m_ulGExprs++);
+	pgexpr->Init(m_pgroup, m_pgroup->m_num_exprs++);
 	m_pgroup->Insert(pgexpr);
 }
 
@@ -75,14 +76,14 @@ void CGroupProxy::MoveDuplicateGExpr(CGroupExpression* pgexpr)
 //		Initialize group's properties
 //
 //---------------------------------------------------------------------------
-void CGroupProxy::InitProperties(CDrvdProp* pdp)
+void CGroupProxy::InitProperties(CDerivedProperty * pdp)
 {
 	m_pgroup->InitProperties(pdp);
 }
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CGroupProxy::PgexprFirst
+//		CGroupProxy::FirstGroupExpr
 //
 //	@doc:
 //		Retrieve first group expression iterator;
@@ -90,7 +91,7 @@ void CGroupProxy::InitProperties(CDrvdProp* pdp)
 //---------------------------------------------------------------------------
 list<CGroupExpression*>::iterator CGroupProxy::PgexprFirst()
 {
-	return m_pgroup->PgexprFirst();
+	return m_pgroup->FirstGroupExpr();
 }
 
 //---------------------------------------------------------------------------
@@ -106,7 +107,7 @@ list<CGroupExpression*>::iterator CGroupProxy::PgexprFirst()
 list<CGroupExpression*>::iterator CGroupProxy::PgexprSkip(list<CGroupExpression*>::iterator pgexprStart, bool fSkipLogical)
 {
 	auto iter = pgexprStart;
-	while (m_pgroup->m_listGExprs.end() != iter && fSkipLogical == (*iter)->m_pop->FLogical())
+	while (m_pgroup->m_group_exprs.end() != iter && fSkipLogical == (*iter)->m_operator->FLogical())
 	{
 		++iter;
 	}
