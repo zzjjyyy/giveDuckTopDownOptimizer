@@ -90,12 +90,12 @@ CQueryContext *CQueryContext::QueryContextGenerate(duckdb::unique_ptr<Operator> 
 			spec->order_nodes.emplace_back(child.type, child.null_order, child.expression->Copy());
 		expr = std::move(expr->children[0]);
 	}
-//	for (size_t i = 0; i < expr->children.size(); i++)
-//		RemoveOrderBy(spec, expr.get(), expr->children[i].get(), i);
+	//	for (size_t i = 0; i < expr->children.size(); i++)
+	//		RemoveOrderBy(spec, expr.get(), expr->children[i].get(), i);
+	//  Printer::Print("Logical Plan Without OrderBy\n");
+	//	((LogicalOperator *)expr.get())->Print();
 
 	// construct the physical property
-	Printer::Print("Logical Plan Without OrderBy\n");
-	((LogicalOperator *)expr.get())->Print();
 	COrderProperty *order_property = new COrderProperty(spec, COrderProperty::EomSatisfy);
 	CRequiredPhysicalProp *physical_property = new CRequiredPhysicalProp(required_cols, order_property);
 

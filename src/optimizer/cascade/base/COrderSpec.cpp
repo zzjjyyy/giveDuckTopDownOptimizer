@@ -45,7 +45,7 @@ COrderSpec::~COrderSpec() {
 //
 //---------------------------------------------------------------------------
 void COrderSpec::Append(OrderType type, OrderByNullType null_order, Expression *expr) {
-	order_nodes.emplace_back(type, null_order, duckdb::unique_ptr<Expression>(expr));
+	order_nodes.emplace_back(type, null_order, expr->Copy());
 }
 
 //---------------------------------------------------------------------------

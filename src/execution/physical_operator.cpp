@@ -269,24 +269,6 @@ unique_ptr<Expression> PhysicalOperator::ExpressionPassThrough(const PhysicalOpe
 COrderProperty::EPropEnforcingType PhysicalOperator::EnforcingTypeOrder(CExpressionHandle &handle,
                                                                         vector<BoundOrderByNode> &peo) const {
 	if (handle.group_expr() != nullptr) {
-		// It is very dangerous here.
-//		if (physical_type == PhysicalOperatorType::PROJECTION) {
-//			vector<BoundOrderByNode> v;
-//			size_t proj_table_idx = ((PhysicalProjection *)this)->v_column_binding[0].table_index;
-//			for (auto &node : peo) {
-//				auto *bound_expr = (BoundColumnRefExpression *)node.expression.get();
-//				size_t node_table_idx = bound_expr->GetColumnBinding()[0].table_index;
-//				if (node_table_idx == proj_table_idx) {
-//					v.push_back(node);
-//				}
-//			}
-//			if (v.empty())
-//				return COrderProperty::EPropEnforcingType::EpetUnnecessary;
-//			else {
-//				return COrderProperty::EPropEnforcingType::EpetRequired;
-//			}
-//		}
-
 		vector<BoundOrderByNode> v;
 		/* In case inconsistence */
 		for (auto &child : peo) {
