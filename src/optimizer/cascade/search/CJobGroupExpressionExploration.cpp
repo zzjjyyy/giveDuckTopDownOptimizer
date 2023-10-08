@@ -59,18 +59,6 @@ const CJobGroupExpressionExploration::EEvent
          CJobGroupExpressionExploration::eevSentinel, CJobGroupExpressionExploration::eevSentinel},
 };
 
-#ifdef GPOS_DEBUG
-// names for states
-const WCHAR rgwszStates[CJobGroupExpressionExploration::estSentinel][GPOPT_FSM_NAME_LENGTH] = {
-    GPOS_WSZ_LIT("initialized"), GPOS_WSZ_LIT("children explored"), GPOS_WSZ_LIT("self explored"),
-    GPOS_WSZ_LIT("completed")};
-
-// names for events
-const WCHAR rgwszEvents[CJobGroupExpressionExploration::eevSentinel][GPOPT_FSM_NAME_LENGTH] = {
-    GPOS_WSZ_LIT("exploring children groups"), GPOS_WSZ_LIT("explored children groups"),
-    GPOS_WSZ_LIT("applying exploration xforms"), GPOS_WSZ_LIT("applied exploration xforms"), GPOS_WSZ_LIT("finalized")};
-#endif // GPOS_DEBUG
-
 //---------------------------------------------------------------------------
 //	@function:
 //		CJobGroupExpressionExploration::CJobGroupExpressionExploration

@@ -97,10 +97,10 @@ IOstream & gpos::HexDump(IOstream &os, const void *pv, ULLONG size)
 //		Taken from D. E. Knuth;
 //
 //---------------------------------------------------------------------------
-ULONG gpos::HashByteArray(const BYTE *byte_array, ULONG size)
+size_t gpos::HashByteArray(const BYTE *byte_array, size_t size)
 {
-	ULONG hash = size;
-	for (ULONG i = 0; i < size; ++i)
+	size_t hash = size;
+	for (size_t i = 0; i < size; ++i)
 	{
 		BYTE b = byte_array[i];
 		hash = ((hash << 5) ^ (hash >> 27)) ^ b;
@@ -116,12 +116,12 @@ ULONG gpos::HashByteArray(const BYTE *byte_array, ULONG size)
 //		Combine ULONG-based hash values
 //
 //---------------------------------------------------------------------------
-ULONG gpos::CombineHashes(ULONG hash1, ULONG hash2)
+size_t gpos::CombineHashes(size_t hash1, size_t hash2)
 {
-	ULONG hashes[2];
+	size_t hashes[2];
 	hashes[0] = hash1;
 	hashes[1] = hash2;
-	return HashByteArray((BYTE *) hashes, GPOS_ARRAY_SIZE(hashes) * sizeof(hashes[0]));
+	return HashByteArray((BYTE *) hashes, sizeof(hashes) / sizeof(hashes[0]) * sizeof(hashes[0]));
 }
 
 

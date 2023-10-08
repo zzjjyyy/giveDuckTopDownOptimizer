@@ -20,6 +20,7 @@
 #include "duckdb/planner/logical_operator.hpp"
 
 namespace duckdb {
+	
 class Cascade {
 public:
 	explicit Cascade(ClientContext &context) : context(context), cardinality_estimator(context) {

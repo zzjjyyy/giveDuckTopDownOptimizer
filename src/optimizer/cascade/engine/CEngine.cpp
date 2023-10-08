@@ -469,7 +469,7 @@ void CEngine::Optimize() {
 		// run optimization job
 		CScheduler::Run(&scheduler_context);
 		// extract best plan found at the end of current search stage
-		auto expr_plan = m_memo_table->ExtractPlan(m_memo_table->GroupRoot(), m_query_context->m_required_plan_property,
+		duckdb::unique_ptr<Operator> expr_plan = m_memo_table->ExtractPlan(m_memo_table->GroupRoot(), m_query_context->m_required_plan_property,
 		                                           m_search_strategy.size());
 		CurrentSearchStage()->SetBestExpr(expr_plan.release());
 		FinalizeSearchStage();
@@ -674,6 +674,7 @@ bool CEngine::FChildrenOptimized(duckdb::vector<COptimizationContext *> optimiza
 			LogicalOperatorType type = opt->m_group->m_group_exprs.front()->m_operator->logical_type;
 			throw std::runtime_error("[CEngine::FChildrenOptimized] - child " + LogicalOperatorToString(type) +
 			                         " not optimized.");
+			return false;
 		}
 	}
 	return true;

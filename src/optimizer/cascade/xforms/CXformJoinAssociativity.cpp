@@ -86,13 +86,14 @@ void CXformJoinAssociativity::CreatePredicates(Operator* join, duckdb::vector<Jo
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CXformGet2TableScan::Transform
+//		CXformJoinAssociativity::Transform
 //
 //	@doc:
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
 void CXformJoinAssociativity::Transform(CXformContext* pxfctxt, CXformResult* pxfres, Operator* pexpr) const {
+    enumeration_pairs++;
 	LogicalComparisonJoin* UpperJoin = (LogicalComparisonJoin*)pexpr;
     LogicalComparisonJoin* LowerJoin = (LogicalComparisonJoin*)pexpr->children[0].get();
     duckdb::vector<JoinCondition> NewUpperJoinCondition;
@@ -110,6 +111,8 @@ void CXformJoinAssociativity::Transform(CXformContext* pxfctxt, CXformResult* px
     NewUpperJoin->AddChild(LowerJoin->children[1]->Copy());
     NewUpperJoin->conditions = std::move(NewUpperJoinCondition);
     NewUpperJoin->ResolveTypes();
+    // Cardinality Estimation
+	NewUpperJoin->CE();
 	// add alternative to transformation result
 	pxfres->Add(std::move(NewUpperJoin));
 }

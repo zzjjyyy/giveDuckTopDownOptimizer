@@ -70,11 +70,12 @@ void CXformGet2TableScan::Transform(CXformContext *xform_context, CXformResult *
 	// create alternative expression
 	duckdb::unique_ptr<PhysicalTableScan> alternative_expression = make_uniq<PhysicalTableScan>(
 	    op->types, op->function, std::move(cpy_bind_data), op->returned_types, op->column_ids,
-	    duckdb::vector<column_t>(), op->names, std::move(table_filters), 1);
+	    duckdb::vector<column_t>(), op->names, std::move(table_filters), op->estimated_cardinality);
 
 	// column binding
 	alternative_expression->v_column_binding = op->GetColumnBindings();
-
+	// Cardinality Estimation
+	alternative_expression->CE();
 	// add alternative to transformation result
 	xform_result->Add(std::move(alternative_expression));
 }

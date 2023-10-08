@@ -42,7 +42,7 @@ Operator *PhysicalDummyScan::SelfRehydrate(CCostContext *pcc, duckdb::vector<Ope
 duckdb::unique_ptr<Operator> PhysicalDummyScan::Copy() {
 	unique_ptr<PhysicalDummyScan> copy = make_uniq<PhysicalDummyScan>(types, estimated_cardinality);
 	copy->v_column_binding = this->v_column_binding;
-	return copy;
+	return unique_ptr_cast<PhysicalDummyScan, Operator>(std::move(copy));
 }
 
 duckdb::unique_ptr<Operator> PhysicalDummyScan::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {

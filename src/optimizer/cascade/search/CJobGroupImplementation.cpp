@@ -21,6 +21,10 @@
 
 using namespace gpopt;
 
+clock_t start_implementation;
+
+clock_t end_implementation;
+
 // State transition diagram for group implementation job state machine;
 //
 // +---------------------------+   eevExploring
@@ -134,14 +138,13 @@ bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext *psc) 
 //---------------------------------------------------------------------------
 CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation(CSchedulerContext *psc,
                                                                                  CJob *pjOwner) {
-	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementation]");
-
 	// get a job pointer
 	CJobGroupImplementation *pjgi = ConvertJob(pjOwner);
 	CGroup *pgroup = pjgi->m_pgroup;
 	if (!pgroup->FExplored()) {
 		// schedule a child exploration job
 		CJobGroupExploration::ScheduleJob(psc, pgroup, pjgi);
+		CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementation]");
 		return eevExploring;
 	} else {
 		// move group to implementation state
@@ -167,11 +170,13 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation
 //
 //---------------------------------------------------------------------------
 CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(CSchedulerContext *psc, CJob *pjOwner) {
-	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementChildren]");
-
 	// get a job pointer
 	CJobGroupImplementation *pjgi = ConvertJob(pjOwner);
 	if (pjgi->FScheduleGroupExpressions(psc)) {
+		if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
+			start_implementation = clock();
+		}
+		CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementChildren]");
 		// implementation is in progress
 		return eevImplementing;
 	} else {
@@ -182,6 +187,11 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(C
 		}
 		// if this is the root, complete implementation phase
 		if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
+			end_implementation = clock();
+			implementation_time = double(end_implementation - start_implementation) / CLOCKS_PER_SEC;
+			FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			fprintf(time_f, "imple = %lf s, ", implementation_time);
+			fclose(time_f);
 			psc->m_engine->FinalizeImplementation();
 		}
 		return eevImplemented;

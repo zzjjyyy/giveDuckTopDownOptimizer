@@ -68,6 +68,13 @@ public:
 	PhysicalHashAggregate(ClientContext &context, vector<LogicalType> types, vector<unique_ptr<Expression>> expressions,
 	                      vector<unique_ptr<Expression>> groups, vector<GroupingSet> grouping_sets,
 	                      vector<vector<idx_t>> grouping_functions, idx_t estimated_cardinality);
+	PhysicalHashAggregate(vector<LogicalType> types, vector<unique_ptr<Expression>> expressions,
+						  idx_t estimated_cardinality);
+	PhysicalHashAggregate(vector<LogicalType> types, vector<unique_ptr<Expression>> expressions,
+                          vector<unique_ptr<Expression>> groups, idx_t estimated_cardinality);
+	PhysicalHashAggregate(vector<LogicalType> types, vector<unique_ptr<Expression>> expressions,
+                          vector<unique_ptr<Expression>> groups, vector<GroupingSet> grouping_sets,
+                          vector<vector<idx_t>> grouping_functions, idx_t estimated_cardinality);
 
 	//! The grouping sets
 	GroupedAggregateData grouped_aggregate_data;
@@ -84,6 +91,8 @@ public:
 	vector<idx_t> distinct_filter;
 
 	unordered_map<Expression *, size_t> filter_indexes;
+
+	vector<ColumnBinding> v_column_binding;
 
 public:
 	// Source interface
@@ -102,6 +111,19 @@ public:
 
 	OrderPreservationType SourceOrder() const override {
 		return OrderPreservationType::NO_ORDER;
+	}
+	
+	unique_ptr<Operator> Copy() override;
+
+	unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+
+	unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr, vector<unique_ptr<Operator>> pdrgpexpr,
+	                                         double cost) override;
+
+	void CE() override;
+	
+	vector<ColumnBinding> GetColumnBindings() override {
+		return v_column_binding;
 	}
 
 public:

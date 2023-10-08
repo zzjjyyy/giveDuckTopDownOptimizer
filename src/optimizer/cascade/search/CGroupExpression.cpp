@@ -20,6 +20,7 @@
 #include "duckdb/optimizer/cascade/task/CWorker.h"
 #include "duckdb/optimizer/cascade/xforms/CXformExploration.h"
 #include "duckdb/optimizer/cascade/xforms/CXformFactory.h"
+#include "duckdb/optimizer/cascade/xforms/CXformUtils.h"
 
 #define GPOPT_COSTCTXT_HT_BUCKETS 100
 
@@ -490,11 +491,9 @@ void CGroupExpression::Transform(CXform *pxform, CXformResult *results, ULONG *e
 	Operator *pexpr = binding.PexprExtract(this, pexprPattern, nullptr);
 	while (nullptr != pexpr) {
 		++(*num_bindings);
-		ULONG ulNumResults = results->m_alternative_expressions.size();
 		pxform->Transform(pxfctxt, results, pexpr);
-		ulNumResults = results->m_alternative_expressions.size() - ulNumResults;
-		if ((bindThreshold != 0 && (*num_bindings) > bindThreshold) || pxform->IsApplyOnce() ||
-		    (0 < results->m_alternative_expressions.size())) {
+		if ((bindThreshold != 0 && (*num_bindings) > bindThreshold)
+		 	 || pxform->IsApplyOnce()) {
 			// do not apply xform to other possible patterns
 			break;
 		}
@@ -563,11 +562,11 @@ bool CGroupExpression::Matches(const CGroupExpression *group_expr) const {
 //		static hash function for operator and group references
 //
 //---------------------------------------------------------------------------
-ULONG CGroupExpression::HashValue(Operator *pop, duckdb::vector<CGroup *> groups) {
-	ULONG ulHash = Operator::HashValue(pop);
-	// ULONG ulHash = pop->HashValue();
-	ULONG arity = groups.size();
-	for (ULONG i = 0; i < arity; i++) {
+size_t CGroupExpression::HashValue(Operator *pop, duckdb::vector<CGroup *> groups) {
+	// ULONG ulHash = Operator::HashValue(pop);
+	size_t ulHash = pop->HashValue();
+	size_t arity = groups.size();
+	for (size_t i = 0; i < arity; i++) {
 		ulHash = CombineHashes(ulHash, groups[i]->HashValue());
 	}
 	return ulHash;
@@ -581,7 +580,7 @@ ULONG CGroupExpression::HashValue(Operator *pop, duckdb::vector<CGroup *> groups
 //		static hash function for group expressions
 //
 //---------------------------------------------------------------------------
-ULONG CGroupExpression::HashValue(const CGroupExpression &gexpr) {
+size_t CGroupExpression::HashValue(const CGroupExpression &gexpr) {
 	return gexpr.HashValue();
 }
 

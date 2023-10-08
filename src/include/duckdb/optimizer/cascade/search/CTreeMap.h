@@ -39,7 +39,7 @@ namespace gpopt
 //		rehydrate function of type PrFn.
 //
 //---------------------------------------------------------------------------
-template <class T, class R, class U, ULONG (*HashFn)(const T *), bool (*EqFn)(const T *, const T *)> class CTreeMap
+template <class T, class R, class U, size_t (*HashFn)(const T *), bool (*EqFn)(const T *, const T *)> class CTreeMap
 {
 	// array of source pointers (sources owned by 3rd party)
 	typedef duckdb::vector<T*> DrgPt;
@@ -88,11 +88,11 @@ public:
 
 	public:
 		// hash function
-		ULONG HashValue()
+		size_t HashValue()
 		{
-			ULONG ulHashParent = HashFn(m_ptParent);
-			ULONG ulHashChild = HashFn(m_ptChild);
-			ULONG ulHashChildIndex = gpos::HashValue<ULONG>(&m_ulChildIndex);
+			size_t ulHashParent = HashFn(m_ptParent);
+			size_t ulHashChild = HashFn(m_ptChild);
+			size_t ulHashChildIndex = gpos::HashValue<ULONG>(&m_ulChildIndex);
 			return CombineHashes(ulHashParent, CombineHashes(ulHashChild, ulHashChildIndex));
 		}
 

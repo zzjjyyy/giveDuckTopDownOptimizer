@@ -152,6 +152,7 @@ CJobGroupExpressionImplementation::EevtImplementChildren(CSchedulerContext *psc,
 	if (!pjgei->FChildrenScheduled()) {
 		pjgei->m_group_expression->SetState(CGroupExpression::estImplementing);
 		pjgei->ScheduleChildGroupsJobs(psc);
+		CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementChildren]");
 		return eevImplementingChildren;
 	} else {
 		return eevChildrenImplemented;
@@ -172,6 +173,7 @@ CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::Eev
 	CJobGroupExpressionImplementation *pjgei = PjConvert(pjOwner);
 	if (!pjgei->FXformsScheduled()) {
 		pjgei->ScheduleApplicableTransformations(psc);
+		CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementSelf]");
 		return eevImplementingSelf;
 	} else {
 		return eevSelfImplemented;
@@ -188,6 +190,7 @@ CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::Eev
 //---------------------------------------------------------------------------
 CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::EevtFinalize(CSchedulerContext *psc,
                                                                                           CJob *pjOwner) {
+	CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementFinalize]");
 	// get a job pointer
 	CJobGroupExpressionImplementation *pjgei = PjConvert(pjOwner);
 	pjgei->m_group_expression->SetState(CGroupExpression::estImplemented);

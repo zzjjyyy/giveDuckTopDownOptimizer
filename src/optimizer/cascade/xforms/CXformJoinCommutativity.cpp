@@ -53,7 +53,6 @@ CXform::EXformPromise CXformJoinCommutativity::XformPromise(CExpressionHandle &e
 void CXformJoinCommutativity::Transform(CXformContext* pxfctxt, CXformResult* pxfres, Operator* pexpr) const
 {
 	LogicalComparisonJoin* popJoin = (LogicalComparisonJoin*)pexpr;
-	
 	// create alternative expression
 	duckdb::unique_ptr<LogicalComparisonJoin> pexprAlt = make_uniq<LogicalComparisonJoin>(JoinType::INNER);
 	/* LogicalComparisonJoin fields */
@@ -90,4 +89,5 @@ void CXformJoinCommutativity::Transform(CXformContext* pxfctxt, CXformResult* px
 	pexprAlt->m_cost = GPOPT_INVALID_COST;
 	// add alternative to transformation result
 	pxfres->Add(std::move(pexprAlt));
+	enumeration_pairs++;
 }

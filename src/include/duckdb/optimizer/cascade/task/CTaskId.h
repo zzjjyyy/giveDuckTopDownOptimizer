@@ -64,7 +64,7 @@ public:
 	}
 
 	// primitive hash function
-	static ULONG HashValue(const CTaskId &tid)
+	static size_t HashValue(const CTaskId &tid)
 	{
 		return gpos::HashValue<ULONG_PTR>(&tid.m_task_id);
 	}

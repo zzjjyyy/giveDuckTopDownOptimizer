@@ -18,6 +18,8 @@
 #include "duckdb/optimizer/cascade/xforms/CXformInnerJoin2HashJoin.h"
 #include "duckdb/optimizer/cascade/xforms/CXformJoinCommutativity.h"
 #include "duckdb/optimizer/cascade/xforms/CXformJoinAssociativity.h"
+#include "duckdb/optimizer/cascade/xforms/CXformLogicalAggregateImplementation.h"
+#include "duckdb/optimizer/cascade/xforms/CXformPushGbBelowJoin.h"
 
 namespace gpopt {
 
@@ -114,6 +116,8 @@ void CXformFactory::Instantiate() {
 	Add(new CXformInnerJoin2HashJoin());
 	Add(new CXformJoinCommutativity());
 	Add(new CXformJoinAssociativity());
+	Add(new CXformLogicalAggregateImplementation());
+	Add(new CXformPushGbBelowJoin());
 	/*
 	Add(make_shared<CXformInnerJoin2HashJoin();
 	Add(make_shared<CXformIndexGet2IndexScan();

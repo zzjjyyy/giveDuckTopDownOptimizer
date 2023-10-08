@@ -19,6 +19,7 @@
 #include "duckdb/optimizer/cascade/search/CGroupProxy.h"
 #include "duckdb/optimizer/cascade/search/CJobGroup.h"
 #include "duckdb/optimizer/cascade/task/CWorker.h"
+#include "duckdb/common/types/hash.hpp"
 
 using namespace gpopt;
 
@@ -296,13 +297,14 @@ void CGroup::SetState(EState estNewState) {
 //		Hash function for group identification
 //
 //---------------------------------------------------------------------------
-ULONG CGroup::HashValue() const {
-	ULONG id = m_id;
+size_t CGroup::HashValue() const {
+	size_t id = m_id;
 	if (FDuplicateGroup() && 0 == m_num_exprs) {
 		// group has been merged into another group
 		id = m_group_for_duplicate_groups->m_id;
 	}
-	return gpos::HashValue<ULONG>(&id);
+	return duckdb::Hash<size_t>(id);
+	// return gpos::HashValue<ULONG>(&id);
 }
 
 //---------------------------------------------------------------------------

@@ -214,7 +214,7 @@ void CStackDescriptor::AppendTrace(IOstream &os, ULONG depth) const
 //		Get hash value for stored stack
 //
 //---------------------------------------------------------------------------
-ULONG CStackDescriptor::HashValue() const
+size_t CStackDescriptor::HashValue() const
 {
 	return gpos::HashByteArray((BYTE *) m_array_of_addresses, m_depth * GPOS_SIZEOF(m_array_of_addresses[0]));
 }

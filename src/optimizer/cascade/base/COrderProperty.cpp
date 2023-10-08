@@ -67,7 +67,7 @@ bool COrderProperty::FCompatible(COrderSpec *pos) const {
 // 		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG COrderProperty::HashValue() const {
+size_t COrderProperty::HashValue() const {
 	return gpos::CombineHashes(m_order_match_type + 1, m_order_spec->HashValue());
 }
 

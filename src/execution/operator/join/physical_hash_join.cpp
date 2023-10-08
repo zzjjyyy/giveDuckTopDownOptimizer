@@ -17,7 +17,9 @@
 namespace duckdb {
 
 PhysicalHashJoin::PhysicalHashJoin(LogicalOperator &op, unique_ptr<Operator> left, unique_ptr<Operator> right, vector<JoinCondition> cond, JoinType join_type, const vector<idx_t> &left_projection_map, const vector<idx_t> &right_projection_map_p, vector<LogicalType> delim_types, idx_t estimated_cardinality, PerfectHashJoinStats perfect_join_stats)
-    : PhysicalComparisonJoin(op, PhysicalOperatorType::HASH_JOIN, std::move(cond), join_type, estimated_cardinality), right_projection_map(right_projection_map_p), delim_types(std::move(delim_types)), perfect_join_statistics(std::move(perfect_join_stats))
+    : PhysicalComparisonJoin(op, PhysicalOperatorType::HASH_JOIN, std::move(cond), join_type, estimated_cardinality),
+	  right_projection_map(right_projection_map_p), delim_types(std::move(delim_types)),
+	  perfect_join_statistics(std::move(perfect_join_stats))
 {
 	children.push_back(std::move(left));
 	children.push_back(std::move(right));
@@ -930,7 +932,7 @@ unique_ptr<Operator> PhysicalHashJoin::Copy() {
 	copy->has_estimated_cardinality = this->has_estimated_cardinality;
 	copy->m_group_expression = this->m_group_expression;
 	copy->m_cost = this->m_cost;
-	return copy;
+	return unique_ptr_cast<PhysicalHashJoin, Operator>(std::move(copy));
 }
 
 unique_ptr<Operator> PhysicalHashJoin::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
@@ -967,7 +969,7 @@ unique_ptr<Operator> PhysicalHashJoin::CopyWithNewGroupExpression(CGroupExpressi
 	copy->physical_type = this->physical_type;
 	copy->m_group_expression = pgexpr;
 	copy->m_cost = this->m_cost;
-	return copy;
+	return unique_ptr_cast<PhysicalHashJoin, Operator>(std::move(copy));
 }
 
 unique_ptr<Operator> PhysicalHashJoin::CopyWithNewChildren(CGroupExpression *pgexpr,
@@ -1006,6 +1008,6 @@ unique_ptr<Operator> PhysicalHashJoin::CopyWithNewChildren(CGroupExpression *pge
 	copy->physical_type = this->physical_type;
 	copy->m_group_expression = pgexpr;
 	copy->m_cost = cost;
-	return copy;
+	return unique_ptr_cast<PhysicalHashJoin, Operator>(std::move(copy));
 }
 } // namespace duckdb

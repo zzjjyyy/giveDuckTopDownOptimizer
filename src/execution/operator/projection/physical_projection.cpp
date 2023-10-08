@@ -117,9 +117,11 @@ duckdb::unique_ptr<Operator> PhysicalProjection::Copy()
 	unique_ptr<PhysicalProjection> result =
 		make_uniq<PhysicalProjection>(this->types, std::move(v), this->estimated_cardinality);
 	
-	/* PhysicalOperator fields */
 	result->v_column_binding = this->v_column_binding;
 	
+	/* PhysicalOperator fields */
+	result->m_total_opt_requests = this->m_total_opt_requests;
+
 	/* Operator fields */
 	result->m_derived_logical_property = this->m_derived_logical_property;
 	result->m_derived_physical_property = this->m_derived_physical_property;
@@ -136,7 +138,7 @@ duckdb::unique_ptr<Operator> PhysicalProjection::Copy()
 	}
 	result->m_group_expression = this->m_group_expression;
 	result->m_cost = this->m_cost;
-	return result;
+	return unique_ptr_cast<PhysicalProjection, Operator>(std::move(result));
 }
 
 duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGroupExpression* pgexpr)
@@ -150,8 +152,10 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGro
 	unique_ptr<PhysicalProjection> result
 		= make_uniq<PhysicalProjection>(this->types, std::move(v), this->estimated_cardinality);
 
-	/* PhysicalOperator fields */
 	result->v_column_binding = this->v_column_binding;
+	
+	/* PhysicalOperator fields */
+	result->m_total_opt_requests = this->m_total_opt_requests;
 
 	/* Operator fields */
 	result->m_derived_logical_property = this->m_derived_logical_property;
@@ -169,7 +173,7 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGro
 	}
 	result->m_group_expression = pgexpr;
 	result->m_cost = m_cost;
-	return result;
+	return unique_ptr_cast<PhysicalProjection, Operator>(std::move(result));
 }
 	
 duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewChildren(CGroupExpression* pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr, double cost)
@@ -182,8 +186,10 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewChildren(CGroupExpre
 	unique_ptr<PhysicalProjection> result
 		= make_uniq<PhysicalProjection>(this->types, std::move(v), this->estimated_cardinality);
 	
-	/* PhysicalOperator fields */
 	result->v_column_binding = this->v_column_binding;
+	
+	/* PhysicalOperator fields */
+	result->m_total_opt_requests = this->m_total_opt_requests;
 
 	/* Operator fields */
 	result->m_derived_logical_property = this->m_derived_logical_property;
@@ -201,7 +207,7 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewChildren(CGroupExpre
 	}
 	result->m_group_expression = pgexpr;
 	result->m_cost = cost;
-	return result;
+	return unique_ptr_cast<PhysicalProjection, Operator>(std::move(result));
 }
 
 void PhysicalProjection::CE() {

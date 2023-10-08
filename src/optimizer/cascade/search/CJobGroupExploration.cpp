@@ -22,6 +22,10 @@
 
 using namespace gpopt;
 
+clock_t start_exploration;
+
+clock_t end_exploration;
+
 // State transition diagram for group exploration job state machine;
 //
 // +------------------------+
@@ -129,8 +133,7 @@ bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext *psc) {
 //
 //---------------------------------------------------------------------------
 CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedulerContext *psc, CJob *pjOwner) {
-	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartExploration]");
-
+	// CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartExploration]");
 	// get a job pointer
 	CJobGroupExploration *pjge = ConvertJob(pjOwner);
 	CGroup *pgroup = pjge->m_pgroup;
@@ -151,11 +154,13 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedul
 //
 //---------------------------------------------------------------------------
 CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedulerContext *psc, CJob *pjOwner) {
-	CJobGroup::PrintJob(ConvertJob(pjOwner), "[ExploreChildren]");
-
 	// get a job pointer
 	CJobGroupExploration *pjge = ConvertJob(pjOwner);
 	if (pjge->FScheduleGroupExpressions(psc)) {
+		if (psc->m_engine->FRoot(pjge->m_pgroup)) {
+			start_exploration = clock();
+		}
+		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[ExploreChildren]");
 		// new expressions have been added to group
 		return eevNewChildren;
 	} else {
@@ -166,6 +171,11 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedule
 		}
 		// if this is the root, complete exploration phase
 		if (psc->m_engine->FRoot(pjge->m_pgroup)) {
+			end_exploration = clock();
+			exploration_time = double(end_exploration - start_exploration) / CLOCKS_PER_SEC;
+			FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			fprintf(time_f, "explor = %lf s, ", exploration_time);
+			fclose(time_f);
 			psc->m_engine->FinalizeExploration();
 		}
 		return eevExplored;

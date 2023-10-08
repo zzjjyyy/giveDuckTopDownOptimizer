@@ -156,13 +156,13 @@ public:
 	// match non-scalar children of group expression against given children of passed expression
 	bool FMatchNonScalarChildren(CGroupExpression *group_expr) const;
 	// hash function
-	ULONG HashValue() const {
+	size_t HashValue() const {
 		return HashValue(m_operator.get(), m_child_groups);
 	}
 	// static hash function for operator and group references
-	static ULONG HashValue(Operator *pop, duckdb::vector<CGroup *> groups);
+	static size_t HashValue(Operator *pop, duckdb::vector<CGroup *> groups);
 	// static hash function for group expression
-	static ULONG HashValue(const CGroupExpression &);
+	static size_t HashValue(const CGroupExpression &);
 	// transform group expression
 	void Transform(CXform *pxform, CXformResult *results, ULONG *elapsed_time, ULONG *num_bindings);
 	// set group expression state

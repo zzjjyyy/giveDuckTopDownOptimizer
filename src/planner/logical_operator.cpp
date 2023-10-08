@@ -121,11 +121,6 @@ idx_t LogicalOperator::EstimateCardinality(ClientContext &context) {
 	return estimated_cardinality;
 }
 
-ULONG LogicalOperator::HashValue() const {
-	ULONG oid = (ULONG)logical_type;
-	return gpos::HashValue<ULONG>(&oid);
-}
-
 void LogicalOperator::Print() {
 	Printer::Print(ToString());
 }

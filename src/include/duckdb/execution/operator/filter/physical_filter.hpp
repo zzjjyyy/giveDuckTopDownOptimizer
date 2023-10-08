@@ -35,6 +35,17 @@ public:
 
 	string ParamsToString() const override;
 
+	unique_ptr<Operator> Copy() override;
+
+	unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+
+	unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr, vector<unique_ptr<Operator>> pdrgpexpr,
+	                                         double cost) override;
+
+	void CE() override;
+	
+	vector<ColumnBinding> GetColumnBindings() override;
+
 protected:
 	OperatorResultType ExecuteInternal(ExecutionContext &context, DataChunk &input, DataChunk &chunk,
 	                                   GlobalOperatorState &gstate, OperatorState &state) const override;

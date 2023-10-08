@@ -202,6 +202,7 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPhysicalP
 		}
 	}
 	if (nullptr == best_group_expr) {
+		throw InternalException("ExtractPlan return nullptr.");
 		// no plan found
 		return nullptr;
 	}

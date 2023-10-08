@@ -69,7 +69,7 @@ public:
 	// }
 
 	// hash function
-	virtual ULONG HashValue() const;
+	virtual size_t HashValue() const;
 	// equality function
 	virtual ULONG Equals(const CDerivedPhysicalProp *pdpplan) const;
 	// check for satisfying required plan properties

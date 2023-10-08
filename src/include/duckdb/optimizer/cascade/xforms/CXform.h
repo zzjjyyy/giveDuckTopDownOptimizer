@@ -56,6 +56,8 @@ public:
 		ExfInnerJoin2HashJoin,
 		ExfJoinCommutativity,
 		ExfJoinAssociativity,
+		ExfLogicalAggregateImplementation,
+		ExfPushGbBelowJoin,
 		/* */
 		ExfProject2ComputeScalarExfn,
 		ExfSelect2Filter,
@@ -146,7 +148,6 @@ public:
 		ExfSplitLimit,
 		ExfSimplifyGbAgg,
 		ExfCollapseGbAgg,
-		ExfPushGbBelowJoin,
 		ExfPushGbDedupBelowJoin,
 		ExfPushGbWithHavingBelowJoin,
 		ExfPushGbBelowUnion,

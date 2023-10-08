@@ -21,8 +21,17 @@
 
 using namespace gpos;
 
+extern double exploration_time;
+
+extern double implementation_time;
+
+extern double optimization_time;
+
 namespace gpos
 {
+
+extern unsigned int enumeration_pairs;
+
 enum Etlsidx { EtlsidxTest, EtlsidxOptCtxt, EtlsidxInvalid, EtlsidxSentinel };
 
 struct EtlsidxHash

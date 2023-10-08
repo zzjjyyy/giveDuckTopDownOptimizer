@@ -71,10 +71,10 @@ public:
 	// compute partial plan cost
 	double CostCompute();
 
-	ULONG HashValue() const;
+	size_t HashValue() const;
 
 	// hash function used for cost bounding
-	static ULONG HashValue(const CPartialPlan* ppp);
+	static size_t HashValue(const CPartialPlan* ppp);
 
 	// equality function used for for cost bounding
 	static bool Equals(const CPartialPlan* pppFst, const CPartialPlan* pppSnd);

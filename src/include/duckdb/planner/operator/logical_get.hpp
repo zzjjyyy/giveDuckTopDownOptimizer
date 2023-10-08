@@ -70,7 +70,7 @@ protected:
 
 public:
 	// ----------------- ORCA -------------------------
-	ULONG HashValue() const override;
+	size_t HashValue() const override;
 
 	// derive join depth
 	ULONG DeriveJoinDepth(CExpressionHandle &exprhdl) override {
@@ -94,5 +94,7 @@ public:
 	                                                 double cost) override;
 
 	void CE() override;
+
+	idx_t GetChildrenRelIds() override;
 };
 } // namespace duckdb

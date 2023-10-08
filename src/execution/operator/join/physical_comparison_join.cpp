@@ -107,18 +107,49 @@ vector<ColumnBinding> PhysicalComparisonJoin::PcrsRequired(CExpressionHandle &ex
 	return pcrs_child_reqd;
 }
 
+idx_t PhysicalComparisonJoin::GetChildrenRelIds() {
+	idx_t first = this->children[0]->GetChildrenRelIds();
+	idx_t second = this->children[1]->GetChildrenRelIds();
+	idx_t res = first | second;
+	return res;
+}
+
 void PhysicalComparisonJoin::CE() {
-	if(this->has_estimated_cardinality) {
-		return;
-	}
 	if(!this->children[0]->has_estimated_cardinality) {
 		this->children[0]->CE();
 	}
-	if(this->children[1]->has_estimated_cardinality) {
+	if(!this->children[1]->has_estimated_cardinality) {
 		this->children[1]->CE();
 	}
+	if(this->has_estimated_cardinality) {
+		return;
+	}
+	idx_t relids = this->GetChildrenRelIds();
+	char* pos;
+	char* p;
+	char cmp[1000];
+	int relid_in_file;
+	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
+	while(fgets(cmp, 1000, fp) != NULL) {
+		if((pos = strchr(cmp, '\n')) != NULL) {
+			*pos = '\0';
+		}
+		p = strtok(cmp, ":");
+		relid_in_file = atoi(p);
+		if(relid_in_file == relids) {
+			p = strtok(NULL, ":");
+			double true_val = atof(p);
+			if(true_val < 9999999999999.0) {
+				fclose(fp);
+				this->has_estimated_cardinality = true;
+				this->estimated_cardinality = true_val;
+				return;
+			}
+		}
+	}
+	fclose(fp);
 	this->has_estimated_cardinality = true;
-	this->estimated_cardinality = 0.25 * this->children[0]->estimated_cardinality * this->children[1]->estimated_cardinality;
+	this->estimated_cardinality = 99999999.0;
 	return;
 }
 } // namespace duckdb

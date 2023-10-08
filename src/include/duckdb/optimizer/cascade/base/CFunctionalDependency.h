@@ -61,22 +61,22 @@ public:
 	}
 
 	// determine if all FD columns are included in the given column set
-	BOOL FIncluded(duckdb::vector<ColumnBinding> pcrs) const;
+	bool FIncluded(duckdb::vector<ColumnBinding> pcrs) const;
 
 	// hash function
-	virtual ULONG HashValue() const;
+	virtual size_t HashValue() const;
 
 	// equality function
-	BOOL Equals(const shared_ptr<CFunctionalDependency> pfd) const;
+	bool Equals(const shared_ptr<CFunctionalDependency> pfd) const;
 
 	// do the given arguments form a functional dependency
-	BOOL FFunctionallyDependent(duckdb::vector<ColumnBinding> pcrsKey, ColumnBinding colref);
+	bool FFunctionallyDependent(duckdb::vector<ColumnBinding> pcrsKey, ColumnBinding colref);
 	
 	// hash function
-	static ULONG HashValue(const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfd);
+	static size_t HashValue(const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfd);
 
 	// equality function
-	static BOOL Equals(const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfdFst, const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfdSnd);
+	static bool Equals(const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfdFst, const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfdSnd);
 
 	// create a set of all keys in the passed FD's array
 	static duckdb::vector<ColumnBinding> PcrsKeys(const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfd);

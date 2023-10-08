@@ -14,6 +14,10 @@
 
 using namespace gpos;
 
+extern clock_t start_implementation;
+	
+extern clock_t end_implementation;
+
 namespace gpopt
 {
 //---------------------------------------------------------------------------

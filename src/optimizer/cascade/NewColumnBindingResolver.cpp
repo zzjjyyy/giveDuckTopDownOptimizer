@@ -4,10 +4,13 @@
 #include "duckdb/common/enums/physical_operator_type.hpp"
 #include "duckdb/common/to_string.hpp"
 #include "duckdb/execution/operator/aggregate/physical_ungrouped_aggregate.hpp"
+#include "duckdb/execution/operator/aggregate/physical_hash_aggregate.hpp"
 #include "duckdb/execution/operator/helper/physical_limit.hpp"
 #include "duckdb/execution/operator/helper/physical_limit_percent.hpp"
+#include "duckdb/execution/operator/filter/physical_filter.hpp"
 #include "duckdb/execution/operator/join/physical_comparison_join.hpp"
 #include "duckdb/execution/operator/join/physical_delim_join.hpp"
+#include "duckdb/execution/operator/join/physical_hash_join.hpp"
 #include "duckdb/execution/operator/order/physical_order.hpp"
 #include "duckdb/execution/operator/order/physical_top_n.hpp"
 #include "duckdb/execution/operator/persistent/physical_insert.hpp"
@@ -37,8 +40,7 @@ void NewColumnBindingResolver::VisitOperatorChildren(PhysicalOperator &op) {
 void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op) {
 	switch (op.physical_type) {
 	case PhysicalOperatorType::NESTED_LOOP_JOIN:
-	case PhysicalOperatorType::DELIM_JOIN:
-	case PhysicalOperatorType::HASH_JOIN: {
+	case PhysicalOperatorType::DELIM_JOIN:{
 		// special case: comparison join
 		auto &comp_join = op.Cast<PhysicalComparisonJoin>();
 		// first get the bindings of the LHS and resolve the LHS expressions
@@ -47,6 +49,7 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op) {
 		for (auto &cond : comp_join.conditions) {
 			VisitExpression(&cond.left);
 		}
+		op.types = global_types;
 		if (left_op->physical_type == PhysicalOperatorType::DELIM_JOIN) {
 			// visit the duplicate eliminated columns on the LHS, if any
 			auto &delim_join = op.Cast<PhysicalDelimJoin>();
@@ -59,13 +62,39 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op) {
 		for (auto &cond : comp_join.conditions) {
 			VisitExpression(&cond.right);
 		}
+		op.types.insert(op.types.end(), global_types.begin(), global_types.end());
 		// finally update the bindings with the result bindings of the join
 		bindings = op.GetColumnBindings();
+		global_types = op.types;
+		return;
+	}
+	case PhysicalOperatorType::HASH_JOIN: {
+		// special case: comparison join
+		auto &hash_join = op.Cast<PhysicalHashJoin>();
+		// first get the bindings of the LHS and resolve the LHS expressions
+		PhysicalOperator *left_op = (PhysicalOperator *)hash_join.children[0].get();
+		VisitOperator(*left_op);
+		for (auto &cond : hash_join.conditions) {
+			VisitExpression(&cond.left);
+		}
+		op.types = global_types;
+		// then get the bindings of the RHS and resolve the RHS expressions
+		PhysicalOperator *right_op = (PhysicalOperator *)hash_join.children[1].get();
+		VisitOperator(*right_op);
+		for (auto &cond : hash_join.conditions) {
+			VisitExpression(&cond.right);
+		}
+		op.types.insert(op.types.end(), global_types.begin(), global_types.end());
+		hash_join.build_types = global_types;
+		// finally update the bindings with the result bindings of the join
+		bindings = op.GetColumnBindings();
+		global_types = op.types;
 		return;
 	}
 	case PhysicalOperatorType::TABLE_SCAN: {
 		//! We first need to update the current set of bindings and then visit operator expressions
 		bindings = op.GetColumnBindings();
+		global_types = op.types;
 		VisitOperatorExpressions(op);
 		return;
 	}
@@ -79,25 +108,66 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op) {
 			VisitExpression(&cond);
 		}
 		bindings = op.GetColumnBindings();
+		global_types = op.types;
 		return;
 	}
 	case PhysicalOperatorType::ORDER_BY: {
 		VisitOperatorChildren(op);
+		op.types = global_types;
 		auto &order = op.Cast<PhysicalOrder>();
 		for (auto &child : order.orders) {
 			VisitExpression(&child.expression);
 		}
 		bindings = op.GetColumnBindings();
+		global_types = op.types;
 		return;
 	}
-	case PhysicalOperatorType::DUMMY_SCAN:
+	case PhysicalOperatorType::DUMMY_SCAN: {
 		// first visit the children of this operator
 		VisitOperatorChildren(op);
 		// now visit the expressions of this operator to resolve any bound column references
 		VisitOperatorExpressions(op);
 		// finally update the current set of bindings to the current set of column bindings
 		bindings = op.GetColumnBindings();
+		global_types = op.types;
 		return;
+	}
+	case PhysicalOperatorType::UNGROUPED_AGGREGATE: {
+		VisitOperatorChildren(op);
+		auto &agg = op.Cast<PhysicalUngroupedAggregate>();
+		/* Notice: we do not update bindings here because only the binding from children is correct */
+		/* the GetColumnBindings in Projection is for subquery (I guess) */
+		for (auto &cond : agg.aggregates) {
+			VisitExpression(&cond);
+		}
+		bindings = op.GetColumnBindings();
+		global_types = op.types;
+		return;
+	}
+	case PhysicalOperatorType::HASH_GROUP_BY: {
+		VisitOperatorChildren(op);
+		auto &agg = op.Cast<PhysicalHashAggregate>();
+		for (auto &cond : agg.grouped_aggregate_data.aggregates) {
+			VisitExpression(&cond);
+		}
+		for (auto &cond : agg.grouped_aggregate_data.groups) {
+			VisitExpression(&cond);
+		}
+		bindings = op.GetColumnBindings();
+		global_types = op.types;
+		return;
+	}
+	case PhysicalOperatorType::FILTER: {
+		VisitOperatorChildren(op);
+		op.types = global_types;
+		auto &filter = op.Cast<PhysicalFilter>();
+		/* Notice: we do not update bindings here because only the binding from children is correct */
+		/* the GetColumnBindings in Projection is for subquery (I guess) */
+		VisitExpression(&filter.expression);
+		bindings = op.GetColumnBindings();
+		global_types = op.types;
+		return;
+	}
 	default:
 		throw InternalException("Add a new case for %s!", PhysicalOperatorToString(op.physical_type));
 		break;

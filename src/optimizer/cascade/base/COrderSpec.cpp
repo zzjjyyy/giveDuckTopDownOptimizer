@@ -110,10 +110,10 @@ void COrderSpec::AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPhysicalPr
 //		Hash of components
 //
 //---------------------------------------------------------------------------
-ULONG COrderSpec::HashValue() const {
-	ULONG ulHash = 0;
-	ULONG arity = order_nodes.size();
-	for (ULONG ul = 0; ul < arity; ul++) {
+size_t COrderSpec::HashValue() const {
+	size_t ulHash = 0;
+	size_t arity = order_nodes.size();
+	for (size_t ul = 0; ul < arity; ul++) {
 		auto &poe = order_nodes[ul];
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashPtr<BoundOrderByNode>(&poe));
 	}
@@ -246,10 +246,10 @@ bool COrderSpec::Equals(duckdb::vector<COrderSpec *> pdrgposFirst, duckdb::vecto
 //		 Combine hash values of a maximum number of entries
 //
 //---------------------------------------------------------------------------
-ULONG COrderSpec::HashValue(const duckdb::vector<COrderSpec *> pdrgpos, ULONG ulMaxSize) {
-	ULONG size = std::min(ulMaxSize, (ULONG)pdrgpos.size());
-	ULONG ulHash = 0;
-	for (ULONG ul = 0; ul < size; ul++) {
+size_t COrderSpec::HashValue(const duckdb::vector<COrderSpec *> pdrgpos, size_t ulMaxSize) {
+	size_t size = std::min(ulMaxSize, pdrgpos.size());
+	size_t ulHash = 0;
+	for (size_t ul = 0; ul < size; ul++) {
 		ulHash = gpos::CombineHashes(ulHash, pdrgpos[ul]->HashValue());
 	}
 	return ulHash;

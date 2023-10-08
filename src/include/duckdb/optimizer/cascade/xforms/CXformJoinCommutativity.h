@@ -48,6 +48,10 @@ public:
 		return "CXformJoinCommutativity";
 	}
 
+	bool IsApplyOnce() override {
+		return true;
+	}
+
 	// compute xform promise for a given expression handle
 	virtual EXformPromise XformPromise(CExpressionHandle &exprhdl) const;
 

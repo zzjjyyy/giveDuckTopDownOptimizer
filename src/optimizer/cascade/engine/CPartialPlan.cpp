@@ -143,9 +143,9 @@ double CPartialPlan::CostCompute()
 //		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG CPartialPlan::HashValue(const CPartialPlan *ppp)
+size_t CPartialPlan::HashValue(const CPartialPlan *ppp)
 {
-	ULONG ulHash = ppp->m_pgexpr->HashValue();
+	size_t ulHash = ppp->m_pgexpr->HashValue();
 	return CombineHashes(ulHash, CRequiredPhysicalProp::UlHashForCostBounding(ppp->m_prpp));
 }
 
@@ -173,7 +173,7 @@ bool CPartialPlan::Equals(const CPartialPlan *pppFst, const CPartialPlan *pppSnd
 	       CRequiredPhysicalProp::FEqualForCostBounding(pppFst->m_prpp, pppSnd->m_prpp);
 }
 
-ULONG CPartialPlan::HashValue() const
+size_t CPartialPlan::HashValue() const
 {
     ULONG ulHash = m_pgexpr->HashValue();
 	return CombineHashes(ulHash, CRequiredPhysicalProp::UlHashForCostBounding(m_prpp));

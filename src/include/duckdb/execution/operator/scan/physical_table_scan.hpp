@@ -80,7 +80,7 @@ public:
 	double GetProgress(ClientContext &context, GlobalSourceState &gstate) const override;
 
 public:
-	ULONG HashValue() const override;
+	size_t HashValue() const override;
 
 	COrderProperty::EPropEnforcingType EnforcingTypeOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
 
@@ -125,6 +125,8 @@ public:
 	}
 
 	void CE() override;
+
+	idx_t GetChildrenRelIds() override;
 };
 
 } // namespace duckdb

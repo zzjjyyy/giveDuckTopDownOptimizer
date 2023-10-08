@@ -133,9 +133,9 @@ bool CRequiredPhysicalProp::Equals(CRequiredPhysicalProp *prpp) const {
 //		Compute hash value using required columns and required sort order
 //
 //---------------------------------------------------------------------------
-ULONG CRequiredPhysicalProp::HashValue() const {
-	ULONG ulHash = 0;
-	for (ULONG m = 0; m < m_cols.size(); m++) {
+size_t CRequiredPhysicalProp::HashValue() const {
+	size_t ulHash = 0;
+	for (size_t m = 0; m < m_cols.size(); m++) {
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashValue(&m_cols[m]));
 	}
 	ulHash = gpos::CombineHashes(ulHash, m_sort_order->HashValue());

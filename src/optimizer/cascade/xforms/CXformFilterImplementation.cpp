@@ -58,6 +58,8 @@ void CXformFilterImplementation::Transform(CXformContext *xform_context, CXformR
 	for (auto &child : expression->children) {
 		alternative_expression->AddChild(child->Copy());
 	}
+	// Cardinality Estimation
+	alternative_expression->CE();
 	// add alternative to transformation result
 	xform_result->Add(std::move(alternative_expression));
 }

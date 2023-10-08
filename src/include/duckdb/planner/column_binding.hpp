@@ -35,7 +35,7 @@ struct ColumnBinding {
 		return (table_index < rhs.table_index) && (column_index < rhs.column_index);
 	}
 
-	ULONG HashValue() {
+	size_t HashValue() {
 		return gpos::CombineHashes(gpos::HashValue(&table_index), gpos::HashValue(&column_index));
 	}
 };

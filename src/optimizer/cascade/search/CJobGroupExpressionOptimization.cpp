@@ -200,7 +200,7 @@ void CJobGroupExpressionOptimization::InitChildGroupsOptimization(CSchedulerCont
 //---------------------------------------------------------------------------
 CJobGroupExpressionOptimization::EEvent
 CJobGroupExpressionOptimization::EevtInitialize(CSchedulerContext *scheduler_context, CJob *pjOwner) {
-	CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: Initialize]");
+	CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: InitializeOptimization]");
 
 	// get a job pointer
 	CJobGroupExpressionOptimization *job = ConvertJob(pjOwner);
@@ -347,12 +347,11 @@ void CJobGroupExpressionOptimization::ScheduleChildGroupsJobs(CSchedulerContext 
 //---------------------------------------------------------------------------
 CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtOptimizeChildren(CSchedulerContext *psc,
                                                                                               CJob *pjOwner) {
-	CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: OptimizeChildren]");
-
 	// get a job pointer
 	CJobGroupExpressionOptimization *pjgeo = ConvertJob(pjOwner);
 	if (0 < pjgeo->m_arity && !pjgeo->FChildrenScheduled()) {
 		pjgeo->ScheduleChildGroupsJobs(psc);
+		CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: OptimizeChildren]");
 		if (pjgeo->m_child_optimization_failed) {
 			throw std::runtime_error(
 			    "[CJobGroupExpressionOptimization::EevtOptimizeChildren]: failed to optimize child, terminate job");

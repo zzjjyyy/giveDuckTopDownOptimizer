@@ -64,7 +64,7 @@ public:
 	void AppendTrace(IOstream &os, ULONG depth = GPOS_STACK_TRACE_DEPTH) const;
 
 	// get hash value for stored stack
-	ULONG HashValue() const;
+	size_t HashValue() const;
 };	// class CStackTrace
 }  // namespace gpos
 #endif

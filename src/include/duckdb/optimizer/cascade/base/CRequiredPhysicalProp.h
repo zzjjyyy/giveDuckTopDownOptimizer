@@ -69,7 +69,7 @@ public:
 	bool Equals(CRequiredPhysicalProp *prpp) const;
 
 	// hash function
-	ULONG HashValue() const;
+	size_t HashValue() const;
 
 	// check if plan properties are satisfied by the given derived properties
 	bool FSatisfied(CDerivedLogicalProp *rel, CDerivedPhysicalProp *plan) const;

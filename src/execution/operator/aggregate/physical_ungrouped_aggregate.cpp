@@ -177,6 +177,89 @@ bool PhysicalUngroupedAggregate::SinkOrderDependent() const {
 	return false;
 }
 
+unique_ptr<Operator> PhysicalUngroupedAggregate::Copy() {
+	/* PhysicalUngroupedAggregate fields */
+	vector<unique_ptr<Expression>> v_expr;
+	for(auto &child : this->aggregates) {
+		v_expr.push_back(child->Copy());
+	}
+	unique_ptr<PhysicalUngroupedAggregate> copy = make_uniq<PhysicalUngroupedAggregate>(this->types,
+																						std::move(v_expr),
+																						this->estimated_cardinality);
+	copy->v_column_binding = this->v_column_binding;
+	
+	/* PhysicalOperator fields */
+	copy->m_total_opt_requests = this->m_total_opt_requests;
+
+	/* Operator fields */
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
+	if (nullptr != this->estimated_props) {
+		copy->estimated_props = this->estimated_props->Copy();
+	}
+	copy->types = this->types;
+	copy->estimated_cardinality = this->estimated_cardinality;
+	copy->has_estimated_cardinality = this->has_estimated_cardinality;
+	for (auto &child : this->children) {
+		copy->AddChild(child->Copy());
+	}
+	copy->m_group_expression = this->m_group_expression;
+	copy->m_cost = this->m_cost;
+	return unique_ptr_cast<PhysicalUngroupedAggregate, Operator>(std::move(copy));
+}
+
+unique_ptr<Operator> PhysicalUngroupedAggregate::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+	auto copy = this->Copy();
+	copy->m_group_expression = pgexpr;
+	return copy;
+}
+
+unique_ptr<Operator> PhysicalUngroupedAggregate::CopyWithNewChildren(CGroupExpression *pgexpr,
+																	 vector<unique_ptr<Operator>> pdrgpexpr,
+	                                         						 double cost) {
+	/* PhysicalUngroupedAggregate fields */
+	vector<unique_ptr<Expression>> v_expr;
+	for(auto &child : this->aggregates) {
+		v_expr.push_back(child->Copy());
+	}
+	unique_ptr<PhysicalUngroupedAggregate> copy = make_uniq<PhysicalUngroupedAggregate>(this->types,
+																						std::move(v_expr),
+																						this->estimated_cardinality);
+	copy->v_column_binding = this->v_column_binding;
+	
+	/* PhysicalOperator fields */
+	copy->m_total_opt_requests = this->m_total_opt_requests;
+
+	/* Operator fields */
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
+	if (nullptr != this->estimated_props) {
+		copy->estimated_props = this->estimated_props->Copy();
+	}
+	copy->types = this->types;
+	copy->estimated_cardinality = this->estimated_cardinality;
+	copy->has_estimated_cardinality = this->has_estimated_cardinality;
+	for (auto &child : pdrgpexpr) {
+		copy->AddChild(child->Copy());
+	}
+	copy->m_group_expression = pgexpr;
+	copy->m_cost = cost;
+	return unique_ptr_cast<PhysicalUngroupedAggregate, Operator>(std::move(copy));
+}
+
+void PhysicalUngroupedAggregate::CE() {
+	if(!this->children[0]->has_estimated_cardinality) {
+		this->children[0]->CE();
+	}
+	if (this->has_estimated_cardinality) {
+		return;
+	}
+	this->has_estimated_cardinality = true;
+	this->estimated_cardinality = 1;
+}
+
 unique_ptr<GlobalSinkState> PhysicalUngroupedAggregate::GetGlobalSinkState(ClientContext &context) const
 {
 	return make_uniq<UngroupedAggregateGlobalState>(*this, context);

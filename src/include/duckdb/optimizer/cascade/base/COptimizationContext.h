@@ -120,11 +120,11 @@ public:
 	static bool Equals(const COptimizationContext &ocLeft, const COptimizationContext &ocRight) {
 		return ocLeft == ocRight;
 	}
-	ULONG HashValue() {
+	size_t HashValue() {
 		return m_required_plan_properties->HashValue();
 	}
 	// hash function for optimization context
-	static ULONG HashValue(const COptimizationContext &oc) {
+	static size_t HashValue(const COptimizationContext &oc) {
 		return oc.m_required_plan_properties->HashValue();
 	}
 	// equality function for cost contexts hash table
@@ -135,7 +135,7 @@ public:
 		return *pocLeft == *pocRight;
 	}
 	// hash function for cost contexts hash table
-	static ULONG HashValue(const OPTCTXT_PTR &poc) {
+	static size_t HashValue(const OPTCTXT_PTR &poc) {
 		return HashValue(*poc);
 	}
 	// hash function used for computing stats during costing

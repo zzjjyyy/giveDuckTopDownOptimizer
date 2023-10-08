@@ -60,6 +60,8 @@ void CXformLogicalProj2PhysicalProj::Transform(CXformContext *pxfctxt, CXformRes
 		alternative_expression->AddChild(child->Copy());
 	}
 	alternative_expression->v_column_binding = operator_proj->GetColumnBindings();
+	// Cardinality Estimation
+	alternative_expression->CE();
 	// add alternative to transformation result
 	pxfres->Add(std::move(alternative_expression));
 }

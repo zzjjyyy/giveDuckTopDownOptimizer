@@ -48,6 +48,16 @@ public:
 	// Rehydrate expression from a given cost context and child expressions
 	Operator* SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan) override;
 	
+	unique_ptr<Operator> Copy() override;
+	
+	unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+
+	unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr,
+                                        duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                        double cost) override;
+	
+	void CE() override;
+
 public:
 	//-------------------------------------------------------------------------------------
 	// Transformations

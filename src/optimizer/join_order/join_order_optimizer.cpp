@@ -388,7 +388,7 @@ bool JoinOrderOptimizer::TryEmitPair(JoinRelationSet &left, JoinRelationSet &rig
 	// If a full plan is created, it's possible a node in the plan gets updated. When this happens, make sure you keep
 	// emitting pairs until you emit another final plan. Another final plan is guaranteed to be produced because of
 	// our symmetry guarantees.
-	if (pairs >= 10000 && !must_update_full_plan) {
+	if (pairs >= 1000000 && !must_update_full_plan) {
 		// when the amount of pairs gets too large we exit the dynamic programming and resort to a greedy algorithm
 		// FIXME: simple heuristic currently
 		// at 10K pairs stop searching exactly and switch to heuristic
@@ -1097,6 +1097,9 @@ unique_ptr<LogicalOperator> JoinOrderOptimizer::Optimize(unique_ptr<LogicalOpera
 		final_plan = plans.find(&total_relation);
 		D_ASSERT(final_plan != plans.end());
 	}
+	FILE* f_pair = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+	fprintf(f_pair, "Considered join pairs: %ld, ", pairs);
+	fclose(f_pair);
 	// now perform the actual reordering
 	return RewritePlan(std::move(plan), *final_plan->second);
 }

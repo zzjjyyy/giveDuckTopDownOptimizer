@@ -49,6 +49,9 @@ CSearchStage::~CSearchStage() {
 //
 //---------------------------------------------------------------------------
 void CSearchStage::SetBestExpr(Operator *pexpr) {
+	if(pexpr == nullptr) {
+		InternalException("In CSearchStage::SetBestExpr: The pointer should not be nullptr!");
+	}
 	m_best_expr = pexpr->Copy();
 	if (NULL != m_best_expr) {
 		m_best_cost = m_best_expr->m_cost;

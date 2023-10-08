@@ -86,7 +86,7 @@ public:
 	                             duckdb::unique_ptr<Operator> pexpr);
 
 	// hash function
-	virtual ULONG HashValue() const;
+	virtual size_t HashValue() const;
 
 	// return a copy of the order spec with remapped columns
 	// virtual COrderSpec* PosCopyWithRemappedColumns(longToExpressionMap* colref_mapping, bool must_exist);
@@ -98,7 +98,7 @@ public:
 	static bool Equals(duckdb::vector<COrderSpec *> pdrgposFirst, duckdb::vector<COrderSpec *> pdrgposSecond);
 
 	// combine hash values of a maximum number of entries
-	ULONG HashValue(duckdb::vector<COrderSpec *> pdrgpos, ULONG ulMaxSize);
+	size_t HashValue(duckdb::vector<COrderSpec *> pdrgpos, size_t ulMaxSize);
 
 	// extract colref set of order columns used by elements of order spec array
 	static duckdb::vector<ColumnBinding> GetColRefSet(duckdb::vector<COrderSpec *> pdrgpos);

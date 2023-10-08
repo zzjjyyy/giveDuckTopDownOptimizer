@@ -123,9 +123,9 @@ public:
 
 	bool FMatchPattern(CGroupExpression *group_expression);
 	// hash function
-	static ULONG HashValue(const Operator *op);
+	static size_t HashValue(const Operator *op);
 
-	virtual ULONG HashValue() const;
+	virtual size_t HashValue() const;
 
 public:
 	//! Resolve types for this specific operator
@@ -194,6 +194,8 @@ public:
 	                                                         double cost);
 
 	virtual void CE();
+
+	virtual idx_t GetChildrenRelIds();
 
 	// ------------------------------------- DuckDB -------------------------------------
 	virtual string ToString() const {

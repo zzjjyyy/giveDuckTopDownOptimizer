@@ -49,8 +49,11 @@
 #include "duckdb/transaction/transaction.hpp"
 #include "duckdb/transaction/transaction_manager.hpp"
 
-namespace duckdb {
+double exploration_time;
 
+double implementation_time;
+
+namespace duckdb {
 struct ActiveQueryContext {
 	//! The query that is currently being executed
 	string query;
@@ -343,27 +346,38 @@ shared_ptr<PreparedStatementData> ClientContext::CreatePreparedStatement(ClientC
 	if (config.enable_optimizer && plan->RequireOptimizer()) {
 		profiler.StartPhase("optimizer");
 		if (statement_type == StatementType::SELECT_STATEMENT) {
+			clock_t start, end;
+			start = clock();
+			exploration_time = 0.0;
+			implementation_time = 0.0;
 			Optimizer optimizer(*planner.binder, *this, true);
 			plan = optimizer.Optimize(std::move(plan));
 			D_ASSERT(plan);
 			Cascade cascade = Cascade(*this);
 			unique_ptr<LogicalOperator> logical_plan = unique_ptr_cast<Operator, LogicalOperator>(std::move(plan));
 			physical_plan = cascade.Optimize(std::move(logical_plan));
+			end = clock();
+			FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			fprintf(time_f, "time = %lf s\n", double(end - start) / CLOCKS_PER_SEC);
+			fclose(time_f);
 		} else {
+			clock_t start, end;
+			start = clock();
 			Optimizer optimizer(*planner.binder, *this);
 			plan = optimizer.Optimize(std::move(plan));
 			D_ASSERT(plan);
 			// now convert logical query plan into a physical query plan
 			PhysicalPlanGenerator physical_planner(*this);
 			physical_plan = physical_planner.CreatePlan(unique_ptr_cast<Operator, LogicalOperator>(std::move(plan)));
+			end = clock();
+			if (statement_type == StatementType::SELECT_STATEMENT) {
+				FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+				fprintf(time_f, "time = %lf s\n", double(end - start) / CLOCKS_PER_SEC);
+				fclose(time_f);
+			}
 		}
 		profiler.EndPhase();
 	}
-	// profiler.StartPhase("physical_planner");
-	//  now convert logical query plan into a physical query plan
-	// PhysicalPlanGenerator physical_planner(*this);
-	// physical_plan = physical_planner.CreatePlan(std::move(plan));
-	// profiler.EndPhase();
 	result->plan = std::move(physical_plan);
 	return result;
 }

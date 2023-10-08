@@ -36,6 +36,8 @@ public:
 	                                    ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
 
 	void CE() override;
+
+	idx_t GetChildrenRelIds() override;
 };
 
 } // namespace duckdb

@@ -12,6 +12,10 @@
 #include "duckdb/optimizer/cascade/search/CJobGroup.h"
 #include "duckdb/optimizer/cascade/search/CJobStateMachine.h"
 
+extern clock_t start_exploration;
+
+extern clock_t end_exploration;
+
 namespace gpopt {
 using namespace gpos;
 

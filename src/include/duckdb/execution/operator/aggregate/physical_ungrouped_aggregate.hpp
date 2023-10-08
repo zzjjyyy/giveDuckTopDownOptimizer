@@ -33,6 +33,8 @@ public:
 	
 	unique_ptr<DistinctAggregateCollectionInfo> distinct_collection_info;
 
+	vector<ColumnBinding> v_column_binding;
+
 public:
 	// Source interface
 	unique_ptr<GlobalSourceState> GetGlobalSourceState(ClientContext &context) const override;
@@ -58,7 +60,7 @@ public:
 
 	string ParamsToString() const override;
 
-	bool IsSink() const override\
+	bool IsSink() const override
 	{
 		return true;
 	}
@@ -69,6 +71,19 @@ public:
 	}
 
 	bool SinkOrderDependent() const override;
+
+	unique_ptr<Operator> Copy() override;
+
+	unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+
+	unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr, vector<unique_ptr<Operator>> pdrgpexpr,
+	                                         double cost) override;
+
+	void CE() override;
+	
+	vector<ColumnBinding> GetColumnBindings() override {
+		return v_column_binding;
+	}
 
 private:
 	//! Finalize the distinct aggregates

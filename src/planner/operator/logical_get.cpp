@@ -196,14 +196,14 @@ vector<idx_t> LogicalGet::GetTableIndex() const {
 	return vector<idx_t> {table_index};
 }
 
-ULONG LogicalGet::HashValue() const {
-	ULONG ulLogicalType = (ULONG)logical_type;
-	ULONG ulPhysicalType = (ULONG)physical_type;
-	ULONG ulHash = CombineHashes(gpos::HashValue<ULONG>(&ulLogicalType), gpos::HashValue<ULONG>(&ulPhysicalType));
-	ulHash = CombineHashes(ulHash, gpos::HashValue<idx_t>(&table_index));
+size_t LogicalGet::HashValue() const {
+	size_t ulLogicalType = (size_t)logical_type;
+	size_t ulPhysicalType = (size_t)physical_type;
+	size_t ulHash = duckdb::CombineHash(duckdb::Hash<size_t>(ulLogicalType), duckdb::Hash<size_t>(ulPhysicalType));
+	ulHash = duckdb::CombineHash(ulHash, duckdb::Hash<idx_t>(table_index));
 	std::string str = ParamsToString();
-	ULONG ulHash2 = std::hash<std::string> {}(str);
-	ulHash = CombineHashes(ulHash, ulHash2);
+	size_t ulHash2 = std::hash<std::string> {}(str);
+	ulHash = duckdb::CombineHash(ulHash, ulHash2);
 	return ulHash;
 }
 
@@ -284,7 +284,7 @@ unique_ptr<Operator> LogicalGet::Copy() {
 	result->input_table_types.assign(input_table_types.begin(), input_table_types.end());
 	result->input_table_names.assign(input_table_names.begin(), input_table_names.end());
 	result->projected_input.assign(projected_input.begin(), projected_input.end());
-	return result;
+	return unique_ptr_cast<LogicalGet, Operator>(std::move(result));
 }
 
 unique_ptr<Operator> LogicalGet::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
@@ -322,7 +322,7 @@ unique_ptr<Operator> LogicalGet::CopyWithNewGroupExpression(CGroupExpression *pg
 	result->input_table_types.assign(input_table_types.begin(), input_table_types.end());
 	result->input_table_names.assign(input_table_names.begin(), input_table_names.end());
 	result->projected_input.assign(projected_input.begin(), projected_input.end());
-	return result;
+	return unique_ptr_cast<LogicalGet, Operator>(std::move(result));
 }
 
 unique_ptr<Operator> LogicalGet::CopyWithNewChildren(CGroupExpression *pgexpr,
@@ -362,13 +362,42 @@ unique_ptr<Operator> LogicalGet::CopyWithNewChildren(CGroupExpression *pgexpr,
 	result->input_table_types.assign(input_table_types.begin(), input_table_types.end());
 	result->input_table_names.assign(input_table_names.begin(), input_table_names.end());
 	result->projected_input.assign(projected_input.begin(), projected_input.end());
-	return result;
+	return unique_ptr_cast<LogicalGet, Operator>(std::move(result));
+}
+
+idx_t LogicalGet::GetChildrenRelIds() {
+	idx_t res = 1 << (table_index + 1);
+	return res;
 }
 
 void LogicalGet::CE() {
 	if(this->has_estimated_cardinality) {
 		return;
 	}
+	idx_t relids = this->GetChildrenRelIds();
+	char* pos;
+	char* p;
+	char cmp[1000];
+	int relid_in_file;
+	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
+	while(fgets(cmp, 1000, fp) != NULL) {
+		if((pos = strchr(cmp, '\n')) != NULL) {
+			*pos = '\0';
+		}
+		p = strtok(cmp, ":");
+		relid_in_file = atoi(p);
+		if(relid_in_file == relids) {
+			p = strtok(NULL, ":");
+			double true_val = atof(p);
+			if(true_val < 9999999999999.0) {
+				fclose(fp);
+				this->has_estimated_cardinality = true;
+				this->estimated_cardinality = true_val;
+				return;
+			}
+		}
+	}
+	fclose(fp);
 	this->has_estimated_cardinality = true;
 	this->estimated_cardinality = static_cast<double>(rand() % 1000);
 	return;

@@ -81,9 +81,6 @@ Operator *LogicalProjection::SelfRehydrate(CCostContext *pcc, duckdb::vector<Ope
 CXform_set *LogicalProjection::XformCandidates() const {
 	CXform_set *xform_set = new CXform_set();
 	(void)xform_set->set(CXform::ExfLogicalProj2PhysicalProj);
-	// (void) xform_set->set(CXform::ExfProject2Apply);
-	// (void) xform_set->set(CXform::ExfProject2ComputeScalar);
-	// (void) xform_set->set(CXform::ExfCollapseProject);
 	return xform_set;
 }
 
@@ -109,7 +106,7 @@ duckdb::unique_ptr<Operator> LogicalProjection::Copy() {
 	}
 	result->m_group_expression = m_group_expression;
 	result->m_cost = m_cost;
-	return result;
+	return unique_ptr_cast<LogicalProjection, Operator>(std::move(result));
 }
 
 duckdb::unique_ptr<Operator> LogicalProjection::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
@@ -134,7 +131,7 @@ duckdb::unique_ptr<Operator> LogicalProjection::CopyWithNewGroupExpression(CGrou
 	}
 	result->m_group_expression = pgexpr;
 	result->m_cost = m_cost;
-	return result;
+	return unique_ptr_cast<LogicalProjection, Operator>(std::move(result));
 }
 
 duckdb::unique_ptr<Operator>
@@ -161,7 +158,7 @@ LogicalProjection::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<
 	}
 	result->m_group_expression = pgexpr;
 	result->m_cost = cost;
-	return result;
+	return unique_ptr_cast<LogicalProjection, Operator>(std::move(result));
 }
 
 void LogicalProjection::CE() {

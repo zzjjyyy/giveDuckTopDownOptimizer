@@ -104,6 +104,7 @@ public:
 public:
 	virtual vector<ColumnBinding> GetColumnBinding()
 	{
+		throw InternalException("Shouldn't go here! Add new override function.");
 		vector<ColumnBinding> v;
 		return v;
 	}

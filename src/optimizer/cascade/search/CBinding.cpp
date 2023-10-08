@@ -49,6 +49,11 @@ list<CGroupExpression *>::iterator CBinding::PgexprNext(CGroup *pgroup, CGroupEx
 //
 //---------------------------------------------------------------------------
 Operator *CBinding::PexprExpandPattern(Operator *pexprPattern, ULONG ulPos, ULONG arity) {
+	// re-use tree pattern
+	if (pexprPattern->FPattern() && !((CPattern*)pexprPattern)->FLeaf())
+	{
+		return pexprPattern;
+	}
 	// re-use first child if it is a multi-leaf/tree
 	if (0 < pexprPattern->Arity()) {
 		if (ulPos == arity - 1) {
@@ -75,6 +80,7 @@ Operator *CBinding::PexprFinalize(CGroupExpression *pgexpr, duckdb::vector<duckd
 		pgexpr->m_operator->AddChild(std::move(child));
 	}
 	pgexpr->m_operator->m_cost = GPOPT_INVALID_COST;
+	pgexpr->m_operator->m_group_expression = pgexpr;
 	return pgexpr->m_operator.get();
 }
 

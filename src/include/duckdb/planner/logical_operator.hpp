@@ -47,8 +47,6 @@ public:
 	// ---------------------------- ORCA -------------------------------------
 	ULONG DeriveJoinDepth(CExpressionHandle &exprhdl) override;
 
-	ULONG HashValue() const override;
-
 	CDerivedProperty *CreateDerivedProperty() override;
 
 	CRequiredProperty *CreateRequiredProperty() const override;

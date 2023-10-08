@@ -24,15 +24,21 @@
 
 #include <cstdlib>
 
+namespace gpos {
+	unsigned int enumeration_pairs = 0;
+}
+
 namespace duckdb {
 using namespace gpos;
 using namespace gpopt;
 
 duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<LogicalOperator> plan) {
 	/* Used for CCostContext::CostCompute */
-	unsigned seed = time(0);
-	srand(seed);
+	gpos::enumeration_pairs = 0;
 
+	// calculate the initial cardinality
+	plan->CE();
+	
 	// ColumnBindingResolver resolver;
 	// resolver.VisitOperator(*plan);
 
@@ -92,14 +98,17 @@ duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<Logica
 	task_proxy.DestroyAll();
 	worker.release();
 
+	FILE* f_pair = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+	fprintf(f_pair, "Considered join pairs: %d, ", enumeration_pairs);
+	fclose(f_pair);
+
 	// print physical plan
-	Printer::Print("Physical Plan: \n");
-	physical_plan->Print();
+	// Printer::Print("Physical Plan: \n");
+	// physical_plan->Print();
 
 	// resolve column references
 	NewColumnBindingResolver new_resolver;
 	new_resolver.VisitOperator(*physical_plan);
-
 	return physical_plan;
 }
 } // namespace duckdb

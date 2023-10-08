@@ -72,7 +72,7 @@ unique_ptr<Operator> LogicalDummyScan::Copy() {
 	result->m_group_expression = m_group_expression;
 	result->m_cost = m_cost;
 
-	return result;
+	return unique_ptr_cast<LogicalDummyScan, Operator>(std::move(result));
 }
 
 unique_ptr<Operator> LogicalDummyScan::CopyWithNewGroupExpression(CGroupExpression *expr) {

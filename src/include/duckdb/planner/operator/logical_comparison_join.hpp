@@ -68,6 +68,8 @@ public:
                                         double cost) override;
 	
 	void CE() override;
+
+	idx_t GetChildrenRelIds() override;
 };
 
 } // namespace duckdb

@@ -180,7 +180,7 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext *pccFst, CCostContext 
 //
 //---------------------------------------------------------------------------
 bool CCostContext::FBetterThan(CCostContext *pcc) const {
-	double dCostDiff = (m_cost - pcc->m_cost);
+	double dCostDiff = (this->m_cost - pcc->m_cost);
 	if (dCostDiff < 0.0) {
 		// if current context has a strictly smaller cost, then it is preferred
 		return true;
@@ -190,23 +190,21 @@ bool CCostContext::FBetterThan(CCostContext *pcc) const {
 		// if current context has a strictly larger cost, then it is not preferred
 		return false;
 	}
-	/* I comment here */
-	/*
 	// otherwise, we need to break tie in cost values
 	// RULE 1: break ties in cost of join plans,
 	// if both plans have the same estimated rows for both children, prefer
 	// the plan with deeper outer child
-	if (CUtils::FPhysicalJoin(Pgexpr()->Pop()) && CUtils::FPhysicalJoin(pcc->group_expr()->Pop()))
+	if (CUtils::FPhysicalJoin(this->m_group_expression->m_operator.get())
+		&& CUtils::FPhysicalJoin(pcc->m_group_expression->m_operator.get()))
 	{
-	    CONST_COSTCTXT_PTR pccPrefered = nullptr;
-	    bool fSuccess = false;
-	    BreakCostTiesForJoinPlans(this, pcc, &pccPrefered, &fSuccess);
-	    if (fSuccess)
-	    {
-	        return (this == pccPrefered);
-	    }
+		if(this->m_group_expression->m_operator->children[0]->estimated_cardinality >
+		   this->m_group_expression->m_operator->children[1]->estimated_cardinality) {
+			return true;
+		} else if (pcc->m_group_expression->m_operator->children[0]->estimated_cardinality >
+		   pcc->m_group_expression->m_operator->children[1]->estimated_cardinality){
+			return false;
+		}
 	}
-	*/
 	return false;
 }
 
@@ -244,11 +242,19 @@ double CCostContext::CostCompute(duckdb::vector<double> pdrgpcostChildren) {
 		this->m_group_expression->m_operator->CE();
 	}
 	if (m_optimization_contexts.size() == 0) {
-		return static_cast<double>(this->m_group_expression->m_operator->estimated_cardinality);
+		/* Scan */
+		return 0;
 	} else if (m_optimization_contexts.size() == 1) {
-		return pdrgpcostChildren[0] + this->m_group_expression->m_operator->estimated_cardinality;
+		/* Filter or Sort */
+		if(this->m_group_expression->m_operator->logical_type == LogicalOperatorType::LOGICAL_FILTER
+		|| this->m_group_expression->m_operator->physical_type == PhysicalOperatorType::FILTER) {
+			return 0;
+		} else {
+			return pdrgpcostChildren[0] +
+				   this->m_group_expression->m_operator->estimated_cardinality;
+		}
 	} else {
-		return pdrgpcostChildren[0] + 1.2 * pdrgpcostChildren[1] +
+		return pdrgpcostChildren[0] + pdrgpcostChildren[1] +
 		       this->m_group_expression->m_operator->estimated_cardinality;
 	}
 }

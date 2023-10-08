@@ -83,8 +83,8 @@ BOOL CDerivedPhysicalProp::FSatisfies(const CRequiredPhysicalProp *prop_plan) co
 //		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG CDerivedPhysicalProp::HashValue() const {
-	ULONG ulHash = m_sort_order->HashValue();
+size_t CDerivedPhysicalProp::HashValue() const {
+	size_t ulHash = m_sort_order->HashValue();
 	return ulHash;
 }
 

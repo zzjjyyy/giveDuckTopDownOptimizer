@@ -171,6 +171,169 @@ PhysicalHashAggregate::PhysicalHashAggregate(ClientContext &context, vector<Logi
 	}
 }
 
+PhysicalHashAggregate::PhysicalHashAggregate(vector<LogicalType> types, vector<unique_ptr<Expression>> expressions,
+					  idx_t estimated_cardinality)
+	: PhysicalHashAggregate(std::move(types), std::move(expressions), {}, estimated_cardinality) {
+}
+PhysicalHashAggregate::PhysicalHashAggregate(vector<LogicalType> types, vector<unique_ptr<Expression>> expressions,
+                          vector<unique_ptr<Expression>> groups_p, idx_t estimated_cardinality)
+	: PhysicalHashAggregate(std::move(types), std::move(expressions), std::move(groups_p), {}, {},
+                            estimated_cardinality) {
+}
+
+PhysicalHashAggregate::PhysicalHashAggregate(vector<LogicalType> types,
+                                             vector<unique_ptr<Expression>> expressions,
+                                             vector<unique_ptr<Expression>> groups_p,
+                                             vector<GroupingSet> grouping_sets_p,
+                                             vector<vector<idx_t>> grouping_functions_p, idx_t estimated_cardinality)
+    : PhysicalOperator(PhysicalOperatorType::HASH_GROUP_BY, std::move(types), estimated_cardinality),
+      grouping_sets(std::move(grouping_sets_p)) {
+	// get a list of all aggregates to be computed
+	const idx_t group_count = groups_p.size();
+	if (grouping_sets.empty()) {
+		GroupingSet set;
+		for (idx_t i = 0; i < group_count; i++) {
+			set.insert(i);
+		}
+		grouping_sets.push_back(std::move(set));
+	}
+	input_group_types = CreateGroupChunkTypes(groups_p);
+
+	grouped_aggregate_data.InitializeGroupby(std::move(groups_p), std::move(expressions),
+	                                         std::move(grouping_functions_p));
+
+	auto &aggregates = grouped_aggregate_data.aggregates;
+	// filter_indexes must be pre-built, not lazily instantiated in parallel...
+	// Because everything that lives in this class should be read-only at execution time
+	idx_t aggregate_input_idx = 0;
+	for (idx_t i = 0; i < aggregates.size(); i++) {
+		auto &aggregate = aggregates[i];
+		auto &aggr = aggregate->Cast<BoundAggregateExpression>();
+		aggregate_input_idx += aggr.children.size();
+		if (aggr.aggr_type == AggregateType::DISTINCT) {
+			distinct_filter.push_back(i);
+		} else if (aggr.aggr_type == AggregateType::NON_DISTINCT) {
+			non_distinct_filter.push_back(i);
+		} else { // LCOV_EXCL_START
+			throw NotImplementedException("AggregateType not implemented in PhysicalHashAggregate");
+		} // LCOV_EXCL_STOP
+	}
+
+	for (idx_t i = 0; i < aggregates.size(); i++) {
+		auto &aggregate = aggregates[i];
+		auto &aggr = aggregate->Cast<BoundAggregateExpression>();
+		if (aggr.filter) {
+			auto &bound_ref_expr = aggr.filter->Cast<BoundReferenceExpression>();
+			if (!filter_indexes.count(aggr.filter.get())) {
+				// Replace the bound reference expression's index with the corresponding index of the payload chunk
+				filter_indexes[aggr.filter.get()] = bound_ref_expr.index;
+				bound_ref_expr.index = aggregate_input_idx;
+			}
+			aggregate_input_idx++;
+		}
+	}
+
+	distinct_collection_info = DistinctAggregateCollectionInfo::Create(grouped_aggregate_data.aggregates);
+
+	for (idx_t i = 0; i < grouping_sets.size(); i++) {
+		groupings.emplace_back(grouping_sets[i], grouped_aggregate_data, distinct_collection_info);
+	}
+}
+
+unique_ptr<Operator> PhysicalHashAggregate::Copy() {
+	/* PhysicalHashAggregate fields */
+	vector<unique_ptr<Expression>> v_expr;
+	for(auto &child : this->grouped_aggregate_data.aggregates) {
+		v_expr.push_back(child->Copy());
+	}
+	vector<unique_ptr<Expression>> v_group;
+	for(auto &child : this->grouped_aggregate_data.groups) {
+		v_group.push_back(child->Copy());
+	}
+	unique_ptr<PhysicalHashAggregate> copy =
+		make_uniq<PhysicalHashAggregate>(this->types, std::move(v_expr), std::move(v_group),
+								         this->grouping_sets, this->grouped_aggregate_data.grouping_functions,
+										 this->estimated_cardinality);
+
+	copy->v_column_binding = this->v_column_binding;
+	
+	/* PhysicalOperator fields */
+	copy->m_total_opt_requests = this->m_total_opt_requests;
+
+	/* Operator fields */
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
+	if (nullptr != this->estimated_props) {
+		copy->estimated_props = this->estimated_props->Copy();
+	}
+	copy->types = this->types;
+	copy->estimated_cardinality = this->estimated_cardinality;
+	copy->has_estimated_cardinality = this->has_estimated_cardinality;
+	for (auto &child : this->children) {
+		copy->AddChild(child->Copy());
+	}
+	copy->m_group_expression = this->m_group_expression;
+	copy->m_cost = this->m_cost;
+	return unique_ptr_cast<PhysicalHashAggregate, Operator>(std::move(copy));
+}
+
+unique_ptr<Operator> PhysicalHashAggregate::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+	auto copy = this->Copy();
+	copy->m_group_expression = pgexpr;
+	return copy;
+}
+
+unique_ptr<Operator> PhysicalHashAggregate::CopyWithNewChildren(CGroupExpression *pgexpr,
+																vector<unique_ptr<Operator>> pdrgpexpr,
+	                                         					double cost) {
+	/* PhysicalHashAggregate fields */
+	vector<unique_ptr<Expression>> v_expr;
+	for(auto &child : this->grouped_aggregate_data.aggregates) {
+		v_expr.push_back(child->Copy());
+	}
+	vector<unique_ptr<Expression>> v_group;
+	for(auto &child : this->grouped_aggregate_data.groups) {
+		v_group.push_back(child->Copy());
+	}
+	unique_ptr<PhysicalHashAggregate> copy =
+		make_uniq<PhysicalHashAggregate>(this->types, std::move(v_expr), std::move(v_group),
+								         this->grouping_sets, this->grouped_aggregate_data.grouping_functions,
+										 this->estimated_cardinality);
+	
+	copy->v_column_binding = this->v_column_binding;
+	
+	/* PhysicalOperator fields */
+	copy->m_total_opt_requests = this->m_total_opt_requests;
+
+	/* Operator fields */
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
+	if (nullptr != this->estimated_props) {
+		copy->estimated_props = this->estimated_props->Copy();
+	}
+	copy->types = this->types;
+	copy->estimated_cardinality = this->estimated_cardinality;
+	copy->has_estimated_cardinality = this->has_estimated_cardinality;
+	for (auto &child : pdrgpexpr) {
+		copy->AddChild(child->Copy());
+	}
+	copy->m_group_expression = pgexpr;
+	copy->m_cost = cost;
+	return unique_ptr_cast<PhysicalHashAggregate, Operator>(std::move(copy));															
+}
+
+void PhysicalHashAggregate::CE() {
+	if(!this->children[0]->has_estimated_cardinality) {
+		this->children[0]->CE();
+	}
+	if (this->has_estimated_cardinality) {
+		return;
+	}
+	this->has_estimated_cardinality = true;
+	this->estimated_cardinality = 1;
+}
 //===--------------------------------------------------------------------===//
 // Sink
 //===--------------------------------------------------------------------===//

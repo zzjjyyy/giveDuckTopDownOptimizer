@@ -24,16 +24,16 @@ namespace gpopt {
 //		default hash function based on operator ID
 //
 //---------------------------------------------------------------------------
-ULONG Operator::HashValue() const {
-	ULONG ul_logical_type = (ULONG)logical_type;
-	ULONG ul_physical_type = (ULONG)physical_type;
-	return CombineHashes(gpos::HashValue<ULONG>(&ul_logical_type), gpos::HashValue<ULONG>(&ul_physical_type));
+size_t Operator::HashValue() const {
+	size_t ul_logical_type = (size_t)logical_type;
+	size_t ul_physical_type = (size_t)physical_type;
+	return duckdb::CombineHash(duckdb::Hash<size_t>(ul_logical_type), duckdb::Hash<size_t>(ul_physical_type));
 }
 
-ULONG Operator::HashValue(const Operator *op) {
-	ULONG ul_hash = op->HashValue();
-	const ULONG arity = op->Arity();
-	for (ULONG ul = 0; ul < arity; ul++) {
+size_t Operator::HashValue(const Operator *op) {
+	size_t ul_hash = op->HashValue();
+	const size_t arity = op->Arity();
+	for (size_t ul = 0; ul < arity; ul++) {
 		ul_hash = CombineHashes(ul_hash, HashValue(op->children[ul].get()));
 	}
 	return ul_hash;
@@ -125,11 +125,13 @@ CRequiredPhysicalProp *Operator::PrppDecorate(CRequiredPhysicalProp *required_pr
 }
 
 duckdb::unique_ptr<Operator> Operator::Copy() {
+	throw InternalException("Shouldn't go here.");
 	duckdb::unique_ptr<Operator> result = make_uniq<Operator>();
 	return result;
 }
 
 duckdb::unique_ptr<Operator> Operator::CopyWithNewGroupExpression(CGroupExpression *group_expression) {
+	throw InternalException("Shouldn't go here.");
 	duckdb::unique_ptr<Operator> result = make_uniq<Operator>();
 	result->m_group_expression = group_expression;
 	return result;
@@ -138,6 +140,7 @@ duckdb::unique_ptr<Operator> Operator::CopyWithNewGroupExpression(CGroupExpressi
 duckdb::unique_ptr<Operator> Operator::CopyWithNewChildren(CGroupExpression *group_expression,
                                                            duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
                                                            double cost) {
+	throw InternalException("Shouldn't go here.");
 	duckdb::unique_ptr<Operator> result = make_uniq<Operator>();
 	result->m_group_expression = group_expression;
 	for (auto &child : pdrgpexpr) {
@@ -147,7 +150,12 @@ duckdb::unique_ptr<Operator> Operator::CopyWithNewChildren(CGroupExpression *gro
 	return result;
 }
 
+idx_t Operator::GetChildrenRelIds() {
+	return this->children[0]->GetChildrenRelIds();
+}
+
 void Operator::CE() {
+	throw InternalException("Operator::CE(): shouldn't enter this function!");
 	if (this->has_estimated_cardinality) {
 		return;
 	}

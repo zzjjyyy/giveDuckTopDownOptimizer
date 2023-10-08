@@ -172,14 +172,16 @@ bool PhysicalTableScan::Equals(const PhysicalOperator &other_p) const {
 	return true;
 }
 
-ULONG PhysicalTableScan::HashValue() const
+size_t PhysicalTableScan::HashValue() const
 {
-	ULONG ulLogicalType = (ULONG)logical_type;
-	ULONG ulPhysicalType = (ULONG)physical_type;
-	ULONG ulHash = CombineHashes(gpos::HashValue<ULONG>(&ulLogicalType), gpos::HashValue<ULONG>(&ulPhysicalType));
+	size_t ulLogicalType = (size_t)logical_type;
+	size_t ulPhysicalType = (size_t)physical_type;
+	size_t ulHash = duckdb::CombineHash(duckdb::Hash<size_t>(ulLogicalType), duckdb::Hash<size_t>(ulPhysicalType));
 	std::string str = ParamsToString();
-	ULONG ulHash2 = std::hash<std::string>{}(str);
-	ulHash = CombineHashes(ulHash, ulHash2);
+	size_t ulHash2 = std::hash<std::string>{}(str);
+	ulHash = duckdb::CombineHash(ulHash, ulHash2);
+	size_t ulHash3 = duckdb::Hash<size_t>(v_column_binding[0].table_index);
+	ulHash = duckdb::CombineHash(ulHash, ulHash3);
 	return ulHash;
 }
 
@@ -279,7 +281,7 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::Copy() {
 	}
 	result->m_group_expression = this->m_group_expression;
 	result->m_cost = this->m_cost;
-	return result;
+	return unique_ptr_cast<PhysicalTableScan, Operator>(std::move(result));
 }
 
 duckdb::unique_ptr<Operator> PhysicalTableScan::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
@@ -317,7 +319,7 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::CopyWithNewGroupExpression(CGrou
 	}
 	result->m_group_expression = pgexpr;
 	result->m_cost = this->m_cost;
-	return result;
+	return unique_ptr_cast<PhysicalTableScan, Operator>(std::move(result));
 }
 
 duckdb::unique_ptr<Operator>
@@ -357,13 +359,42 @@ PhysicalTableScan::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<
 	}
 	result->m_group_expression = pgexpr;
 	result->m_cost = cost;
-	return result;
+	return unique_ptr_cast<PhysicalTableScan, Operator>(std::move(result));
+}
+
+idx_t PhysicalTableScan::GetChildrenRelIds() {
+	idx_t res = 1 << (v_column_binding[0].table_index + 1);
+	return res;
 }
 
 void PhysicalTableScan::CE() {
 	if(this->has_estimated_cardinality) {
 		return;
 	}
+	idx_t relids = this->GetChildrenRelIds();
+	char* pos;
+	char* p;
+	char cmp[1000];
+	int relid_in_file;
+	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
+	while(fgets(cmp, 1000, fp) != NULL) {
+		if((pos = strchr(cmp, '\n')) != NULL) {
+			*pos = '\0';
+		}
+		p = strtok(cmp, ":");
+		relid_in_file = atoi(p);
+		if(relid_in_file == relids) {
+			p = strtok(NULL, ":");
+			double true_val = atof(p);
+			if(true_val < 9999999999999.0) {
+				fclose(fp);
+				this->has_estimated_cardinality = true;
+				this->estimated_cardinality = true_val;
+				return;
+			}
+		}
+	}
+	fclose(fp);
 	this->has_estimated_cardinality = true;
 	this->estimated_cardinality = static_cast<double>(rand() % 1000);
 	return;

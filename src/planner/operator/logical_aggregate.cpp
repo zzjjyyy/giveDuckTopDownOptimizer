@@ -27,6 +27,7 @@ vector<ColumnBinding> LogicalAggregate::GetColumnBindings() {
 	D_ASSERT(groupings_index != DConstants::INVALID_INDEX || grouping_functions.empty());
 	vector<ColumnBinding> result;
 	result.reserve(groups.size() + expressions.size() + grouping_functions.size());
+	/*
 	for (idx_t i = 0; i < groups.size(); i++) {
 		result.emplace_back(group_index, i);
 	}
@@ -35,6 +36,15 @@ vector<ColumnBinding> LogicalAggregate::GetColumnBindings() {
 	}
 	for (idx_t i = 0; i < grouping_functions.size(); i++) {
 		result.emplace_back(groupings_index, i);
+	}
+	*/
+	for (idx_t i = 0; i < groups.size(); i++) {
+		auto v = groups[i]->GetColumnBinding();
+		result.insert(result.end(), v.begin(), v.end());
+	}
+	for (idx_t i = 0; i < expressions.size(); i++) {
+		auto v = expressions[i]->GetColumnBinding();
+		result.insert(result.end(), v.begin(), v.end());
 	}
 	return result;
 }
@@ -115,6 +125,101 @@ vector<idx_t> LogicalAggregate::GetTableIndex() const {
 		result.push_back(groupings_index);
 	}
 	return result;
+}
+
+unique_ptr<Operator> LogicalAggregate::Copy() {
+	/* LogicalAggregate fields */
+	vector<unique_ptr<Expression>> v;
+	for(auto &child : this->groups) {
+		v.push_back(child->Copy());
+	}
+	unique_ptr<LogicalAggregate> copy = make_uniq<LogicalAggregate>(this->group_index, this->aggregate_index, std::move(v));
+	
+	/* Operator fields */
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
+	if (nullptr != this->estimated_props) {
+		copy->estimated_props = this->estimated_props->Copy();
+	}
+	copy->types = this->types;
+	copy->estimated_cardinality = this->estimated_cardinality;
+	for (auto &child : this->expressions) {
+		copy->expressions.push_back(child->Copy());
+	}
+	copy->has_estimated_cardinality = this->has_estimated_cardinality;
+	copy->logical_type = this->logical_type;
+	copy->physical_type = this->physical_type;
+	for (auto &child : this->children) {
+		copy->AddChild(child->Copy());
+	}
+	copy->m_group_expression = this->m_group_expression;
+	copy->m_cost = this->m_cost;
+	return unique_ptr_cast<LogicalAggregate, Operator>(std::move(copy));
+}
+	
+unique_ptr<Operator> LogicalAggregate::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+	unique_ptr<Operator> copy = this->Copy();
+	copy->m_group_expression = pgexpr;
+	return copy;
+}
+
+unique_ptr<Operator> LogicalAggregate::CopyWithNewChildren(CGroupExpression *pgexpr,
+                                        				   duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                        				   double cost) {
+	/* LogicalComparisonJoin fields */
+	vector<unique_ptr<Expression>> v;
+	for(auto &child : this->groups) {
+		v.push_back(child->Copy());
+	}
+	unique_ptr<LogicalAggregate> copy = make_uniq<LogicalAggregate>(this->group_index, this->aggregate_index, std::move(v));
+	
+	/* Operator fields */
+	copy->m_derived_logical_property = this->m_derived_logical_property;
+	copy->m_derived_physical_property = this->m_derived_physical_property;
+	copy->m_required_physical_property = this->m_required_physical_property;
+	if (nullptr != this->estimated_props) {
+		copy->estimated_props = this->estimated_props->Copy();
+	}
+	copy->types = this->types;
+	copy->estimated_cardinality = this->estimated_cardinality;
+	for (auto &child : this->expressions) {
+		copy->expressions.push_back(child->Copy());
+	}
+	copy->has_estimated_cardinality = this->has_estimated_cardinality;
+	copy->logical_type = this->logical_type;
+	copy->physical_type = this->physical_type;
+	for (auto &child : pdrgpexpr) {
+		copy->AddChild(child->Copy());
+	}
+	copy->m_group_expression = pgexpr;
+	copy->m_cost = cost;
+	return unique_ptr_cast<LogicalAggregate, Operator>(std::move(copy));
+}
+	
+void LogicalAggregate::CE() {
+	if(!this->children[0]->has_estimated_cardinality) {
+		this->children[0]->CE();
+	}
+	if (this->has_estimated_cardinality) {
+		return;
+	}
+	this->has_estimated_cardinality = true;
+	this->estimated_cardinality = 1;
+}
+
+//---------------------------------------------------------------------------
+//	@function:
+//		LogicalProjection::XformCandidates
+//
+//	@doc:
+//		Get candidate xforms
+//
+//---------------------------------------------------------------------------
+CXform_set *LogicalAggregate::XformCandidates() const {
+	CXform_set *xform_set = new CXform_set();
+	(void)xform_set->set(CXform::ExfLogicalAggregateImplementation);
+	return xform_set;
 }
 
 } // namespace duckdb

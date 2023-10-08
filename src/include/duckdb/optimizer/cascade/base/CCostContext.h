@@ -144,17 +144,17 @@ public:
 	}
 
 	// hash function
-	ULONG HashValue() {
+	size_t HashValue() {
 		return m_poc->HashValue();
 	}
 
 	// hash function
-	static ULONG HashValue(const CCostContext &cc) {
+	static size_t HashValue(const CCostContext &cc) {
 		return COptimizationContext::HashValue(*(cc.m_poc));
 	}
 
 	// hash function
-	static ULONG HashValue(const CCostContext *pcc) {
+	static size_t HashValue(const CCostContext *pcc) {
 		return HashValue(*pcc);
 	}
 }; // class CCostContext

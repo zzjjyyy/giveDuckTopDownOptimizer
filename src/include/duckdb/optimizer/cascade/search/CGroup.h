@@ -64,12 +64,12 @@ public:
 	// equality function
 	bool operator==(const SContextLink &pclink2) const;
 
-	ULONG HashValue() const {
-		ULONG ulHashPcc = 0;
+	size_t HashValue() const {
+		size_t ulHashPcc = 0;
 		if (NULL != m_parent_cost_context) {
 			ulHashPcc = m_parent_cost_context->HashValue();
 		}
-		ULONG ulHashPoc = 0;
+		size_t ulHashPoc = 0;
 		if (NULL != m_poc) {
 			ulHashPoc = m_poc->HashValue();
 		}
@@ -189,7 +189,7 @@ public:
 	CGroupExpression *BestExpression(COptimizationContext *poc);
 
 	// hash function
-	ULONG HashValue() const;
+	size_t HashValue() const;
 
 	// has group been explored?
 	bool FExplored() const {

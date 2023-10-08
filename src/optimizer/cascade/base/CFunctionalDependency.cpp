@@ -97,9 +97,9 @@ BOOL CFunctionalDependency::FIncluded(duckdb::vector<ColumnBinding> pcrs) const
 //		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG CFunctionalDependency::HashValue() const
+size_t CFunctionalDependency::HashValue() const
 {
-	ULONG ulHash = 0;
+	size_t ulHash = 0;
 	for(size_t m = 0; m < m_pcrsKey.size(); m++)
 	{
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashValue<ColumnBinding>(&m_pcrsKey[m]));
@@ -205,13 +205,13 @@ BOOL CFunctionalDependency::FFunctionallyDependent(duckdb::vector<ColumnBinding>
 //		Hash function
 //
 //---------------------------------------------------------------------------
-ULONG CFunctionalDependency::HashValue(const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfd)
+size_t CFunctionalDependency::HashValue(const duckdb::vector<shared_ptr<CFunctionalDependency>> pdrgpfd)
 {
-	ULONG ulHash = 0;
+	size_t ulHash = 0;
 	if (0 != pdrgpfd.size())
 	{
-		const ULONG size = pdrgpfd.size();
-		for (ULONG ul = 0; ul < size; ul++)
+		const size_t size = pdrgpfd.size();
+		for (size_t ul = 0; ul < size; ul++)
 		{
 			ulHash = gpos::CombineHashes(ulHash, pdrgpfd[ul]->HashValue());
 		}

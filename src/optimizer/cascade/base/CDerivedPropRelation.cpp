@@ -77,10 +77,7 @@ void CDerivedLogicalProp::Derive(CExpressionHandle &exprhdl, CDerivedPropertyCon
 //---------------------------------------------------------------------------
 bool CDerivedLogicalProp::FSatisfies(const CRequiredPhysicalProp *prop_plan) const {
 	auto v1 = GetOutputColumns();
-	duckdb::vector<ColumnBinding> v(v1.size() + prop_plan->m_cols.size());
-	auto itr = set_difference(v1.begin(), v1.end(), prop_plan->m_cols.begin(), prop_plan->m_cols.end(), v.begin());
-	v.resize(itr - v.begin());
-	return (v1.size() == prop_plan->m_cols.size() + v.size());
+	return CUtils::ContainsAll(v1, prop_plan->m_cols);
 }
 
 //---------------------------------------------------------------------------

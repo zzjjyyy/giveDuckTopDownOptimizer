@@ -90,6 +90,20 @@ public:
 		}
 		return 0;
     }
+
+    static bool FPhysicalJoin(Operator* op) {
+        if(op->physical_type == PhysicalOperatorType::IE_JOIN
+           || op->physical_type == PhysicalOperatorType::HASH_JOIN
+           || op->physical_type == PhysicalOperatorType::DELIM_JOIN
+           || op->physical_type == PhysicalOperatorType::INDEX_JOIN
+           || op->physical_type == PhysicalOperatorType::POSITIONAL_JOIN
+           || op->physical_type == PhysicalOperatorType::NESTED_LOOP_JOIN
+           || op->physical_type == PhysicalOperatorType::BLOCKWISE_NL_JOIN
+           || op->physical_type == PhysicalOperatorType::PIECEWISE_MERGE_JOIN) {
+            return true;
+        }
+        return false;
+    }
 };
 }
 #endif

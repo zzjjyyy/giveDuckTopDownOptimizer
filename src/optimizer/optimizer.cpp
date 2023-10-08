@@ -92,10 +92,12 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 		RegexRangeFilter regex_opt;
 		plan = regex_opt.Rewrite(std::move(plan));
 	});
+	/*
 	RunOptimizer(OptimizerType::IN_CLAUSE, [&]() {
 		InClauseRewriter rewriter(context, *this);
 		plan = rewriter.Rewrite(std::move(plan));
 	});
+	*/
 	if (!forCascade) {
 		// then we perform the join ordering optimization
 		// this also rewrites cross products + filters into joins and performs filter pushdowns
@@ -157,8 +159,8 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 	unique_ptr<LogicalOperator> final_plan = unique_ptr_cast<Operator, LogicalOperator>(std::move(tmp_plan));
 
 	// print the logical plan
-	Printer::Print("Input Logical Plan: \n");
-	final_plan->Print();
+	// Printer::Print("Input Logical Plan: \n");
+	// final_plan->Print();
 
 	return final_plan;
 }

@@ -56,7 +56,7 @@ public:
 	virtual ~COrderProperty();
 
 	// hash function
-	virtual ULONG HashValue() const;
+	virtual size_t HashValue() const;
 
 	// check if the given order specification is compatible with the
 	// order specification of this object for the specified matching type

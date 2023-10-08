@@ -143,7 +143,7 @@ unique_ptr<Operator> PhysicalOrder::Copy() {
 	}
 	copy->m_group_expression = this->m_group_expression;
 	copy->m_cost = this->m_cost;
-	return copy;
+	return unique_ptr_cast<PhysicalOrder, Operator>(std::move(copy));
 }
 
 unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
@@ -172,7 +172,7 @@ unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression 
 	}
 	copy->m_group_expression = pgexpr;
 	copy->m_cost = this->m_cost;
-	return copy;
+	return unique_ptr_cast<PhysicalOrder, Operator>(std::move(copy));
 }
 
 unique_ptr<Operator> PhysicalOrder::CopyWithNewChildren(CGroupExpression *pgexpr,
@@ -202,14 +202,15 @@ unique_ptr<Operator> PhysicalOrder::CopyWithNewChildren(CGroupExpression *pgexpr
 	}
 	copy->m_group_expression = pgexpr;
 	copy->m_cost = cost;
-	return copy;
+	return unique_ptr_cast<PhysicalOrder, Operator>(std::move(copy));
 }
 
 void PhysicalOrder::CE() {
-	if (this->has_estimated_cardinality)
-		return;
 	if (!this->children[0]->has_estimated_cardinality) {
 		this->children[0]->CE();
+	}
+	if (this->has_estimated_cardinality) {
+		return;
 	}
 	this->has_estimated_cardinality = true;
 	this->estimated_cardinality = children[0]->estimated_cardinality;

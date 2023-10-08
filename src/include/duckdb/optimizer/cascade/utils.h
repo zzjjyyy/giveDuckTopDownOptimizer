@@ -89,39 +89,39 @@ void Print(WCHAR *wsz);
 IOstream &HexDump(IOstream &os, const void *pv, ULLONG size);
 
 // generic hash function for byte strings
-ULONG HashByteArray(const BYTE *, const ULONG);
+size_t HashByteArray(const BYTE *, const size_t);
 
 // generic hash function; by address
 template <class T>
-inline ULONG
+inline size_t
 HashValue(const T *pt)
 {
-	return HashByteArray((BYTE *) pt, GPOS_SIZEOF(T));
+	return HashByteArray((BYTE *) pt, sizeof(T));
 }
 
 // generic hash function for pointer types -- use e.g. when address is ID of object
-template <class T> inline ULONG HashPtr(const T* pt)
+template <class T> inline size_t HashPtr(const T* pt)
 {
 	return HashByteArray((BYTE *) &pt, GPOS_SIZEOF(void *));
 }
 
 // equality function on pointers
 template <class T>
-inline BOOL
+inline bool
 EqualPtr(const T *pt1, const T *pt2)
 {
 	return pt1 == pt2;
 }
 
 // hash function for ULONG_PTR
-inline ULONG
+inline size_t
 HashULongPtr(const ULONG_PTR &key)
 {
-	return (ULONG) key;
+	return (size_t) key;
 }
 
 // combine ULONG hashes
-ULONG CombineHashes(ULONG, ULONG);
+size_t CombineHashes(size_t, size_t);
 
 // equality function, which uses the equality operator of the arguments type
 template <class T>

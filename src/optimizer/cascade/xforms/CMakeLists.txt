@@ -11,9 +11,12 @@ add_library_unity(
         CXformInnerJoin2HashJoin.cpp
         CXformJoinAssociativity.cpp
         CXformJoinCommutativity.cpp
+        CXformLogicalAggregateImplementation.cpp
         CXformLogicalProj2PhysicalProj.cpp
         CXformOrderImplementation.cpp
-        CXformResult.cpp)
+        CXformPushGbBelowJoin.cpp
+        CXformResult.cpp
+        CXformUtils.cpp)
 set(ALL_OBJECT_FILES
         ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:xforms>
         PARENT_SCOPE)

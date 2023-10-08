@@ -31,9 +31,10 @@ using namespace duckdb;
 
 namespace gpopt {
 
-//! The ColumnBindingResolver resolves ColumnBindings into base tables
+//! The NewColumnBindingResolver resolves ColumnBindings into base tables
 //! (table_index, column_index) into physical indices into the DataChunks that
 //! are used within the execution engine
+//! Meanwhile, it modify the logicaltypes of each operator
 class NewColumnBindingResolver {
 public:
 	NewColumnBindingResolver();
@@ -44,6 +45,7 @@ public:
 
 protected:
 	duckdb::vector<ColumnBinding> bindings;
+    duckdb::vector<LogicalType> global_types;
 
     void VisitOperatorExpressions(PhysicalOperator &op);
     void EnumerateExpressions(PhysicalOperator &op,
