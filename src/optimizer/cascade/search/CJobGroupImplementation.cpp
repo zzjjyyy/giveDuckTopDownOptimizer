@@ -144,7 +144,7 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation
 	if (!pgroup->FExplored()) {
 		// schedule a child exploration job
 		CJobGroupExploration::ScheduleJob(psc, pgroup, pjgi);
-		CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementation]");
+		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementation]");
 		return eevExploring;
 	} else {
 		// move group to implementation state
@@ -176,7 +176,7 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(C
 		if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
 			start_implementation = clock();
 		}
-		CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementChildren]");
+		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementChildren]");
 		// implementation is in progress
 		return eevImplementing;
 	} else {

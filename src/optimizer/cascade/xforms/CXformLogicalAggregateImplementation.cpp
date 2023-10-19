@@ -91,10 +91,29 @@ void CXformLogicalAggregateImplementation::Transform(CXformContext *pxfctxt, CXf
 	} else {
         // groups! create a GROUP BY aggregator
 		duckdb::vector<idx_t> required_bits;
+		duckdb::vector<duckdb::unique_ptr<Expression>> expressions;
+		for(auto &child : op_agg->expressions) {
+            expressions.push_back(child->Copy());
+        }
+		duckdb::vector<duckdb::unique_ptr<Expression>> groups;
+		for(auto &child : op_agg->groups) {
+            groups.push_back(child->Copy());
+        }
+		duckdb::vector<duckdb::GroupingSet> grouping_sets;
+		for(auto &child : op_agg->grouping_sets) {
+            grouping_sets.push_back(child);
+        }
+		duckdb::vector<duckdb::vector<idx_t>> grouping_functions;
+		for(auto &child : op_agg->grouping_functions) {
+            grouping_functions.push_back(child);
+        }
 		auto groupby = make_uniq<PhysicalHashAggregate>(
-			    op_agg->types, std::move(op_agg->expressions), std::move(op_agg->groups), std::move(op_agg->grouping_sets),
-			    std::move(op_agg->grouping_functions), op_agg->estimated_cardinality);
+			    op_agg->types, std::move(expressions), std::move(groups), std::move(grouping_sets),
+			    std::move(grouping_functions), op_agg->estimated_cardinality);
 		groupby->v_column_binding = op_agg->GetColumnBindings();
+		for(auto &child : pexpr->children) {
+			groupby->AddChild(child->Copy());
+		}
 		groupby->CE();
 		pxfres->Add(std::move(groupby));
 	}

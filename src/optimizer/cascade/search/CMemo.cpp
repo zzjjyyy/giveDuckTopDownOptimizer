@@ -89,10 +89,10 @@ void CMemo::Add(CGroup *group, Operator *expr_origin) {
 //
 //---------------------------------------------------------------------------
 CGroup *CMemo::GroupInsert(CGroup *target_group, CGroupExpression *group_expr, Operator *expr_origin, bool is_new) {
-	auto itr = group_expr_hashmap.find(group_expr->HashValue());
+	auto itr = group_expr_hashmap.find(group_expr);
 	// we do a lookup since group expression may have been already inserted
 	if (group_expr_hashmap.end() == itr) {
-		group_expr_hashmap.insert(make_pair(group_expr->HashValue(), group_expr));
+		group_expr_hashmap.insert(make_pair(group_expr, group_expr));
 		// group proxy scope
 		{
 			CGroupProxy gp(target_group);
@@ -141,7 +141,7 @@ CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
 	CGroupExpression *group_expr_found = nullptr;
 	// hash table accessor's scope
 	{
-		auto itr = group_expr_hashmap.find(group_expr->HashValue());
+		auto itr = group_expr_hashmap.find(group_expr);
 		if (itr != group_expr_hashmap.end()) {
 			group_expr_found = itr->second;
 		}
@@ -308,10 +308,10 @@ bool CMemo::FRehash() {
 		CGroupExpression *pgexprFound = NULL;
 		{
 			// hash table accessor scope
-			itr = group_expr_hashmap.find(pgexpr->HashValue());
+			itr = group_expr_hashmap.find(pgexpr);
 			if (itr == group_expr_hashmap.end()) {
 				// group expression has no duplicates, insert back to memo hash table
-				group_expr_hashmap.insert(make_pair(pgexpr->HashValue(), pgexpr));
+				group_expr_hashmap.insert(make_pair(pgexpr, pgexpr));
 				continue;
 			}
 			pgexprFound = itr->second;

@@ -15,6 +15,10 @@ duckdb::unique_ptr<Operator> CXformUtils::PexprPushGbBelowJoin(Operator *m_opera
 	duckdb::vector<ColumnBinding> pcrsOuterOutput = pexprOuter->GetColumnBindings();
 	duckdb::vector<ColumnBinding> pcrsAggOutput = pexprGb->GetColumnBindings();
 	duckdb::vector<ColumnBinding> pcrsUsed;
+	for(auto &child : pexprGb->groups) {
+		duckdb::vector<ColumnBinding> v = child->GetColumnBinding();
+		pcrsUsed.insert(pcrsUsed.end(), v.begin(), v.end());
+	}
 	for(auto &child : pexprGb->expressions) {
 		duckdb::vector<ColumnBinding> v = child->GetColumnBinding();
 		pcrsUsed.insert(pcrsUsed.end(), v.begin(), v.end());

@@ -43,8 +43,7 @@ vector<ColumnBinding> LogicalAggregate::GetColumnBindings() {
 		result.insert(result.end(), v.begin(), v.end());
 	}
 	for (idx_t i = 0; i < expressions.size(); i++) {
-		auto v = expressions[i]->GetColumnBinding();
-		result.insert(result.end(), v.begin(), v.end());
+		result.emplace_back(aggregate_index, i);
 	}
 	return result;
 }
@@ -130,10 +129,13 @@ vector<idx_t> LogicalAggregate::GetTableIndex() const {
 unique_ptr<Operator> LogicalAggregate::Copy() {
 	/* LogicalAggregate fields */
 	vector<unique_ptr<Expression>> v;
-	for(auto &child : this->groups) {
+	for(auto &child : this->expressions) {
 		v.push_back(child->Copy());
 	}
 	unique_ptr<LogicalAggregate> copy = make_uniq<LogicalAggregate>(this->group_index, this->aggregate_index, std::move(v));
+	for(auto &child : this->groups) {
+		copy->groups.push_back(child->Copy());
+	}
 	
 	/* Operator fields */
 	copy->m_derived_logical_property = this->m_derived_logical_property;
@@ -144,9 +146,6 @@ unique_ptr<Operator> LogicalAggregate::Copy() {
 	}
 	copy->types = this->types;
 	copy->estimated_cardinality = this->estimated_cardinality;
-	for (auto &child : this->expressions) {
-		copy->expressions.push_back(child->Copy());
-	}
 	copy->has_estimated_cardinality = this->has_estimated_cardinality;
 	copy->logical_type = this->logical_type;
 	copy->physical_type = this->physical_type;
@@ -169,11 +168,14 @@ unique_ptr<Operator> LogicalAggregate::CopyWithNewChildren(CGroupExpression *pge
                                         				   double cost) {
 	/* LogicalComparisonJoin fields */
 	vector<unique_ptr<Expression>> v;
-	for(auto &child : this->groups) {
+	for(auto &child : this->expressions) {
 		v.push_back(child->Copy());
 	}
 	unique_ptr<LogicalAggregate> copy = make_uniq<LogicalAggregate>(this->group_index, this->aggregate_index, std::move(v));
-	
+	for(auto &child : this->groups) {
+		copy->groups.push_back(child->Copy());
+	}
+
 	/* Operator fields */
 	copy->m_derived_logical_property = this->m_derived_logical_property;
 	copy->m_derived_physical_property = this->m_derived_physical_property;
@@ -183,9 +185,6 @@ unique_ptr<Operator> LogicalAggregate::CopyWithNewChildren(CGroupExpression *pge
 	}
 	copy->types = this->types;
 	copy->estimated_cardinality = this->estimated_cardinality;
-	for (auto &child : this->expressions) {
-		copy->expressions.push_back(child->Copy());
-	}
 	copy->has_estimated_cardinality = this->has_estimated_cardinality;
 	copy->logical_type = this->logical_type;
 	copy->physical_type = this->physical_type;
@@ -205,7 +204,12 @@ void LogicalAggregate::CE() {
 		return;
 	}
 	this->has_estimated_cardinality = true;
-	this->estimated_cardinality = 1;
+	if(this->groups.empty()) {
+		this->estimated_cardinality = 1;
+	} else {
+		this->estimated_cardinality = this->groups.size();
+	}
+	return;
 }
 
 //---------------------------------------------------------------------------

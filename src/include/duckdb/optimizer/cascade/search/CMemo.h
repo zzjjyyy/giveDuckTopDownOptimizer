@@ -26,6 +26,46 @@ typedef CTreeMap<CCostContext, gpopt::Operator, CDrvdPropCtxtPlan, CCostContext:
 
 using namespace gpos;
 
+struct CGroupExpressionHash {
+	size_t operator()(const CGroupExpression* gexpr) const {
+		size_t ulHash = gexpr->m_operator->HashValue();
+		size_t arity = gexpr->m_child_groups.size();
+		for (size_t i = 0; i < arity; i++) {
+			ulHash = CombineHashes(ulHash, gexpr->m_child_groups[i]->HashValue());
+		}
+		return ulHash;
+	}
+};
+
+struct CGroupExpressionCmp {
+	size_t operator()(const CGroupExpression* gexpr1, const CGroupExpression* gexpr2) const {
+		// make sure we are not comparing to invalid group expression
+		if (nullptr == gexpr1->m_operator || nullptr == gexpr2->m_operator) {
+			return nullptr == gexpr1->m_operator && nullptr == gexpr2->m_operator;
+		}
+		// have same arity
+		if (gexpr1->Arity() != gexpr2->Arity()) {
+			return false;
+		}
+		// match operators
+		if (!(gexpr1->m_operator->logical_type == gexpr2->m_operator->logical_type)
+			|| !(gexpr1->m_operator->physical_type == gexpr2->m_operator->physical_type)) {
+			return false;
+		}
+		// compare inputs
+		if (0 == gexpr1->Arity()) {
+			return true;
+		} else {
+			if (1 == gexpr1->Arity() || gexpr1->m_operator->FInputOrderSensitive()) {
+				return CGroup::FMatchGroups(gexpr1->m_child_groups, gexpr2->m_child_groups);
+			} else {
+				return CGroup::FMatchGroups(gexpr1->m_child_groups_sorted, gexpr2->m_child_groups_sorted);
+			}
+		}
+		return false;
+	}
+};
+
 //---------------------------------------------------------------------------
 //	@class:
 //		CMemo
@@ -51,7 +91,7 @@ public:
 	// list of groups
 	list<CGroup *> m_groups_list;
 	// hashtable of all group expressions
-	unordered_map<ULONG, CGroupExpression *> group_expr_hashmap;
+	unordered_map<CGroupExpression*, CGroupExpression*, CGroupExpressionHash, CGroupExpressionCmp> group_expr_hashmap;
 
 public:
 	// set root group

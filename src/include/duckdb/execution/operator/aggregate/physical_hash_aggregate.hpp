@@ -126,6 +126,8 @@ public:
 		return v_column_binding;
 	}
 
+	static vector<LogicalType> CreateGroupChunkTypes(vector<unique_ptr<Expression>> &groups);
+	
 public:
 	// Sink interface
 	SinkResultType Sink(ExecutionContext &context, GlobalSinkState &state, LocalSinkState &lstate,

@@ -200,7 +200,7 @@ void CJobGroupExpressionOptimization::InitChildGroupsOptimization(CSchedulerCont
 //---------------------------------------------------------------------------
 CJobGroupExpressionOptimization::EEvent
 CJobGroupExpressionOptimization::EevtInitialize(CSchedulerContext *scheduler_context, CJob *pjOwner) {
-	CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: InitializeOptimization]");
+	// CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: InitializeOptimization]");
 
 	// get a job pointer
 	CJobGroupExpressionOptimization *job = ConvertJob(pjOwner);
@@ -351,7 +351,7 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtOpt
 	CJobGroupExpressionOptimization *pjgeo = ConvertJob(pjOwner);
 	if (0 < pjgeo->m_arity && !pjgeo->FChildrenScheduled()) {
 		pjgeo->ScheduleChildGroupsJobs(psc);
-		CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: OptimizeChildren]");
+		// CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: OptimizeChildren]");
 		if (pjgeo->m_child_optimization_failed) {
 			throw std::runtime_error(
 			    "[CJobGroupExpressionOptimization::EevtOptimizeChildren]: failed to optimize child, terminate job");
@@ -373,7 +373,7 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtOpt
 //---------------------------------------------------------------------------
 CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtAddEnforcers(CSchedulerContext *psc,
                                                                                           CJob *pjOwner) {
-	CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: AddEnforcers]");
+	// CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: AddEnforcers]");
 
 	// get a job pointer
 	CJobGroupExpressionOptimization *pjgeo = ConvertJob(pjOwner);
@@ -407,7 +407,7 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtAdd
 //---------------------------------------------------------------------------
 CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtOptimizeSelf(CSchedulerContext *psc,
                                                                                           CJob *pjOwner) {
-	CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: OptimizeSelf]");
+	// CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: OptimizeSelf]");
 
 	// get a job pointer
 	CJobGroupExpressionOptimization *job = ConvertJob(pjOwner);
@@ -436,7 +436,7 @@ CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtOpt
 //---------------------------------------------------------------------------
 CJobGroupExpressionOptimization::EEvent CJobGroupExpressionOptimization::EevtFinalize(CSchedulerContext *psc,
                                                                                       CJob *pjOwner) {
-	CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: Finalize]");
+	// CJobGroupExpression::PrintJob(ConvertJob(pjOwner), "[Expression: Finalize]");
 
 	// get a job pointer
 	CJobGroupExpressionOptimization *pjgeo = ConvertJob(pjOwner);

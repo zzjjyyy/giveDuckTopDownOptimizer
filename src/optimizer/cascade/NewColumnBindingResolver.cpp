@@ -153,6 +153,9 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op) {
 		for (auto &cond : agg.grouped_aggregate_data.groups) {
 			VisitExpression(&cond);
 		}
+		/* input_group_types created before is wrong and need to be remade */
+		agg.input_group_types.clear();
+		agg.input_group_types = PhysicalHashAggregate::CreateGroupChunkTypes(agg.grouped_aggregate_data.groups);
 		bindings = op.GetColumnBindings();
 		global_types = op.types;
 		return;

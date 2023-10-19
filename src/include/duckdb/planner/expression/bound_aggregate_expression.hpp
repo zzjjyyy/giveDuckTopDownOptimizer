@@ -57,5 +57,6 @@ public:
 	unique_ptr<Expression> Copy() override;
 	void Serialize(FieldWriter &writer) const override;
 	static unique_ptr<Expression> Deserialize(ExpressionDeserializationState &state, FieldReader &reader);
+	vector<ColumnBinding> GetColumnBinding() override;
 };
 } // namespace duckdb

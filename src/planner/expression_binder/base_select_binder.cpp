@@ -138,9 +138,16 @@ BindResult BaseSelectBinder::BindGroupingFunction(OperatorExpression &op, idx_t 
 }
 
 BindResult BaseSelectBinder::BindGroup(ParsedExpression &expr, idx_t depth, idx_t group_index) {
+	/* I comment here */
+	/*
 	auto &group = node.groups.group_expressions[group_index];
 	return BindResult(make_uniq<BoundColumnRefExpression>(expr.GetName(), group->return_type,
 	                                                      ColumnBinding(node.group_index, group_index), depth));
+	*/
+	auto &group = node.groups.group_expressions[group_index];
+	auto v = group->GetColumnBinding();
+	return BindResult(make_uniq<BoundColumnRefExpression>(expr.GetName(), group->return_type,
+	                                                      v[0], depth));
 }
 
 } // namespace duckdb

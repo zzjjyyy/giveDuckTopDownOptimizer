@@ -64,7 +64,7 @@ HashAggregateGroupingLocalState::HashAggregateGroupingLocalState(const PhysicalH
 	}
 }
 
-static vector<LogicalType> CreateGroupChunkTypes(vector<unique_ptr<Expression>> &groups) {
+vector<LogicalType> PhysicalHashAggregate::CreateGroupChunkTypes(vector<unique_ptr<Expression>> &groups) {
 	set<idx_t> group_indices;
 
 	if (groups.empty()) {
@@ -72,15 +72,30 @@ static vector<LogicalType> CreateGroupChunkTypes(vector<unique_ptr<Expression>> 
 	}
 
 	for (auto &group : groups) {
-		D_ASSERT(group->type == ExpressionType::BOUND_REF);
-		auto &bound_ref = group->Cast<BoundReferenceExpression>();
-		group_indices.insert(bound_ref.index);
+		int i = 0;
+		if (group->type == ExpressionType::BOUND_REF) {
+			auto &bound_ref = group->Cast<BoundReferenceExpression>();
+			group_indices.insert(bound_ref.index);
+		} else if (group->type == ExpressionType::BOUND_COLUMN_REF) {
+			group_indices.insert(i);
+			i = i + 1;
+		} else {
+			D_ASSERT(false);
+		}
 	}
 	idx_t highest_index = *group_indices.rbegin();
 	vector<LogicalType> types(highest_index + 1, LogicalType::SQLNULL);
 	for (auto &group : groups) {
-		auto &bound_ref = group->Cast<BoundReferenceExpression>();
-		types[bound_ref.index] = bound_ref.return_type;
+		int i = 0;
+		if (group->type == ExpressionType::BOUND_REF) {
+			auto &bound_ref = group->Cast<BoundReferenceExpression>();
+			types[bound_ref.index] = bound_ref.return_type;
+		} else if (group->type == ExpressionType::BOUND_COLUMN_REF) {
+			types[i] = group->return_type;
+			i = i + 1;
+		} else {
+			D_ASSERT(false);
+		}
 	}
 	return types;
 }
