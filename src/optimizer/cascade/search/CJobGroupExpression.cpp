@@ -23,7 +23,7 @@
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void gpopt::CJobGroupExpression::Init(CGroupExpression* pgexpr)
+void gpopt::CJobGroupExpression::Init(duckdb::unique_ptr<CGroupExpression> pgexpr)
 {
 	m_children_scheduled = false;
 	m_xforms_scheduled = false;
@@ -39,14 +39,15 @@ void gpopt::CJobGroupExpression::Init(CGroupExpression* pgexpr)
 //		Schedule transformation jobs for the given set of xforms
 //
 //---------------------------------------------------------------------------
-void gpopt::CJobGroupExpression::ScheduleTransformations(CSchedulerContext* psc, CXform_set * xform_set)
+void gpopt::CJobGroupExpression::ScheduleTransformations(duckdb::unique_ptr<CSchedulerContext> psc,
+														 duckdb::unique_ptr<CXform_set> xform_set)
 {
 	// iterate on xforms
 	for(size_t i = 0; i < CXform::EXformId::ExfSentinel; i++)
 	{
 		if (xform_set->test(i))
 		{
-			CXform* pxform = CXformFactory::XformFactory()->Xform(static_cast<CXform::EXformId>(i));
+			auto pxform = CXformFactory::XformFactory()->Xform(static_cast<CXform::EXformId>(i));
 			CJobTransformation::ScheduleJob(psc, m_group_expression, pxform, this);
 		}
 	}

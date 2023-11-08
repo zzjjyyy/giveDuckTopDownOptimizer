@@ -29,13 +29,15 @@ using namespace gpos;
 class CDrvdPropCtxtRelational : public CDerivedPropertyContext {
 public:
 	// copy function
-	virtual CDerivedPropertyContext * PdpctxtCopy() const
+	virtual duckdb::unique_ptr<CDerivedPropertyContext> PdpctxtCopy() const
 	{
-		return new CDrvdPropCtxtRelational();
+		auto tmp = new CDrvdPropCtxtRelational();
+		auto res = duckdb::unique_ptr<CDerivedPropertyContext>(tmp);
+		return res;
 	}
 
 	// add props to context
-	virtual void AddProps(CDerivedProperty * pdp)
+	virtual void AddProps(duckdb::unique_ptr<CDerivedProperty> pdp)
 	{
 		// derived relational context is currently empty
 	}

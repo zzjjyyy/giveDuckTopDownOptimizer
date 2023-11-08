@@ -50,15 +50,17 @@ public:
 
 	unique_ptr<Operator> Copy() override;
 	
-	unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+	unique_ptr<Operator>
+	CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) override;
 
-	unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr,
-                                        duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-                                        double cost) override;
+	unique_ptr<Operator>
+	CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+                        duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                        double cost) override;
 	
 	void CE() override;
 
-	CXform_set *XformCandidates() const;
+	duckdb::unique_ptr<CXform_set> XformCandidates() const;
 	
 protected:
 	void ResolveTypes() override;

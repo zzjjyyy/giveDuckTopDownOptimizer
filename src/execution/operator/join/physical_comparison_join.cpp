@@ -81,8 +81,12 @@ void PhysicalComparisonJoin::ConstructEmptyJoinResult(JoinType join_type, bool h
 	}
 }
 
-vector<ColumnBinding> PhysicalComparisonJoin::PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrs_required,
-	                                ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) {
+vector<ColumnBinding>
+PhysicalComparisonJoin::PcrsRequired(CExpressionHandle &exprhdl,
+									 vector<ColumnBinding> pcrs_required,
+	                                 ULONG child_index,
+									 vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt,
+									 ULONG ulOptReq) {
 	vector<ColumnBinding> pcrs_join;
 	for (auto &child : this->conditions) {
 		vector<ColumnBinding> left_cell = child.left->GetColumnBinding();
@@ -124,32 +128,15 @@ void PhysicalComparisonJoin::CE() {
 	if(this->has_estimated_cardinality) {
 		return;
 	}
-	idx_t relids = this->GetChildrenRelIds();
-	char* pos;
-	char* p;
-	char cmp[1000];
-	int relid_in_file;
-	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
-	while(fgets(cmp, 1000, fp) != NULL) {
-		if((pos = strchr(cmp, '\n')) != NULL) {
-			*pos = '\0';
-		}
-		p = strtok(cmp, ":");
-		relid_in_file = atoi(p);
-		if(relid_in_file == relids) {
-			p = strtok(NULL, ":");
-			double true_val = atof(p);
-			if(true_val < 9999999999999.0) {
-				fclose(fp);
-				this->has_estimated_cardinality = true;
-				this->estimated_cardinality = true_val;
-				return;
-			}
-		}
-	}
-	fclose(fp);
 	this->has_estimated_cardinality = true;
-	this->estimated_cardinality = 99999999.0;
+	idx_t relids = this->GetChildrenRelIds();
+	auto true_val = true_set.find(relids);
+	if(true_val != true_set.end()) {
+		this->estimated_cardinality = true_val->second;
+	} else {
+		this->estimated_cardinality = 9999999999.0;
+	}
+	// this->estimated_cardinality = 99999999.0;
 	return;
 }
 } // namespace duckdb

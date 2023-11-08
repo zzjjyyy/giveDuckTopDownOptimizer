@@ -43,10 +43,13 @@ public:
 	}
 
 	// compute xform promise for a given expression handle
-	EXformPromise XformPromise(CExpressionHandle &expression_handle) const override;
+	EXformPromise
+	XformPromise(CExpressionHandle &expression_handle) const override;
 
 	// actual transform
-	void Transform(CXformContext *xform_context, CXformResult *xform_result, Operator *pexpr) const override;
+	void Transform(duckdb::unique_ptr<CXformContext> xform_context,
+				   duckdb::unique_ptr<CXformResult> xform_result,
+				   duckdb::unique_ptr<Operator> pexpr) const override;
 };
 } // namespace gpopt
 #endif

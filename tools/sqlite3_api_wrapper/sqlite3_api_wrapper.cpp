@@ -142,6 +142,9 @@ int sqlite3_shutdown(void) {
 	return SQLITE_OK;
 }
 
+// Need to delete
+duckdb::unique_ptr<sqlite3_stmt> global;
+
 /* In SQLite this function compiles the query into VDBE bytecode,
  * in the implementation it currently executes the query */
 // TODO: prepare the statement instead of executing right away
@@ -211,7 +214,7 @@ int sqlite3_prepare_v2(sqlite3 *db,           /* Database handle */
 		if (pzTail && set_remainder) {
 			*pzTail = zSql + next_location + 1;
 		}
-
+		global = stmt;
 		*ppStmt = stmt.release();
 		return SQLITE_OK;
 	} catch (const Exception &ex) {
@@ -724,8 +727,8 @@ int sqlite3_finalize(sqlite3_stmt *pStmt) {
 			delete pStmt;
 			return SQLITE_ERROR;
 		}
-
-		delete pStmt;
+		global.reset();
+		// delete pStmt;
 	}
 	return SQLITE_OK;
 }

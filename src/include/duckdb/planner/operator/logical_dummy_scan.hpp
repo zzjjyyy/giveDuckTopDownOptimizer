@@ -21,7 +21,7 @@ public:
 	explicit LogicalDummyScan(idx_t table_index)
 	    : LogicalOperator(LogicalOperatorType::LOGICAL_DUMMY_SCAN), table_index(table_index) {
 		logical_type = LogicalOperatorType::LOGICAL_DUMMY_SCAN;
-		m_derived_logical_property = new CDerivedLogicalProp();
+		m_derived_logical_property = make_uniq<CDerivedLogicalProp>();
 		m_group_expression = nullptr;
 		m_derived_physical_property = nullptr;
 		m_required_physical_property = nullptr;
@@ -37,8 +37,11 @@ public:
 	idx_t EstimateCardinality(ClientContext &context) override {
 		return 1;
 	}
+	
 	void Serialize(FieldWriter &writer) const override;
+
 	static unique_ptr<LogicalOperator> Deserialize(LogicalDeserializationState &state, FieldReader &reader);
+
 	vector<idx_t> GetTableIndex() const override;
 
 protected:
@@ -55,20 +58,24 @@ public:
 		return 1;
 	}
 
-	CXform_set *XformCandidates() const override;
+	duckdb::unique_ptr<CXform_set> XformCandidates() const override;
 
-	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
+	duckdb::unique_ptr<CPropConstraint> DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 
 	// Rehydrate expression from a given cost context and child expressions
-	Operator *SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-	                        CDrvdPropCtxtPlan *pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	              duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 
-	duckdb::unique_ptr<Operator> Copy() override;
+	unique_ptr<Operator> Copy() override;
 
-	duckdb::unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+	unique_ptr<Operator>
+	CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) override;
 
-	duckdb::unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr,
-	                                                 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-	                                                 double cost) override;
+	unique_ptr<Operator>
+	CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+	                    duckdb::vector<unique_ptr<Operator>> pdrgpexpr,
+	                    double cost) override;
 };
 } // namespace duckdb

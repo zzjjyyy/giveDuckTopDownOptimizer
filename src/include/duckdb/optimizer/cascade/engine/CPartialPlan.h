@@ -43,20 +43,23 @@ public:
 	
 public:
 	// root group expression
-	CGroupExpression* m_pgexpr;
+	duckdb::unique_ptr<CGroupExpression> m_pgexpr;
 
 	// required plan properties of root operator
-	CRequiredPhysicalProp * m_prpp;
+	duckdb::unique_ptr<CRequiredPhysicalProp> m_prpp;
 
 	// cost context of known child plan -- can be null if no child plans are known
-	CCostContext* m_pccChild;
+	duckdb::unique_ptr<CCostContext> m_pccChild;
 
 	// index of known child plan
 	ULONG m_ulChildIndex;
 
 public:
 	// ctor
-	CPartialPlan(CGroupExpression* pgexpr, CRequiredPhysicalProp * prpp, CCostContext* pccChild, ULONG child_index);
+	CPartialPlan(duckdb::unique_ptr<CGroupExpression> pgexpr,
+				 duckdb::unique_ptr<CRequiredPhysicalProp> prpp,
+				 duckdb::unique_ptr<CCostContext> pccChild,
+				 ULONG child_index);
 	
 	// no copy ctor
 	CPartialPlan(const CPartialPlan &) = delete;
@@ -66,7 +69,9 @@ public:
 
 public:
 	// extract costing info from children
-	void ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle &exprhdl, ICostModel::SCostingInfo* pci);
+	void ExtractChildrenCostingInfo(duckdb::unique_ptr<ICostModel> pcm,
+									CExpressionHandle &exprhdl,
+									duckdb::unique_ptr<ICostModel::SCostingInfo> pci);
 
 	// compute partial plan cost
 	double CostCompute();
@@ -74,10 +79,13 @@ public:
 	size_t HashValue() const;
 
 	// hash function used for cost bounding
-	static size_t HashValue(const CPartialPlan* ppp);
+	static size_t
+	HashValue(const duckdb::unique_ptr<CPartialPlan> ppp);
 
 	// equality function used for for cost bounding
-	static bool Equals(const CPartialPlan* pppFst, const CPartialPlan* pppSnd);
+	static bool
+	Equals(const duckdb::unique_ptr<CPartialPlan> pppFst,
+		   const duckdb::unique_ptr<CPartialPlan> pppSnd);
 };	// class CPartialPlan
 }  // namespace gpopt
 #endif

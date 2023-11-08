@@ -25,7 +25,7 @@ class COptimizationContext;
 class CRequiredLogicalProp;
 
 // optimization context pointer definition
-typedef COptimizationContext *OPTCTXT_PTR;
+typedef duckdb::unique_ptr<COptimizationContext> OPTCTXT_PTR;
 
 //---------------------------------------------------------------------------
 //	@class:
@@ -53,116 +53,150 @@ public:
 	//	 CRequiredLogicalProp* prprel: required relational props -- used during stats derivation
 	//	 IStatisticsArray* stats_ctxt: stats of previously optimized expressions
 	//---------------------------------------------------------------------------
-	COptimizationContext(CGroup *pgroup, CRequiredPhysicalProp *prpp, CRequiredLogicalProp *prprel,
-	                     ULONG search_stage_index)
+	COptimizationContext(duckdb::unique_ptr<CGroup> pgroup, duckdb::unique_ptr<CRequiredPhysicalProp> prpp,
+						 duckdb::unique_ptr<CRequiredLogicalProp> prprel, ULONG search_stage_index)
 	    : m_id(GPOPT_INVALID_OPTCTXT_ID), m_group(pgroup), m_required_plan_properties(prpp),
 	      m_required_relational_properties(prprel), m_search_stage(search_stage_index), m_best_cost_context(nullptr),
 	      m_estate(estUnoptimized), m_has_multi_stage_agg_plan(false) {
 	}
+
 	COptimizationContext(const COptimizationContext &) = delete;
+
 	virtual ~COptimizationContext();
 
 	// unique id within owner group, used for debugging
 	ULONG m_id;
+
 	// back pointer to owner group, used for debugging
-	CGroup *m_group;
+	duckdb::unique_ptr<CGroup> m_group;
+
 	// required plan properties
-	CRequiredPhysicalProp *m_required_plan_properties;
+	duckdb::unique_ptr<CRequiredPhysicalProp> m_required_plan_properties;
+
 	// required relational properties -- used for stats computation during costing
-	CRequiredLogicalProp *m_required_relational_properties;
+	duckdb::unique_ptr<CRequiredLogicalProp> m_required_relational_properties;
+
 	// index of search stage where context is generated
 	ULONG m_search_stage;
+
 	// best cost context under the optimization context
-	CCostContext *m_best_cost_context;
+	duckdb::unique_ptr<CCostContext> m_best_cost_context;
+
 	// optimization context state
 	EState m_estate;
+
 	// is there a multi-stage Agg plan satisfying required properties
 	bool m_has_multi_stage_agg_plan;
+
 	// context's optimization job queue
 	CJobQueue m_opt_job_queue;
+
 	// link for optimization context hash table in CGroup
 	SLink m_link;
+
 	// invalid optimization context, needed for hash table iteration
 	static const COptimizationContext M_INVALID_OPT_CONTEXT;
+
 	// invalid optimization context pointer, needed for cost contexts hash table iteration
 	static const OPTCTXT_PTR M_INVALID_OPT_CONTEXT_PTR;
 
 public:
 	// internal matching function
-	bool FMatchSortColumns(COptimizationContext *poc) const;
+	bool FMatchSortColumns(duckdb::unique_ptr<COptimizationContext> poc) const;
+	
 	// best group expression accessor
-	CGroupExpression *BestExpression() const;
+	duckdb::unique_ptr<CGroupExpression> BestExpression() const;
+	
 	// match optimization contexts
-	bool Matches(const COptimizationContext *poc) const;
+	bool Matches(const duckdb::unique_ptr<COptimizationContext> poc) const;
+	
 	// search stage index accessor
 	ULONG UlSearchStageIndex() const {
 		return m_search_stage;
 	}
+
 	// optimization job queue accessor
-	CJobQueue *PjqOptimization() {
+	CJobQueue* PjqOptimization() {
 		return &m_opt_job_queue;
 	}
+
 	// set optimization context id
 	void SetId(ULONG id) {
 		m_id = id;
 	}
+
 	// set optimization context state
 	void SetState(EState estNewState) {
 		m_estate = estNewState;
 	}
+
 	// set best cost context
-	void SetBest(CCostContext *pcc);
-	// comparison operator for hashtables
-	bool operator==(const COptimizationContext &oc) const {
-		return oc.Matches(this);
-	}
-	// check equality of optimization contexts
-	static bool Equals(const COptimizationContext &ocLeft, const COptimizationContext &ocRight) {
-		return ocLeft == ocRight;
-	}
+	void SetBest(duckdb::unique_ptr<CCostContext> pcc);
+
 	size_t HashValue() {
 		return m_required_plan_properties->HashValue();
 	}
+
 	// hash function for optimization context
 	static size_t HashValue(const COptimizationContext &oc) {
 		return oc.m_required_plan_properties->HashValue();
 	}
+
 	// equality function for cost contexts hash table
 	static bool Equals(const OPTCTXT_PTR &pocLeft, const OPTCTXT_PTR &pocRight) {
 		if (pocLeft == M_INVALID_OPT_CONTEXT_PTR || pocRight == M_INVALID_OPT_CONTEXT_PTR) {
 			return pocLeft == M_INVALID_OPT_CONTEXT_PTR && pocRight == M_INVALID_OPT_CONTEXT_PTR;
 		}
-		return *pocLeft == *pocRight;
+		return pocLeft->Matches(pocRight);
 	}
+
 	// hash function for cost contexts hash table
 	static size_t HashValue(const OPTCTXT_PTR &poc) {
 		return HashValue(*poc);
 	}
+
 	// hash function used for computing stats during costing
-	static ULONG UlHashForStats(const COptimizationContext *poc) {
+	static ULONG UlHashForStats(const duckdb::unique_ptr<COptimizationContext> poc) {
 		return HashValue(*poc);
 	}
+
 	// equality function used for computing stats during costing
-	static bool FEqualForStats(const COptimizationContext *pocLeft, const COptimizationContext *pocRight);
+	static bool FEqualForStats(const duckdb::unique_ptr<COptimizationContext> pocLeft,
+							   const duckdb::unique_ptr<COptimizationContext> pocRight);
+	
 	// check if Agg node should be optimized for the given context
-	static bool FOptimizeAgg(CGroupExpression *pgexprParent, CGroupExpression *pgexprAgg, COptimizationContext *poc,
+	static bool FOptimizeAgg(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+							 duckdb::unique_ptr<CGroupExpression> pgexprAgg,
+							 duckdb::unique_ptr<COptimizationContext> poc,
 	                         ULONG ulSearchStages);
+
 	// check if Sort node should be optimized for the given context
-	static bool FOptimizeSort(CGroupExpression *pgexprParent, CGroupExpression *pgexprSort, COptimizationContext *poc,
+	static bool FOptimizeSort(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+							  duckdb::unique_ptr<CGroupExpression> pgexprSort,
+							  duckdb::unique_ptr<COptimizationContext> poc,
 	                          ULONG ulSearchStages);
+
 	// check if Motion node should be optimized for the given context
-	static bool FOptimizeMotion(CGroupExpression *pgexprParent, CGroupExpression *pgexprMotion,
-	                            COptimizationContext *poc, ULONG ulSearchStages);
+	static bool FOptimizeMotion(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+								duckdb::unique_ptr<CGroupExpression> pgexprMotion,
+	                            duckdb::unique_ptr<COptimizationContext> poc, ULONG ulSearchStages);
+	
 	// check if NL join node should be optimized for the given context
-	static bool FOptimizeNLJoin(CGroupExpression *pgexprParent, CGroupExpression *pgexprMotion,
-	                            COptimizationContext *poc, ULONG ulSearchStages);
+	static bool FOptimizeNLJoin(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+								duckdb::unique_ptr<CGroupExpression> pgexprMotion,
+	                            duckdb::unique_ptr<COptimizationContext> poc, ULONG ulSearchStages);
+	
 	// return true if given group expression should be optimized under given context
-	static bool FOptimize(CGroupExpression *pgexprParent, CGroupExpression *pgexprChild, COptimizationContext *pocChild,
+	static bool FOptimize(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+						  duckdb::unique_ptr<CGroupExpression> pgexprChild,
+						  duckdb::unique_ptr<COptimizationContext> pocChild,
 	                      ULONG ulSearchStages);
+	
 	// compare array of contexts based on context ids
-	static bool FEqualContextIds(duckdb::vector<COptimizationContext *> pdrgpocFst,
-	                             duckdb::vector<COptimizationContext *> pdrgpocSnd);
+	static bool FEqualContextIds(duckdb::vector<duckdb::unique_ptr<COptimizationContext>> pdrgpocFst,
+	                             duckdb::vector<duckdb::unique_ptr<COptimizationContext>> pdrgpocSnd);
+
 	// compute required properties to CTE producer based on plan properties of CTE consumer
-	// static CRequiredPhysicalProp *PrppCTEProducer(COptimizationContext *poc, ULONG ulSearchStages);
+	// static CRequiredPhysicalProp *PrppCTEProducer(duckdb::unique_ptr<COptimizationContext> poc, ULONG ulSearchStages);
 }; // class COptimizationContext
 } // namespace gpopt

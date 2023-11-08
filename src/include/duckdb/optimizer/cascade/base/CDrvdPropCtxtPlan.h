@@ -40,14 +40,14 @@ public:
 
 public:
 	// copy function
-	CDerivedPropertyContext * PdpctxtCopy() const override;
+	duckdb::unique_ptr<CDerivedPropertyContext> PdpctxtCopy() const override;
 
 	// add props to context
-	void AddProps(CDerivedProperty * pdp) override;
+	void AddProps(duckdb::unique_ptr<CDerivedProperty> pdp) override;
 
 public:
 	// conversion function
-	static CDrvdPropCtxtPlan* PdpctxtplanConvert(CDerivedPropertyContext * pdpctxt)
+	static CDrvdPropCtxtPlan* PdpctxtplanConvert(CDerivedPropertyContext *pdpctxt)
 	{
 		return reinterpret_cast<CDrvdPropCtxtPlan*>(pdpctxt);
 	}

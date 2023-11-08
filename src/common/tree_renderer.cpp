@@ -370,6 +370,7 @@ public:
 	}
 	template <class T> static void Iterate(const T &op, const std::function<void(const T &child)> &callback)
 	{
+		// Need to delete
 		for (auto &child : op.GetChildren())
 		{
 			callback(child);

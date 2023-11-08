@@ -50,12 +50,6 @@ void NewColumnBindingResolver::VisitOperator(PhysicalOperator &op) {
 			VisitExpression(&cond.left);
 		}
 		op.types = global_types;
-		if (left_op->physical_type == PhysicalOperatorType::DELIM_JOIN) {
-			// visit the duplicate eliminated columns on the LHS, if any
-			auto &delim_join = op.Cast<PhysicalDelimJoin>();
-			for (auto scan : delim_join.delim_scans) {
-			}
-		}
 		// then get the bindings of the RHS and resolve the RHS expressions
 		PhysicalOperator *right_op = (PhysicalOperator *)comp_join.children[1].get();
 		VisitOperator(*right_op);
@@ -213,11 +207,6 @@ void NewColumnBindingResolver::EnumerateExpressions(
 	case PhysicalOperatorType::NESTED_LOOP_JOIN:
 	case PhysicalOperatorType::DELIM_JOIN:
 	case PhysicalOperatorType::HASH_JOIN: {
-		if (op.physical_type == PhysicalOperatorType::DELIM_JOIN) {
-			auto &delim_join = op.Cast<PhysicalDelimJoin>();
-			for (auto &expr : delim_join.delim_scans) {
-			}
-		}
 		auto &join = op.Cast<PhysicalComparisonJoin>();
 		for (auto &cond : join.conditions) {
 			callback(&cond.left);

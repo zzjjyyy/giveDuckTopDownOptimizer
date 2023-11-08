@@ -83,7 +83,7 @@ CJobGroupExploration::~CJobGroupExploration() {
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void CJobGroupExploration::Init(CGroup *pgroup) {
+void CJobGroupExploration::Init(duckdb::unique_ptr<CGroup> pgroup) {
 	CJobGroup::Init(pgroup);
 	m_jsm.Init(rgeev2);
 	// set job actions
@@ -102,12 +102,12 @@ void CJobGroupExploration::Init(CGroup *pgroup) {
 //		the function returns true if it could schedule any new jobs
 //
 //---------------------------------------------------------------------------
-bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext *psc) {
+bool CJobGroupExploration::FScheduleGroupExpressions(duckdb::unique_ptr<CSchedulerContext> psc) {
 	auto last_expr = m_last_scheduled_expr;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
 	while (m_pgroup->m_group_exprs.end() != itr) {
-		CGroupExpression *expr = *itr;
+		auto expr = *itr;
 		if (!expr->FTransitioned(CGroupExpression::estExplored)) {
 			CJobGroupExpressionExploration::ScheduleJob(psc, expr, this);
 			last_expr = itr;
@@ -132,11 +132,15 @@ bool CJobGroupExploration::FScheduleGroupExpressions(CSchedulerContext *psc) {
 //		Start group exploration
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedulerContext *psc, CJob *pjOwner) {
-	// CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartExploration]");
+CJobGroupExploration::EEvent
+CJobGroupExploration::EevtStartExploration(duckdb::unique_ptr<CSchedulerContext> psc,
+										   CJob *pjOwner) {
+#ifdef DEBUG
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartExploration]");
+#endif
 	// get a job pointer
-	CJobGroupExploration *pjge = ConvertJob(pjOwner);
-	CGroup *pgroup = pjge->m_pgroup;
+	auto pjge = ConvertJob(pjOwner);
+	auto pgroup = pjge->m_pgroup;
 	// move group to exploration state
 	{
 		CGroupProxy gp(pgroup);
@@ -153,14 +157,18 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtStartExploration(CSchedul
 //		Explore child group expressions
 //
 //---------------------------------------------------------------------------
-CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedulerContext *psc, CJob *pjOwner) {
+CJobGroupExploration::EEvent
+CJobGroupExploration::EevtExploreChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+										  CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupExploration *pjge = ConvertJob(pjOwner);
+	auto pjge = ConvertJob(pjOwner);
+#ifdef DEBUG
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[ExploreChildren]");
+#endif
 	if (pjge->FScheduleGroupExpressions(psc)) {
-		if (psc->m_engine->FRoot(pjge->m_pgroup)) {
-			start_exploration = clock();
-		}
-		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[ExploreChildren]");
+		// if (psc->m_engine->FRoot(pjge->m_pgroup)) {
+		//	   start_exploration = clock();
+		// }
 		// new expressions have been added to group
 		return eevNewChildren;
 	} else {
@@ -171,11 +179,11 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedule
 		}
 		// if this is the root, complete exploration phase
 		if (psc->m_engine->FRoot(pjge->m_pgroup)) {
-			end_exploration = clock();
-			exploration_time = double(end_exploration - start_exploration) / CLOCKS_PER_SEC;
-			FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
-			fprintf(time_f, "explor = %lf s, ", exploration_time);
-			fclose(time_f);
+			// end_exploration = clock();
+			// exploration_time = double(end_exploration - start_exploration) / CLOCKS_PER_SEC;
+			// FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			// fprintf(time_f, "explor = %lf s, ", exploration_time);
+			// fclose(time_f);
 			psc->m_engine->FinalizeExploration();
 		}
 		return eevExplored;
@@ -190,7 +198,7 @@ CJobGroupExploration::EEvent CJobGroupExploration::EevtExploreChildren(CSchedule
 //		Main job function
 //
 //---------------------------------------------------------------------------
-bool CJobGroupExploration::FExecute(CSchedulerContext *psc) {
+bool CJobGroupExploration::FExecute(duckdb::unique_ptr<CSchedulerContext> psc) {
 	return m_jsm.FRun(psc, this);
 }
 
@@ -202,10 +210,12 @@ bool CJobGroupExploration::FExecute(CSchedulerContext *psc) {
 //		Schedule a new group exploration job
 //
 //---------------------------------------------------------------------------
-void CJobGroupExploration::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent) {
-	CJob *pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExploration);
+void CJobGroupExploration::ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+									   duckdb::unique_ptr<CGroup> pgroup,
+									   CJob *pjParent) {
+	auto pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExploration);
 	// initialize job
-	CJobGroupExploration *pjge = ConvertJob(pj);
+	auto pjge = ConvertJob(pj);
 	pjge->Init(pgroup);
 	psc->m_scheduler->Add(pjge, pjParent);
 }

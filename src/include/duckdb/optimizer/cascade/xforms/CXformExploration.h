@@ -54,8 +54,8 @@ public:
 	}
 
 	// conversion function
-	static CXformExploration *Pxformexp(CXform *pxform) {
-		return dynamic_cast<CXformExploration *>(pxform);
+	static duckdb::unique_ptr<CXformExploration> Pxformexp(duckdb::unique_ptr<CXform> pxform) {
+		return unique_ptr_cast<CXform, CXformExploration>(pxform);
 	}
 }; // class CXformExploration
 } // namespace gpopt

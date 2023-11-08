@@ -32,12 +32,16 @@ public:
 
 	//! The type of the join (INNER, OUTER, etc...)
 	JoinType join_type;
+
 	//! Table index used to refer to the MARK column (in case of a MARK join)
 	idx_t mark_index;
+
 	//! The columns of the LHS that are output by the join
 	vector<idx_t> left_projection_map;
+
 	//! The columns of the RHS that are output by the join
 	vector<idx_t> right_projection_map;
+	
 	//! Join Keys statistics (optional)
 	vector<unique_ptr<BaseStatistics>> join_stats;
 
@@ -55,6 +59,6 @@ public:
 	// Transformations
 	//-------------------------------------------------------------------------------------
 	// candidate set of xforms
-	CXform_set *XformCandidates() const override;
+	duckdb::unique_ptr<CXform_set> XformCandidates() const override;
 };
 } // namespace duckdb

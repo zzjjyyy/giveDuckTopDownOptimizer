@@ -7,11 +7,14 @@
 
 using namespace gpopt;
 
-duckdb::unique_ptr<Operator> CXformUtils::PexprPushGbBelowJoin(Operator *m_operator) {
-	LogicalAggregate *pexprGb = (LogicalAggregate*)m_operator;
-	LogicalComparisonJoin* pexprJoin = (LogicalComparisonJoin*)m_operator->children[0].get();
-	Operator *pexprOuter = pexprJoin->children[0].get();
-	Operator *pexprInner = pexprJoin->children[1].get();
+duckdb::unique_ptr<Operator>
+CXformUtils::PexprPushGbBelowJoin(duckdb::unique_ptr<Operator> m_operator) {
+	auto pexprGb = unique_ptr_cast<Operator, LogicalAggregate>(m_operator);
+	auto pexprJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(m_operator->children[0]);
+	auto pexprOuter = pexprJoin->children[0];
+	// Need to delete
+	// Operator *pexprInner = pexprJoin->children[1].get();
+	auto pexprInner = pexprJoin->children[1];
 	duckdb::vector<ColumnBinding> pcrsOuterOutput = pexprOuter->GetColumnBindings();
 	duckdb::vector<ColumnBinding> pcrsAggOutput = pexprGb->GetColumnBindings();
 	duckdb::vector<ColumnBinding> pcrsUsed;
@@ -27,7 +30,9 @@ duckdb::unique_ptr<Operator> CXformUtils::PexprPushGbBelowJoin(Operator *m_opera
 	for(auto& child : pexprJoin->conditions) {
 		auto left = child.left->GetColumnBinding();
 		auto right = child.right->GetColumnBinding();
-		if(IsPK(right, pexprInner)) {
+		// Need to delete
+		// if(IsPK(right, pexprInner.get())) {
+		if (IsPK(right, pexprInner)) {
 			pcrsFKey.insert(pcrsFKey.end(), left.begin(), left.end());
 		}
 	}
@@ -50,16 +55,20 @@ duckdb::unique_ptr<Operator> CXformUtils::PexprPushGbBelowJoin(Operator *m_opera
 	// come only from the outer child of the join;
 	// we can safely push Gb to be on top of join's outer child
 	duckdb::unique_ptr<LogicalAggregate> popGbAggNew = PopGbAggPushableBelowJoin(pexprGb, pcrsOuterOutput, pcrsGrpCols);
-	duckdb::unique_ptr<Operator> new_operator = pexprJoin->Copy();
+	// Need to delete
+	// duckdb::unique_ptr<Operator> new_operator = pexprJoin->Copy();
+	auto new_operator = duckdb::unique_ptr<Operator>(pexprJoin);
 	new_operator->children.clear();
 	new_operator->AddChild(std::move(popGbAggNew));
-	new_operator->AddChild(std::move(pexprInner->Copy()));
+	// Need to delete
+	// new_operator->AddChild(std::move(pexprInner->Copy()));
+	new_operator->AddChild(pexprInner);
 	return new_operator;
 }
 
-bool CXformUtils::IsPK(duckdb::vector<ColumnBinding> v, Operator *m_operator) {
+bool CXformUtils::IsPK(duckdb::vector<ColumnBinding> v, duckdb::unique_ptr<Operator> m_operator) {
 	if(m_operator->logical_type == LogicalOperatorType::LOGICAL_GET) {
-		LogicalGet *logical_get = (LogicalGet*)m_operator;
+		auto logical_get = unique_ptr_cast<Operator, LogicalGet>(m_operator);
 		/* Is it the table that column binds? */
 		if(logical_get->table_index == v[0].table_index) {
 			/* The first column is the primary key */
@@ -69,10 +78,10 @@ bool CXformUtils::IsPK(duckdb::vector<ColumnBinding> v, Operator *m_operator) {
 		}
 		return false;
 	}
-	if(IsPK(v, m_operator->children[0].get())) {
+	if(IsPK(v, m_operator->children[0])) {
 		return true;
 	}
-	if(IsPK(v, m_operator->children[1].get())) {
+	if(IsPK(v, m_operator->children[1])) {
 		return true;
 	}
 	return false;
@@ -118,11 +127,14 @@ bool CXformUtils::FCanPushGbAggBelowJoin(duckdb::vector<ColumnBinding> pcrsGrpCo
 //		operator, output columns of the join's outer child and grouping cols
 //
 //---------------------------------------------------------------------------
-duckdb::unique_ptr<LogicalAggregate> CXformUtils::PopGbAggPushableBelowJoin(LogicalAggregate *popGbAggOld,
-									   										duckdb::vector<ColumnBinding> pcrsOutputOuter,
-									   										duckdb::vector<ColumnBinding> pcrsGrpCols)
+duckdb::unique_ptr<LogicalAggregate>
+CXformUtils::PopGbAggPushableBelowJoin(duckdb::unique_ptr<LogicalAggregate> popGbAggOld,
+									   duckdb::vector<ColumnBinding> pcrsOutputOuter,
+									   duckdb::vector<ColumnBinding> pcrsGrpCols)
 {
-	duckdb::unique_ptr<Operator> popNew = popGbAggOld->Copy();
+	// Need to delete
+	// duckdb::unique_ptr<Operator> popNew = popGbAggOld->Copy();
+	auto popNew = duckdb::unique_ptr<Operator>(popGbAggOld);
 	duckdb::unique_ptr<LogicalAggregate> popGbAggNew = unique_ptr_cast<Operator, LogicalAggregate>(std::move(popNew));
 	if (!CUtils::ContainsAll(pcrsOutputOuter, pcrsGrpCols))
 	{
@@ -133,7 +145,9 @@ duckdb::unique_ptr<LogicalAggregate> CXformUtils::PopGbAggPushableBelowJoin(Logi
 		for(auto &child : popGbAggOld->groups) {
 			auto v = child->GetColumnBinding();
 			if(CUtils::ContainsAll(pcrsOutputOuter, v)) {
-				popGbAggNew->groups.push_back(child->Copy());
+				// Need to delete
+				// popGbAggNew->groups.push_back(child->Copy());
+				popGbAggNew->groups.push_back(child);
 			}
 		}
 	}

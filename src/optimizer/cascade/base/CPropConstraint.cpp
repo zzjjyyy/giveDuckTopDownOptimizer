@@ -21,7 +21,8 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPropConstraint::CPropConstraint(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs, Expression* pcnstr)
+CPropConstraint::CPropConstraint(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs,
+								 duckdb::unique_ptr<Expression> pcnstr)
 	: m_pdrgpcrs(pdrgpcrs), m_pcnstr(pcnstr)
 {
 	InitHashMap();

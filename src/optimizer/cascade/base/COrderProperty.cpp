@@ -26,7 +26,8 @@ const CHAR *COrderProperty::m_szOrderMatching[EomSentinel] = {"satisfy"};
 //		Ctor
 //
 //---------------------------------------------------------------------------
-COrderProperty::COrderProperty(COrderSpec *pos, EOrderMatching eom) : m_order_spec(pos), m_order_match_type(eom) {
+COrderProperty::COrderProperty(duckdb::unique_ptr<COrderSpec> pos, EOrderMatching eom)
+	: m_order_spec(pos), m_order_match_type(eom) {
 }
 
 //---------------------------------------------------------------------------
@@ -49,7 +50,7 @@ COrderProperty::~COrderProperty() {
 //		order specification of this object for the specified matching type
 //
 //---------------------------------------------------------------------------
-bool COrderProperty::FCompatible(COrderSpec *pos) const {
+bool COrderProperty::FCompatible(duckdb::unique_ptr<COrderSpec> pos) const {
 	switch (m_order_match_type) {
 	case EomSatisfy:
 		return pos->FSatisfies(m_order_spec);
@@ -80,7 +81,9 @@ size_t COrderProperty::HashValue() const {
 //
 //---------------------------------------------------------------------------
 COrderProperty::EPropEnforcingType
-COrderProperty::EorderEnforcingType(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, bool fOrderReqd) const {
+COrderProperty::EorderEnforcingType(CExpressionHandle &exprhdl,
+								    duckdb::unique_ptr<PhysicalOperator> popPhysical,
+									bool fOrderReqd) const {
 	if (fOrderReqd) {
 		return popPhysical->EnforcingTypeOrder(exprhdl, this->m_order_spec->order_nodes);
 	}

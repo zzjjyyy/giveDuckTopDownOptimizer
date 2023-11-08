@@ -60,7 +60,7 @@ public:
 	void Push(T* elem)
 	{
 		SLink &link = m_list.Link(elem);
-		T* head = m_list.First();
+		auto head = m_list.First();
 		// set current head as next element
 		link.m_next = head;
 		m_list.m_head = elem;
@@ -76,23 +76,25 @@ public:
 		{
 			// second element becomes the new head
 			SLink &link = m_list.Link(old_head);
-			T* new_head = static_cast<T*>(link.m_next);
+			auto new_head = static_cast<T*>(link.m_next);
 			m_list.m_head = new_head;
 			// reset link
-			link.m_next = NULL;
+			link.m_next = nullptr;
 		}
 		return old_head;
 	}
 
 	// get first element
-	T* PtFirst()
+	T*
+	PtFirst()
 	{
 		m_list.m_tail = m_list.m_head;
 		return m_list.First();
 	}
 
 	// get next element
-	T* Next(T* elem)
+	T*
+	Next(T* elem)
 	{
 		m_list.m_tail = m_list.m_head;
 		return m_list.Next(elem);
@@ -101,7 +103,7 @@ public:
 	// check if list is empty
 	bool IsEmpty() const
 	{
-		return NULL == m_list.First();
+		return nullptr == m_list.First();
 	}
 };	// class CSyncList
 }  // namespace gpos

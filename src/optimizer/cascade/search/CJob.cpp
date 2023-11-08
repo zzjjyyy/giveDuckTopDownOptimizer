@@ -23,8 +23,8 @@ using namespace gpos;
 //---------------------------------------------------------------------------
 void CJob::Reset()
 {
-	m_parent_jobs = NULL;
-	m_job_queue = NULL;
+	m_parent_jobs = nullptr;
+	m_job_queue = nullptr;
 	m_reference_cnt = 0;
 	m_is_initialized = false;
 }

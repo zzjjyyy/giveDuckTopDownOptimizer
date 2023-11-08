@@ -45,7 +45,9 @@ using namespace gpos;
 class CJobFactory {
 public:
 	explicit CJobFactory(ULONG num_jobs);
+
 	CJobFactory(const CJobFactory &) = delete;
+
 	~CJobFactory();
 
 	// number of jobs in each pool
@@ -69,20 +71,24 @@ public:
 public:
 	// retrieve job of specific type
 	template <class T>
-	T *PtRetrieve(CSyncPool<T> *&pool) {
+	T*
+	PtRetrieve(CSyncPool<T> *&pool) {
 		if (nullptr == pool) {
 			pool = new CSyncPool<T>(m_num_jobs);
-			T *tmp = new T();
+			auto tmp = new T();
 			SIZE_T id_offset = (SIZE_T)(&(tmp->m_id)) - (SIZE_T)tmp;
+			delete tmp;
 			pool->Init((gpos::ULONG)id_offset);
 		}
 		return pool->PtRetrieve();
 	}
+
 	// release job
 	template <class T>
 	void Release(T *pt, CSyncPool<T> *pool) {
 		pool->Recycle(pt);
 	}
+	
 	// truncate job pool
 	template <class T>
 	void TruncatePool(CSyncPool<T> *&pool) {
@@ -91,11 +97,12 @@ public:
 	}
 
 	// create job of specific type
-	CJob *CreateJob(CJob::EJobType job_type);
+	CJob* CreateJob(CJob::EJobType job_type);
+
 	// release completed job
-	void Release(CJob *job);
+	void Release(CJob* job);
+
 	// truncate the container for the specific job type
 	void Truncate(CJob::EJobType job_type);
-
 }; // class CJobFactory
 } // namespace gpopt

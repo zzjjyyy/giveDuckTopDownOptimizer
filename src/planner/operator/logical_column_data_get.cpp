@@ -45,9 +45,10 @@ vector<idx_t> LogicalColumnDataGet::GetTableIndex() const {
 	return vector<idx_t> {table_index};
 }
 
-CKeyCollection *LogicalColumnDataGet::DeriveKeyCollection(CExpressionHandle &expression_handle) {
+duckdb::unique_ptr<CKeyCollection>
+LogicalColumnDataGet::DeriveKeyCollection(CExpressionHandle &expression_handle) {
 	vector<ColumnBinding> v = GenerateColumnBindings(table_index, chunk_types.size());
-	return new CKeyCollection(v);
+	return make_uniq<CKeyCollection>(v);
 }
 
 //---------------------------------------------------------------------------
@@ -58,16 +59,19 @@ CKeyCollection *LogicalColumnDataGet::DeriveKeyCollection(CExpressionHandle &exp
 //		Derive constraint property
 //
 //---------------------------------------------------------------------------
-CPropConstraint *LogicalColumnDataGet::DerivePropertyConstraint(CExpressionHandle &expression_handle) {
+duckdb::unique_ptr<CPropConstraint>
+LogicalColumnDataGet::DerivePropertyConstraint(CExpressionHandle &expression_handle) {
 	return nullptr;
 	// return PpcDeriveConstraintPassThru(expression_handle, 0);
 }
 
 // Rehydrate expression from a given cost context and child expressions
-Operator *LogicalColumnDataGet::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-                                              CDrvdPropCtxtPlan *pdpctxtplan) {
-	LogicalColumnDataGet *pexpr =
-	    new LogicalColumnDataGet(table_index, chunk_types, make_uniq<ColumnDataCollection>(*collection));
+duckdb::unique_ptr<Operator>
+LogicalColumnDataGet::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+								    duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                    duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
+	auto pexpr =
+	    make_uniq<LogicalColumnDataGet>(table_index, chunk_types, make_uniq<ColumnDataCollection>(*collection));
 	pexpr->m_cost = pcc->m_cost;
 	pexpr->m_group_expression = pcc->m_group_expression;
 	return pexpr;
@@ -81,8 +85,9 @@ Operator *LogicalColumnDataGet::SelfRehydrate(CCostContext *pcc, duckdb::vector<
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set *LogicalColumnDataGet::XformCandidates() const {
-	CXform_set *xform_set = new CXform_set();
+duckdb::unique_ptr<CXform_set>
+LogicalColumnDataGet::XformCandidates() const {
+	auto xform_set = make_uniq<CXform_set>();
 	(void)xform_set->set(CXform::ExfImplementColumnDataGet);
 	return xform_set;
 }

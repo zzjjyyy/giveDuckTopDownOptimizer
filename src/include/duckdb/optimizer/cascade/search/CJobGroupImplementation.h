@@ -63,34 +63,44 @@ public:
 
 public:
 	// initialize job
-	void Init(CGroup* pgroup);
+	void Init(duckdb::unique_ptr<CGroup> pgroup);
 
 	// get first unscheduled expression
-	virtual list<CGroupExpression*>::iterator PgexprFirstUnsched()
-	{
+	virtual list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	PgexprFirstUnsched() {
 		return CJobGroup::PgexprFirstUnschedLogical();
 	}
 
 	// schedule implementation jobs for of all new group expressions
-	virtual bool FScheduleGroupExpressions(CSchedulerContext* psc);
+	virtual bool
+	FScheduleGroupExpressions(duckdb::unique_ptr<CSchedulerContext> psc);
 
 	// schedule a new group implementation job
-	static void ScheduleJob(CSchedulerContext* psc, CGroup* pgroup, CJob* pjParent);
+	static void
+	ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+				duckdb::unique_ptr<CGroup> pgroup,
+				CJob *pjParent);
 
 	// job's function
-	virtual bool FExecute(CSchedulerContext* psc);
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) override;
 
 	// conversion function
-	static CJobGroupImplementation*ConvertJob(CJob* pj)
+	static CJobGroupImplementation*
+	ConvertJob(CJob *pj)
 	{
 		return dynamic_cast<CJobGroupImplementation*>(pj);
 	}
 
 	// start implementation action
-	static EEvent EevtStartImplementation(CSchedulerContext* psc, CJob* pj);
+	static EEvent
+	EevtStartImplementation(duckdb::unique_ptr<CSchedulerContext> psc,
+							CJob *pj);
 
 	// implement child group expressions action
-	static EEvent EevtImplementChildren(CSchedulerContext* psc, CJob* pj);
+	static EEvent
+	EevtImplementChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+						  CJob *pj);
 };	// class CJobGroupImplementation
 }  // namespace gpopt
 #endif

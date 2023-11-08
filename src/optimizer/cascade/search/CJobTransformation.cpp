@@ -13,6 +13,7 @@
 #include "duckdb/optimizer/cascade/search/CJobFactory.h"
 #include "duckdb/optimizer/cascade/search/CScheduler.h"
 #include "duckdb/optimizer/cascade/search/CSchedulerContext.h"
+#include <iostream>
 
 using namespace gpopt;
 
@@ -67,7 +68,8 @@ CJobTransformation::~CJobTransformation()
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void CJobTransformation::Init(CGroupExpression* pgexpr, CXform* pxform)
+void CJobTransformation::Init(duckdb::unique_ptr<CGroupExpression> pgexpr,
+							  duckdb::unique_ptr<CXform> pxform)
 {
 	m_pgexpr = pgexpr;
 	m_xform = pxform;
@@ -86,17 +88,22 @@ void CJobTransformation::Init(CGroupExpression* pgexpr, CXform* pxform)
 //		Apply transformation action
 //
 //---------------------------------------------------------------------------
-CJobTransformation::EEvent CJobTransformation::EevtTransform(CSchedulerContext* psc, CJob* pj)
+CJobTransformation::EEvent
+CJobTransformation::EevtTransform(duckdb::unique_ptr<CSchedulerContext> psc,
+								  CJob *pj)
 {
+#ifdef DEBUG
+	std::cout << "Do Transformation" << std::endl;
+#endif
 	// get a job pointer
-	CJobTransformation* pjt = PjConvert(pj);
-	CGroupExpression* pgexpr = pjt->m_pgexpr;
-	CXform* pxform = pjt->m_xform;
+	auto pjt = PjConvert(pj);
+	auto pgexpr = pjt->m_pgexpr;
+	auto pxform = pjt->m_xform;
 	// insert transformation results to memo
-	CXformResult* pxfres = new CXformResult();
+	auto pxfres = make_uniq<CXformResult>();
 	ULONG ulElapsedTime = 0;
 	ULONG ulNumberOfBindings = 0;
-	pgexpr->Transform(pxform, pxfres, &ulElapsedTime, &ulNumberOfBindings);
+	pgexpr->Transform(pgexpr, pxform, pxfres, &ulElapsedTime, &ulNumberOfBindings);
 	psc->m_engine->InsertXformResult(pgexpr->m_group, pxfres, pxform->ID(), pgexpr, ulElapsedTime, ulNumberOfBindings);
 	return eevCompleted;
 }
@@ -109,7 +116,7 @@ CJobTransformation::EEvent CJobTransformation::EevtTransform(CSchedulerContext* 
 //		Main job function
 //
 //---------------------------------------------------------------------------
-bool CJobTransformation::FExecute(CSchedulerContext* psc)
+bool CJobTransformation::FExecute(duckdb::unique_ptr<CSchedulerContext> psc)
 {
 	return m_jsm.FRun(psc, this);
 }
@@ -122,11 +129,14 @@ bool CJobTransformation::FExecute(CSchedulerContext* psc)
 //		Schedule a new transformation job
 //
 //---------------------------------------------------------------------------
-void CJobTransformation::ScheduleJob(CSchedulerContext* psc, CGroupExpression* pgexpr, CXform* pxform, CJob* pjParent)
+void CJobTransformation::ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+									 duckdb::unique_ptr<CGroupExpression> pgexpr,
+									 duckdb::unique_ptr<CXform> pxform,
+									 CJob *pjParent)
 {
-	CJob* pj = psc->m_job_factory->CreateJob(CJob::EjtTransformation);
+	auto pj = psc->m_job_factory->CreateJob(CJob::EjtTransformation);
 	// initialize job
-	CJobTransformation* pjt = PjConvert(pj);
+	auto pjt = PjConvert(pj);
 	pjt->Init(pgexpr, pxform);
 	psc->m_scheduler->Add(pjt, pjParent);
 }

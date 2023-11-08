@@ -59,19 +59,24 @@ public:
 
 public:
 	explicit CScheduler(ULONG num_jobs);
+
 	CScheduler(const CScheduler &) = delete;
+
 	virtual ~CScheduler();
 
 	// job wrapper; used for inserting job to waiting list (lock-free)
 	struct SJobLink {
 		// link id, set by sync set
 		ULONG m_id;
+
 		// pointer to job
-		CJob *m_job;
+		CJob* m_job;
+
 		// slink for list of waiting jobs
 		SLink m_link;
+
 		// initialize link
-		void Init(CJob *pj) {
+		void Init(CJob* pj) {
 			m_job = pj;
 			m_link.m_prev = m_link.m_next = nullptr;
 		}
@@ -79,12 +84,15 @@ public:
 
 	// list of jobs waiting to execute
 	CSyncList<SJobLink> m_todo_jobs;
+
 	// pool of job link objects
 	CSyncPool<SJobLink> m_job_links;
+
 	// current job counters
 	ULONG_PTR m_num_total;
 	ULONG_PTR m_num_running;
 	ULONG_PTR m_num_queued;
+
 	// stats
 	ULONG_PTR m_stats_queued;
 	ULONG_PTR m_stats_dequeued;
@@ -95,36 +103,55 @@ public:
 
 public:
 	// keep executing jobs (if any)
-	void ExecuteJobs(CSchedulerContext *psc);
+	void ExecuteJobs(duckdb::unique_ptr<CSchedulerContext> psc);
+	
 	// process job execution results
-	void ProcessJobResult(CJob *pj, CSchedulerContext *psc, bool fCompleted);
+	void ProcessJobResult(CJob* pj,
+						  duckdb::unique_ptr<CSchedulerContext> psc,
+						  bool fCompleted);
+	
 	// retrieve next job to run
-	CJob *RetrieveJob();
+	CJob* RetrieveJob();
+	
 	// schedule job for execution
-	void Schedule(CJob *pj);
+	void Schedule(CJob* pj);
+	
 	// prepare for job execution
-	void PreExecute(CJob *pj);
+	void PreExecute(CJob* pj);
+	
 	// execute job
-	bool FExecute(CJob *pj, CSchedulerContext *psc);
+	bool FExecute(CJob* pj,
+				  duckdb::unique_ptr<CSchedulerContext> psc);
+	
 	// process job execution outcome
-	EJobResult JobPostExecute(CJob *pj, bool fCompleted);
+	EJobResult
+	JobPostExecute(CJob* pj,
+				   bool fCompleted);
+	
 	// resume parent job
-	void ResumeParent(CJob *pj);
+	void ResumeParent(CJob* pj);
+	
 	// check if all jobs have completed
 	bool IsEmpty() const {
 		return (0 == m_num_total);
 	}
+	
 	// main job processing task
-	static void *Run(void *);
+	static void *Run(duckdb::unique_ptr<CSchedulerContext> pv);
+	
 	// transition job to completed
-	void Complete(CJob *pj);
+	void Complete(CJob* pj);
+	
 	// transition queued job to completed
-	void CompleteQueued(CJob *pj);
+	void CompleteQueued(CJob* pj);
+	
 	// transition job to suspended
-	void Suspend(CJob *pj);
+	void Suspend(CJob* pj);
+
 	// add new job for scheduling
-	void Add(CJob *pj, CJob *pjParent);
+	void Add(CJob* pj, CJob* pjParent);
+
 	// resume suspended job
-	void Resume(CJob *pj);
+	void Resume(CJob* pj);
 }; // class CScheduler
 } // namespace gpopt

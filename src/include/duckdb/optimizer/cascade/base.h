@@ -9,9 +9,11 @@
 #ifndef GPOS_base_H
 #define GPOS_base_H
 
+#include "duckdb/common/unique_ptr.hpp"
 #include "duckdb/optimizer/cascade/assert.h"
 #include "duckdb/optimizer/cascade/types.h"
 #include <memory>
+#include <unordered_map>
 
 // invalid cost value
 #define GPOPT_INVALID_COST -0.5
@@ -31,6 +33,8 @@ namespace gpos
 {
 
 extern unsigned int enumeration_pairs;
+
+extern std::unordered_map<int, double> true_set;
 
 enum Etlsidx { EtlsidxTest, EtlsidxOptCtxt, EtlsidxInvalid, EtlsidxSentinel };
 

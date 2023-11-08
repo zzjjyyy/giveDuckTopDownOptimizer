@@ -46,22 +46,28 @@ private:
 	JSM m_jsm;
 
 	// group expression that triggered group optimization
-	CGroupExpression *m_pgexprOrigin;
+	duckdb::unique_ptr<CGroupExpression> m_pgexprOrigin;
 
 	// optimization context of the job
-	COptimizationContext *m_poc;
+	duckdb::unique_ptr<COptimizationContext> m_poc;
 
 	// current optimization level of group expressions
 	EOptimizationLevel m_eolCurrent;
 
 	// start optimization action
-	static EEvent EevtStartOptimization(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtStartOptimization(duckdb::unique_ptr<CSchedulerContext> psc,
+						  CJob *pj);
 
 	// optimized child group expressions action
-	static EEvent EevtOptimizeChildren(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtOptimizeChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+						 CJob *pj);
 
 	// complete optimization action
-	static EEvent EevtCompleteOptimization(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtCompleteOptimization(duckdb::unique_ptr<CSchedulerContext> psc,
+							 CJob *pj);
 
 public:
 	// ctor
@@ -74,7 +80,9 @@ public:
 	virtual ~CJobGroupOptimization();
 
 	// initialize job
-	void Init(CGroup *pgroup, CGroupExpression *pgexprOrigin, COptimizationContext *poc);
+	void Init(duckdb::unique_ptr<CGroup> pgroup,
+			  duckdb::unique_ptr<CGroupExpression> pgexprOrigin,
+			  duckdb::unique_ptr<COptimizationContext> poc);
 
 	// current optimization level accessor
 	EOptimizationLevel EolCurrent() const {
@@ -87,23 +95,30 @@ public:
 	}
 
 	// get first unscheduled expression
-	virtual list<CGroupExpression *>::iterator PgexprFirstUnsched() override {
+	virtual list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	PgexprFirstUnsched() override {
 		return CJobGroup::PgexprFirstUnschedNonLogical();
 	}
 
 	// schedule optimization jobs for of all new group expressions
-	virtual bool FScheduleGroupExpressions(CSchedulerContext *psc) override;
+	virtual bool
+	FScheduleGroupExpressions(duckdb::unique_ptr<CSchedulerContext> psc) override;
 
 	// schedule a new group optimization job
-	static void ScheduleJob(CSchedulerContext *scheduler_context, CGroup *group, CGroupExpression *group_expr_origin,
-	                        COptimizationContext *opt_context, CJob *parent_job);
+	static void ScheduleJob(duckdb::unique_ptr<CSchedulerContext> scheduler_context,
+							duckdb::unique_ptr<CGroup> group,
+							duckdb::unique_ptr<CGroupExpression> group_expr_origin,
+							duckdb::unique_ptr<COptimizationContext> opt_context,
+                            CJob* parent_job);
 
 	// job's function
-	virtual bool FExecute(CSchedulerContext *psc) override;
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) override;
 
 	// conversion function
-	static CJobGroupOptimization *ConvertJob(CJob *pj) {
-		return dynamic_cast<CJobGroupOptimization *>(pj);
+	static CJobGroupOptimization*
+	ConvertJob(CJob* pj) {
+		return dynamic_cast<CJobGroupOptimization*>(pj);
 	}
 }; // class CJobGroupOptimization
 } // namespace gpopt

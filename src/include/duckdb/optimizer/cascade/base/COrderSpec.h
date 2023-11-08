@@ -75,13 +75,14 @@ public:
 	virtual duckdb::vector<ColumnBinding> PcrsUsed() const;
 
 	// check if order specs match
-	bool Matches(COrderSpec *pos) const;
+	bool Matches(duckdb::unique_ptr<COrderSpec> pos) const;
 
 	// check if order specs satisfies req'd spec
-	bool FSatisfies(COrderSpec *pos) const;
+	bool FSatisfies(duckdb::unique_ptr<COrderSpec> pos) const;
 
 	// append enforcers to dynamic array for the given plan properties
-	virtual void AppendEnforcers(CExpressionHandle &exprhdl, CRequiredPhysicalProp *prpp,
+	virtual void AppendEnforcers(CExpressionHandle &exprhdl,
+								 duckdb::unique_ptr<CRequiredPhysicalProp> prpp,
 	                             duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
 	                             duckdb::unique_ptr<Operator> pexpr);
 
@@ -92,20 +93,27 @@ public:
 	// virtual COrderSpec* PosCopyWithRemappedColumns(longToExpressionMap* colref_mapping, bool must_exist);
 
 	// return a copy of the order spec after excluding the given columns
-	virtual COrderSpec *PosExcludeColumns(duckdb::vector<ColumnBinding> pcrs);
+	virtual duckdb::unique_ptr<COrderSpec>
+	PosExcludeColumns(duckdb::vector<ColumnBinding> pcrs);
 
 	// matching function over order spec arrays
-	static bool Equals(duckdb::vector<COrderSpec *> pdrgposFirst, duckdb::vector<COrderSpec *> pdrgposSecond);
+	static bool
+	Equals(duckdb::vector<duckdb::unique_ptr<COrderSpec>> pdrgposFirst,
+		   duckdb::vector<duckdb::unique_ptr<COrderSpec>> pdrgposSecond);
 
 	// combine hash values of a maximum number of entries
-	size_t HashValue(duckdb::vector<COrderSpec *> pdrgpos, size_t ulMaxSize);
+	size_t
+	HashValue(duckdb::vector<duckdb::unique_ptr<COrderSpec>> pdrgpos,
+			  size_t ulMaxSize);
 
 	// extract colref set of order columns used by elements of order spec array
-	static duckdb::vector<ColumnBinding> GetColRefSet(duckdb::vector<COrderSpec *> pdrgpos);
+	static duckdb::vector<ColumnBinding>
+	GetColRefSet(duckdb::vector<duckdb::unique_ptr<COrderSpec>> pdrgpos);
 
 	// filter out array of order specs from order expressions using the passed columns
-	static duckdb::vector<COrderSpec *> PdrgposExclude(duckdb::vector<COrderSpec *> pdrgpos,
-	                                                   duckdb::vector<ColumnBinding> pcrsToExclude);
+	static duckdb::vector<duckdb::unique_ptr<COrderSpec>>
+	PdrgposExclude(duckdb::vector<duckdb::unique_ptr<COrderSpec>> pdrgpos,
+	               duckdb::vector<ColumnBinding> pcrsToExclude);
 }; // class COrderSpec
 } // namespace gpopt
 #endif

@@ -52,7 +52,8 @@ CJobFactory::~CJobFactory()
 //		Create job of specific type
 //
 //---------------------------------------------------------------------------
-CJob* CJobFactory::CreateJob(CJob::EJobType job_type)
+CJob*
+CJobFactory::CreateJob(CJob::EJobType job_type)
 {
 	CJob* pj;
 	switch (job_type)
@@ -97,7 +98,7 @@ CJob* CJobFactory::CreateJob(CJob::EJobType job_type)
 //		Release completed job
 //
 //---------------------------------------------------------------------------
-void CJobFactory::Release(CJob*job)
+void CJobFactory::Release(CJob* job)
 {
 	switch (job->JobType())
 	{

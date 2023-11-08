@@ -22,12 +22,14 @@ namespace gpopt {
 //		CBinding::NextGroupExpr
 //
 //	@doc:
-//		Move cursor within a group (initialize if NULL)
+//		Move cursor within a group (initialize if nullptr)
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression *>::iterator CBinding::PgexprNext(CGroup *pgroup, CGroupExpression *pgexpr) const {
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CBinding::PgexprNext(duckdb::unique_ptr<CGroup> pgroup,
+					 duckdb::unique_ptr<CGroupExpression> pgexpr) const {
 	CGroupProxy gp(pgroup);
-	if (NULL == pgexpr) {
+	if (nullptr == pgexpr) {
 		return gp.PgexprFirst();
 	}
 	auto itr = std::find(gp.m_pgroup->m_group_exprs.begin(), gp.m_pgroup->m_group_exprs.end(), pgexpr);
@@ -48,9 +50,11 @@ list<CGroupExpression *>::iterator CBinding::PgexprNext(CGroup *pgroup, CGroupEx
 //		Given the pattern determine if we need to re-use the pattern operators;
 //
 //---------------------------------------------------------------------------
-Operator *CBinding::PexprExpandPattern(Operator *pexprPattern, ULONG ulPos, ULONG arity) {
+duckdb::unique_ptr<Operator>
+CBinding::PexprExpandPattern(duckdb::unique_ptr<Operator> pexprPattern,
+							 ULONG ulPos, ULONG arity) {
 	// re-use tree pattern
-	if (pexprPattern->FPattern() && !((CPattern*)pexprPattern)->FLeaf())
+	if (pexprPattern->FPattern() && !(unique_ptr_cast<Operator, CPattern>(pexprPattern))->FLeaf())
 	{
 		return pexprPattern;
 	}
@@ -58,12 +62,12 @@ Operator *CBinding::PexprExpandPattern(Operator *pexprPattern, ULONG ulPos, ULON
 	if (0 < pexprPattern->Arity()) {
 		if (ulPos == arity - 1) {
 			// special-case last child
-			return pexprPattern->children[pexprPattern->Arity() - 1].get();
+			return pexprPattern->children[pexprPattern->Arity() - 1];
 		}
 		// otherwise re-use multi-leaf/tree child
-		return pexprPattern->children[0].get();
+		return pexprPattern->children[0];
 	}
-	return pexprPattern->children[ulPos].get();
+	return pexprPattern->children[ulPos];
 }
 
 //---------------------------------------------------------------------------
@@ -74,14 +78,24 @@ Operator *CBinding::PexprExpandPattern(Operator *pexprPattern, ULONG ulPos, ULON
 //		Assemble expression; substitute operator with pattern as necessary
 //
 //---------------------------------------------------------------------------
-Operator *CBinding::PexprFinalize(CGroupExpression *pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr) {
+// Need to delete
+// Operator *CBinding::PexprFinalize(CGroupExpression *pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr) {
+duckdb::unique_ptr<Operator>
+CBinding::PexprFinalize(duckdb::unique_ptr<CGroupExpression> pgexpr,
+						duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr) {
 	pgexpr->m_operator->children.clear();
-	for (auto &child : pdrgpexpr) {
-		pgexpr->m_operator->AddChild(std::move(child));
+	// Need to delete
+	// for (auto &child : pdrgpexpr) {
+	for (auto child : pdrgpexpr) {
+		// Need to delete
+		// pgexpr->m_operator->AddChild(std::move(child));
+		pgexpr->m_operator->AddChild(child);
 	}
 	pgexpr->m_operator->m_cost = GPOPT_INVALID_COST;
 	pgexpr->m_operator->m_group_expression = pgexpr;
-	return pgexpr->m_operator.get();
+	// Need to delete
+	// return pgexpr->m_operator.get();
+	return pgexpr->m_operator;
 }
 
 //---------------------------------------------------------------------------
@@ -93,14 +107,18 @@ Operator *CBinding::PexprFinalize(CGroupExpression *pgexpr, duckdb::vector<duckd
 //		Keep root node fixed;
 //
 //---------------------------------------------------------------------------
-Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPattern, Operator *pexprLast) {
+// Need to delete
+// Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPattern, Operator *pexprLast) {
+duckdb::unique_ptr<Operator> CBinding::PexprExtract(duckdb::unique_ptr<CGroupExpression> pgexpr, duckdb::unique_ptr<Operator> pexprPattern, duckdb::unique_ptr<Operator> pexprLast) {
 	if (!pexprPattern->FMatchPattern(pgexpr)) {
 		// shallow matching fails
-		return NULL;
+		return nullptr;
 	}
-	if (pexprPattern->FPattern() && ((CPattern *)pexprPattern)->FLeaf()) {
+	if (pexprPattern->FPattern() && (unique_ptr_cast<Operator, CPattern>(pexprPattern))->FLeaf()) {
 		// return immediately; no deep extraction for leaf patterns
-		return pgexpr->m_operator.get();
+		// Need to delete
+		// return pgexpr->m_operator.get();
+		return pgexpr->m_operator;
 	}
 	// for a scalar operator, there is always only one group expression in it's
 	// group. scalar operators are required to derive the scalar properties only
@@ -108,21 +126,23 @@ Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPatter
 	// specifically which will generate equivalent scalar operators in the same group.
 	// so, if a scalar op been extracted once, there is no need to explore
 	// all the child bindings, as the scalar properites will remain the same.
-	if (NULL != pexprLast && pgexpr->m_group->m_is_scalar) {
-		return NULL;
+	if (nullptr != pexprLast && pgexpr->m_group->m_is_scalar) {
+		return nullptr;
 	}
 	duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr;
 	ULONG arity = pgexpr->Arity();
-	if (0 == arity && NULL != pexprLast) {
+	if (0 == arity && nullptr != pexprLast) {
 		// no more bindings
-		return NULL;
+		return nullptr;
 	} else {
 		// attempt binding to children
 		if (!FExtractChildren(pgexpr, pexprPattern, pexprLast, pdrgpexpr)) {
-			return NULL;
+			return nullptr;
 		}
 	}
-	Operator *pexpr = PexprFinalize(pgexpr, std::move(pdrgpexpr));
+	// Need to delete
+	// Operator *pexpr = PexprFinalize(pgexpr, std::move(pdrgpexpr));
+	auto pexpr = PexprFinalize(pgexpr, pdrgpexpr);
 	return pexpr;
 }
 
@@ -134,19 +154,22 @@ Operator *CBinding::PexprExtract(CGroupExpression *pgexpr, Operator *pexprPatter
 //		Initialize cursors of child expressions
 //
 //---------------------------------------------------------------------------
-BOOL CBinding::FInitChildCursors(CGroupExpression *pgexpr, Operator *pexprPattern,
+bool CBinding::FInitChildCursors(duckdb::unique_ptr<CGroupExpression> pgexpr,
+								 duckdb::unique_ptr<Operator> pexprPattern,
                                  duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr) {
 	const ULONG arity = pgexpr->Arity();
 	// grab first expression from each cursor
 	for (ULONG ul = 0; ul < arity; ul++) {
-		CGroup *pgroup = (*pgexpr)[ul];
-		Operator *pexprPatternChild = PexprExpandPattern(pexprPattern, ul, arity);
-		Operator *pexprNewChild = PexprExtract(pgroup, pexprPatternChild, NULL);
-		if (NULL == pexprNewChild) {
+		auto pgroup = (*pgexpr)[ul];
+		auto pexprPatternChild = PexprExpandPattern(pexprPattern, ul, arity);
+		auto pexprNewChild = PexprExtract(pgroup, pexprPatternChild, nullptr);
+		if (nullptr == pexprNewChild) {
 			// failure means we have no more expressions
 			return false;
 		}
-		pdrgpexpr.emplace_back(pexprNewChild->Copy());
+		// Need to delete
+		// pdrgpexpr.emplace_back(pexprNewChild->Copy());
+		pdrgpexpr.emplace_back(pexprNewChild);
 	}
 	return true;
 }
@@ -160,10 +183,12 @@ BOOL CBinding::FInitChildCursors(CGroupExpression *pgexpr, Operator *pexprPatter
 //		with the next child expressions
 //
 //---------------------------------------------------------------------------
-bool CBinding::FAdvanceChildCursors(CGroupExpression *pgexpr, Operator *pexprPattern, Operator *pexprLast,
+bool CBinding::FAdvanceChildCursors(duckdb::unique_ptr<CGroupExpression> pgexpr,
+									duckdb::unique_ptr<Operator> pexprPattern,
+									duckdb::unique_ptr<Operator> pexprLast,
                                     duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr) {
 	const ULONG arity = pgexpr->Arity();
-	if (NULL == pexprLast) {
+	if (nullptr == pexprLast) {
 		// first call, initialize cursors
 		return FInitChildCursors(pgexpr, pexprPattern, pdrgpexpr);
 	}
@@ -172,26 +197,32 @@ bool CBinding::FAdvanceChildCursors(CGroupExpression *pgexpr, Operator *pexprPat
 	// number of exhausted cursors
 	ULONG ulExhaustedCursors = 0;
 	for (ULONG ul = 0; ul < arity; ul++) {
-		CGroup *pgroup = (*pgexpr)[ul];
-		Operator *pexprPatternChild = PexprExpandPattern(pexprPattern, ul, arity);
-		Operator *pexprNewChild = NULL;
+		auto pgroup = (*pgexpr)[ul];
+		auto pexprPatternChild = PexprExpandPattern(pexprPattern, ul, arity);
+		// Need to delete
+		// Operator *pexprNewChild = nullptr;
+		duckdb::unique_ptr<Operator> pexprNewChild;
 		if (fCursorAdvanced) {
 			// re-use last extracted child expression
-			pexprNewChild = pexprLast->children[ul].get();
+			// Need to delete
+			// pexprNewChild = pexprLast->children[ul].get();
+			pexprNewChild = pexprLast->children[ul];
 		} else {
-			Operator *pexprLastChild = pexprLast->children[ul].get();
+			auto pexprLastChild = pexprLast->children[ul];
 			// advance current cursor
 			pexprNewChild = PexprExtract(pgroup, pexprPatternChild, pexprLastChild);
-			if (NULL == pexprNewChild) {
+			if (nullptr == pexprNewChild) {
 				// cursor is exhausted, we need to reset it
-				pexprNewChild = PexprExtract(pgroup, pexprPatternChild, NULL);
+				pexprNewChild = PexprExtract(pgroup, pexprPatternChild, nullptr);
 				ulExhaustedCursors++;
 			} else {
 				// advancing current cursor has succeeded
 				fCursorAdvanced = true;
 			}
 		}
-		pdrgpexpr.emplace_back(pexprNewChild->Copy());
+		// Need to delete
+		// pdrgpexpr.emplace_back(pexprNewChild->Copy());
+		pdrgpexpr.emplace_back(pexprNewChild);
 	}
 	return ulExhaustedCursors < arity;
 }
@@ -205,7 +236,9 @@ bool CBinding::FAdvanceChildCursors(CGroupExpression *pgexpr, Operator *pexprPat
 //		Allocates the array for the children as needed;
 //
 //---------------------------------------------------------------------------
-bool CBinding::FExtractChildren(CGroupExpression *pgexpr, Operator *pexprPattern, Operator *pexprLast,
+bool CBinding::FExtractChildren(duckdb::unique_ptr<CGroupExpression> pgexpr,
+								duckdb::unique_ptr<Operator> pexprPattern,
+								duckdb::unique_ptr<Operator> pexprLast,
                                 duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr) {
 	ULONG arity = pgexpr->Arity();
 	if (arity < pexprPattern->Arity()) {
@@ -228,18 +261,25 @@ bool CBinding::FExtractChildren(CGroupExpression *pgexpr, Operator *pexprPattern
 //		until group is exhausted;
 //
 //---------------------------------------------------------------------------
-Operator *CBinding::PexprExtract(CGroup *pgroup, Operator *pexprPattern, Operator *pexprLast) {
-	CGroupExpression *pgexpr = NULL;
-	list<CGroupExpression *>::iterator itr;
-	if (NULL != pexprLast) {
+// Need to delete
+// Operator *CBinding::PexprExtract(CGroup *pgroup, Operator *pexprPattern, Operator *pexprLast) {
+duckdb::unique_ptr<Operator>
+CBinding::PexprExtract(duckdb::unique_ptr<CGroup> pgroup,
+					   duckdb::unique_ptr<Operator> pexprPattern,
+					   duckdb::unique_ptr<Operator> pexprLast) {
+	duckdb::unique_ptr<CGroupExpression> pgexpr = nullptr;
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
+	if (nullptr != pexprLast) {
 		itr = find(pgroup->m_group_exprs.begin(), pgroup->m_group_exprs.end(), pexprLast->m_group_expression);
-		pgexpr = *itr;
+		if(pgroup->m_group_exprs.end() != itr) {
+			pgexpr = *itr;
+		}
 	} else {
 		// init cursor
 		itr = PgexprNext(pgroup, nullptr);
 		pgexpr = *itr;
 	}
-	if (pexprPattern->FPattern() && ((CPattern *)pexprPattern)->FLeaf()) {
+	if (pexprPattern->FPattern() && (unique_ptr_cast<Operator, CPattern>(pexprPattern))->FLeaf()) {
 		// for leaf patterns, we do not iterate on group expressions
 		if (nullptr != pexprLast) {
 			// if a leaf was extracted before, then group is exhausted
@@ -248,20 +288,22 @@ Operator *CBinding::PexprExtract(CGroup *pgroup, Operator *pexprPattern, Operato
 		return PexprExtract(pgexpr, pexprPattern, pexprLast);
 	}
 	// start position for next binding
-	Operator *pexprStart = pexprLast;
+	auto pexprStart = pexprLast;
 	do {
 		if (pexprPattern->FMatchPattern(pgexpr)) {
-			Operator *pexprResult = PexprExtract(pgexpr, pexprPattern, pexprStart);
-			if (NULL != pexprResult) {
+			auto pexprResult = PexprExtract(pgexpr, pexprPattern, pexprStart);
+			if (nullptr != pexprResult) {
 				return pexprResult;
 			}
 		}
 		// move cursor and reset start position
 		itr = PgexprNext(pgroup, pgexpr);
-		pgexpr = *itr;
-		pexprStart = nullptr;
+		if(pgroup->m_group_exprs.end() != itr) {
+			pgexpr = *itr;
+			pexprStart = nullptr;
+		}
 	} while (pgroup->m_group_exprs.end() != itr);
 	// group exhausted
-	return NULL;
+	return nullptr;
 }
 } // namespace gpopt

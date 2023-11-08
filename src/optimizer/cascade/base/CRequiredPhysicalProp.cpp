@@ -26,7 +26,7 @@ using namespace duckdb;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CRequiredPhysicalProp::CRequiredPhysicalProp(duckdb::vector<ColumnBinding> pcrs, COrderProperty *peo)
+CRequiredPhysicalProp::CRequiredPhysicalProp(duckdb::vector<ColumnBinding> pcrs, duckdb::unique_ptr<COrderProperty> peo)
     : m_cols(pcrs), m_sort_order(peo) {
 }
 
@@ -49,10 +49,12 @@ CRequiredPhysicalProp::~CRequiredPhysicalProp() {
 //		Compute required columns
 //
 //---------------------------------------------------------------------------
-void CRequiredPhysicalProp::ComputeReqdCols(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-                                        duckdb::vector<CDerivedProperty *> pdrgpdpCtxt) {
-	CRequiredPhysicalProp *prppInput = CRequiredPhysicalProp::Prpp(prpInput);
-	PhysicalOperator *popPhysical = (PhysicalOperator *)exprhdl.Pop();
+void CRequiredPhysicalProp::ComputeReqdCols(CExpressionHandle &exprhdl,
+											duckdb::unique_ptr<CRequiredProperty> prpInput,
+											ULONG child_index,
+                                        	duckdb::vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt) {
+	auto prppInput = CRequiredPhysicalProp::Prpp(prpInput);
+	auto popPhysical = unique_ptr_cast<Operator, PhysicalOperator>(exprhdl.Pop());
 	m_cols = popPhysical->PcrsRequired(exprhdl, prppInput->m_cols, child_index, pdrgpdpCtxt, 0);
 }
 
@@ -64,14 +66,20 @@ void CRequiredPhysicalProp::ComputeReqdCols(CExpressionHandle &exprhdl, CRequire
 //		Compute required props
 //
 //---------------------------------------------------------------------------
-void CRequiredPhysicalProp::Compute(CExpressionHandle &expr_handle, CRequiredProperty *property, ULONG child_index,
-                                duckdb::vector<CDerivedProperty *> children_derived_prop, ULONG num_opt_request) {
-	CRequiredPhysicalProp *property_plan = CRequiredPhysicalProp::Prpp(property);
-	PhysicalOperator *physical_op = (PhysicalOperator *)expr_handle.Pop();
+void CRequiredPhysicalProp::Compute(CExpressionHandle &expr_handle,
+									duckdb::unique_ptr<CRequiredProperty> property,
+									ULONG child_index,
+                                	duckdb::vector<duckdb::unique_ptr<CDerivedProperty>> children_derived_prop,
+									ULONG num_opt_request) {
+	auto property_plan = CRequiredPhysicalProp::Prpp(property);
+	auto physical_op = unique_ptr_cast<Operator, PhysicalOperator>(expr_handle.Pop());
 	ComputeReqdCols(expr_handle, property, child_index, children_derived_prop);
 	m_sort_order =
-	    new COrderProperty(physical_op->RequiredSortSpec(expr_handle, property_plan->m_sort_order->m_order_spec,
-	                                                     child_index, children_derived_prop, num_opt_request),
+	    make_uniq<COrderProperty>(physical_op->RequiredSortSpec(expr_handle,
+																property_plan->m_sort_order->m_order_spec,
+	                                                     		child_index,
+																children_derived_prop,
+																num_opt_request),
 	    physical_op->OrderMatching(property_plan, child_index, children_derived_prop, num_opt_request));
 }
 
@@ -86,17 +94,17 @@ void CRequiredPhysicalProp::Compute(CExpressionHandle &expr_handle, CRequiredPro
 //---------------------------------------------------------------------------
 bool CRequiredPhysicalProp::FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG ulOptReq) const {
 	// check if operator provides required columns
-	if (!((PhysicalOperator *)exprhdl.Pop())->FProvidesReqdCols(exprhdl, m_cols, ulOptReq)) {
+	if (!unique_ptr_cast<Operator, PhysicalOperator>(exprhdl.Pop())->FProvidesReqdCols(exprhdl, m_cols, ulOptReq)) {
 		return false;
 	}
-	duckdb::vector<ColumnBinding> pcrsOutput = exprhdl.DeriveOutputColumns();
+	auto pcrsOutput = exprhdl.DeriveOutputColumns();
 	// check if property spec members use columns from operator output
 	bool fProvidesReqdCols = true;
-	COrderSpec *pps = m_sort_order->m_order_spec;
+	auto pps = m_sort_order->m_order_spec;
 	if (NULL == pps) {
 		return fProvidesReqdCols;
 	}
-	duckdb::vector<ColumnBinding> pcrsUsed = pps->PcrsUsed();
+	auto pcrsUsed = pps->PcrsUsed();
 	duckdb::vector<ColumnBinding> v;
 	for (auto &child : pcrsUsed) {
 		fProvidesReqdCols = false;
@@ -121,7 +129,7 @@ bool CRequiredPhysicalProp::FProvidesReqdCols(CExpressionHandle &exprhdl, ULONG 
 //		Equality function
 //
 //---------------------------------------------------------------------------
-bool CRequiredPhysicalProp::Equals(CRequiredPhysicalProp *prpp) const {
+bool CRequiredPhysicalProp::Equals(duckdb::unique_ptr<CRequiredPhysicalProp> prpp) const {
 	return CUtils::Equals(m_cols, prpp->m_cols) && m_sort_order->Matches(prpp->m_sort_order);
 }
 
@@ -150,13 +158,16 @@ size_t CRequiredPhysicalProp::HashValue() const {
 //		Check if plan properties are satisfied by the given derived properties
 //
 //---------------------------------------------------------------------------
-bool CRequiredPhysicalProp::FSatisfied(CDerivedLogicalProp *rel, CDerivedPhysicalProp *plan) const {
+bool
+CRequiredPhysicalProp::FSatisfied(duckdb::unique_ptr<CRequiredPhysicalProp> this_physical_prop,
+							      duckdb::unique_ptr<CDerivedLogicalProp> rel,
+								  duckdb::unique_ptr<CDerivedPhysicalProp> plan) const {
 	// first, check satisfiability of relational properties
-	if (!rel->FSatisfies(this)) {
+	if (!rel->FSatisfies(this_physical_prop)) {
 		return false;
 	}
 	// otherwise, check satisfiability of all plan properties
-	return plan->FSatisfies(this);
+	return plan->FSatisfies(this_physical_prop);
 }
 
 //---------------------------------------------------------------------------
@@ -167,10 +178,13 @@ bool CRequiredPhysicalProp::FSatisfied(CDerivedLogicalProp *rel, CDerivedPhysica
 //		Check if plan properties are compatible with the given derived properties
 //
 //---------------------------------------------------------------------------
-bool CRequiredPhysicalProp::FCompatible(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical,
-                                        CDerivedLogicalProp *pdprel, CDerivedPhysicalProp *pdpplan) const {
+bool CRequiredPhysicalProp::FCompatible(duckdb::unique_ptr<CRequiredPhysicalProp> this_req_physical_prop,
+										CExpressionHandle &exprhdl,
+									    duckdb::unique_ptr<PhysicalOperator> popPhysical,
+                                        duckdb::unique_ptr<CDerivedLogicalProp> pdprel,
+										duckdb::unique_ptr<CDerivedPhysicalProp> pdpplan) const {
 	// first, check satisfiability of relational properties, including required columns
-	if (!pdprel->FSatisfies(this)) {
+	if (!pdprel->FSatisfies(this_req_physical_prop)) {
 		return false;
 	}
 	return true;
@@ -184,11 +198,11 @@ bool CRequiredPhysicalProp::FCompatible(CExpressionHandle &exprhdl, PhysicalOper
 //		Generate empty required properties
 //
 //---------------------------------------------------------------------------
-CRequiredPhysicalProp *CRequiredPhysicalProp::PrppEmpty() {
+duckdb::unique_ptr<CRequiredPhysicalProp> CRequiredPhysicalProp::PrppEmpty() {
 	duckdb::vector<ColumnBinding> pcrs;
-	COrderSpec *pos = new COrderSpec();
-	COrderProperty *peo = new COrderProperty(pos, COrderProperty::EomSatisfy);
-	return new CRequiredPhysicalProp(pcrs, peo);
+	auto pos = make_uniq<COrderSpec>();
+	auto peo = make_uniq<COrderProperty>(pos, COrderProperty::EomSatisfy);
+	return make_uniq<CRequiredPhysicalProp>(pcrs, peo);
 }
 
 //---------------------------------------------------------------------------
@@ -199,8 +213,8 @@ CRequiredPhysicalProp *CRequiredPhysicalProp::PrppEmpty() {
 //		Hash function used for cost bounding
 //
 //---------------------------------------------------------------------------
-ULONG CRequiredPhysicalProp::UlHashForCostBounding(CRequiredPhysicalProp *prpp) {
-	duckdb::vector<ColumnBinding> v = prpp->m_cols;
+ULONG CRequiredPhysicalProp::UlHashForCostBounding(duckdb::unique_ptr<CRequiredPhysicalProp> prpp) {
+	auto v = prpp->m_cols;
 	ULONG ulHash = 0;
 	for (size_t m = 0; m < v.size(); m++) {
 		ulHash = gpos::CombineHashes(ulHash, gpos::HashValue(&v[m]));
@@ -216,7 +230,8 @@ ULONG CRequiredPhysicalProp::UlHashForCostBounding(CRequiredPhysicalProp *prpp) 
 //		Equality function used for cost bounding
 //
 //---------------------------------------------------------------------------
-bool CRequiredPhysicalProp::FEqualForCostBounding(CRequiredPhysicalProp *prppFst, CRequiredPhysicalProp *prppSnd) {
+bool CRequiredPhysicalProp::FEqualForCostBounding(duckdb::unique_ptr<CRequiredPhysicalProp> prppFst,
+												  duckdb::unique_ptr<CRequiredPhysicalProp> prppSnd) {
 	return CUtils::Equals(prppFst->m_cols, prppSnd->m_cols);
 }
 } // namespace gpopt

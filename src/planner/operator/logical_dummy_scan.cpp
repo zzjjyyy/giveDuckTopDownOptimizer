@@ -25,8 +25,9 @@ vector<idx_t> LogicalDummyScan::GetTableIndex() const {
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set *LogicalDummyScan::XformCandidates() const {
-	CXform_set *xform_set = new CXform_set();
+duckdb::unique_ptr<CXform_set>
+LogicalDummyScan::XformCandidates() const {
+	auto xform_set = make_uniq<CXform_set>();
 	(void)xform_set->set(CXform::ExfDummyScanImplementation);
 	return xform_set;
 }
@@ -39,15 +40,18 @@ CXform_set *LogicalDummyScan::XformCandidates() const {
 //		Derive constraint property
 //
 //---------------------------------------------------------------------------
-CPropConstraint *LogicalDummyScan::DerivePropertyConstraint(CExpressionHandle &expr_handle) {
+duckdb::unique_ptr<CPropConstraint>
+LogicalDummyScan::DerivePropertyConstraint(CExpressionHandle &expr_handle) {
 	return nullptr;
 	// return PpcDeriveConstraintPassThru(exprhdl, 0);
 }
 
 // Rehydrate expression from a given cost context and child expressions
-Operator *LogicalDummyScan::SelfRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdr_exprs,
-                                          CDrvdPropCtxtPlan *pdpctxtplan) {
-	return new LogicalDummyScan(table_index);
+duckdb::unique_ptr<Operator>
+LogicalDummyScan::SelfRehydrate(duckdb::unique_ptr<CCostContext> cost_context,
+								duckdb::vector<duckdb::unique_ptr<Operator>> pdr_exprs,
+                                duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
+	return make_uniq<LogicalDummyScan>(table_index);
 }
 
 unique_ptr<Operator> LogicalDummyScan::Copy() {
@@ -75,15 +79,17 @@ unique_ptr<Operator> LogicalDummyScan::Copy() {
 	return unique_ptr_cast<LogicalDummyScan, Operator>(std::move(result));
 }
 
-unique_ptr<Operator> LogicalDummyScan::CopyWithNewGroupExpression(CGroupExpression *expr) {
+unique_ptr<Operator>
+LogicalDummyScan::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> expr) {
 	auto result = Copy();
 	result->m_group_expression = expr;
 	return result;
 }
 
-unique_ptr<Operator> LogicalDummyScan::CopyWithNewChildren(CGroupExpression *expr,
-                                                           duckdb::vector<duckdb::unique_ptr<Operator>> pdr_exprs,
-                                                           double cost) {
+unique_ptr<Operator>
+LogicalDummyScan::CopyWithNewChildren(unique_ptr<CGroupExpression> expr,
+                                      duckdb::vector<unique_ptr<Operator>> pdr_exprs,
+                                      double cost) {
 	auto result = Copy();
 	for(auto &child : pdr_exprs)
 	{

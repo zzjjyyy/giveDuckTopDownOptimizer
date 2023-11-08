@@ -39,13 +39,20 @@ public:
 
 public:
 	// Rehydrate expression from a given cost context and child expressions
-	Operator* SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+				  duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 	
-	duckdb::unique_ptr<Operator> Copy() override;
+	unique_ptr<Operator> Copy() override;
 
-	duckdb::unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression* pgexpr) override;
+	unique_ptr<Operator>
+	CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) override;
 	
-	duckdb::unique_ptr<Operator> CopyWithNewChildren(CGroupExpression* pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr, double cost) override;
+	unique_ptr<Operator>
+	CopyWithNewChildren(duckdb::unique_ptr<CGroupExpression> pgexpr,
+						duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+						double cost) override;
 
 	vector<ColumnBinding> GetColumnBindings() override {
 		return v_column_binding;

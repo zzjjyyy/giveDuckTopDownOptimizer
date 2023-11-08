@@ -24,7 +24,7 @@
 namespace gpopt {
 
 // global instance of xform factory
-CXformFactory *CXformFactory::m_xform_factory = nullptr;
+duckdb::unique_ptr<CXformFactory> CXformFactory::m_xform_factory = nullptr;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -40,8 +40,8 @@ CXformFactory::CXformFactory() : m_xform_dict(0), m_exploration_xforms(nullptr),
 		m_xform_range[i] = nullptr;
 	}
 
-	m_exploration_xforms = new CXform_set();
-	m_implementation_xforms = new CXform_set();
+	m_exploration_xforms = make_uniq<CXform_set>();
+	m_implementation_xforms = make_uniq<CXform_set>();
 }
 
 //---------------------------------------------------------------------------
@@ -59,12 +59,14 @@ CXformFactory::~CXformFactory() {
 			// dtor called after failing to populate array
 			break;
 		}
-		delete m_xform_range[i];
+		// Need to delete
+		// delete m_xform_range[i];
 		m_xform_range[i] = nullptr;
 	}
 	m_xform_dict.clear();
-	delete m_exploration_xforms;
-	delete m_implementation_xforms;
+	// need to delete
+	// delete m_exploration_xforms;
+	// delete m_implementation_xforms;
 }
 
 //---------------------------------------------------------------------------
@@ -76,7 +78,7 @@ CXformFactory::~CXformFactory() {
 //		are added for readability/debugging
 //
 //---------------------------------------------------------------------------
-void CXformFactory::Add(CXform *xform) {
+void CXformFactory::Add(duckdb::unique_ptr<CXform> xform) {
 	CXform::EXformId xform_id = xform->ID();
 	m_xform_range[xform_id] = xform;
 	// create name -> xform mapping
@@ -84,7 +86,7 @@ void CXformFactory::Add(CXform *xform) {
 	CHAR *sz_xform_name = new CHAR[length + 1];
 	clib::Strncpy(sz_xform_name, xform->Name(), length + 1);
 	m_xform_dict.insert(make_pair(sz_xform_name, xform));
-	CXform_set *xform_set = m_exploration_xforms;
+	auto xform_set = m_exploration_xforms;
 	if (xform->FImplementation()) {
 		xform_set = m_implementation_xforms;
 	}
@@ -108,16 +110,16 @@ void CXformFactory::Instantiate() {
 	Add(make_shared<CXformExpandNAryJoinDP()>;
 	Add(make_shared<CXformExpandNAryJoin>();
 	*/
-	Add(new CXformGet2TableScan());
-	Add(new CXformLogicalProj2PhysicalProj());
-	Add(new CXformOrderImplementation());
-	Add(new CXformFilterImplementation());
-	Add(new CXformDummyScanImplementation());
-	Add(new CXformInnerJoin2HashJoin());
-	Add(new CXformJoinCommutativity());
-	Add(new CXformJoinAssociativity());
-	Add(new CXformLogicalAggregateImplementation());
-	Add(new CXformPushGbBelowJoin());
+	Add(make_uniq<CXformGet2TableScan>());
+	Add(make_uniq<CXformLogicalProj2PhysicalProj>());
+	Add(make_uniq<CXformOrderImplementation>());
+	Add(make_uniq<CXformFilterImplementation>());
+	Add(make_uniq<CXformDummyScanImplementation>());
+	Add(make_uniq<CXformInnerJoin2HashJoin>());
+	Add(make_uniq<CXformJoinCommutativity>());
+	Add(make_uniq<CXformJoinAssociativity>());
+	Add(make_uniq<CXformLogicalAggregateImplementation>());
+	Add(make_uniq<CXformPushGbBelowJoin>());
 	/*
 	Add(make_shared<CXformInnerJoin2HashJoin();
 	Add(make_shared<CXformIndexGet2IndexScan();
@@ -278,8 +280,8 @@ void CXformFactory::Instantiate() {
 //		Accessor of xform array
 //
 //---------------------------------------------------------------------------
-CXform *CXformFactory::Xform(CXform::EXformId xform_id) const {
-	CXform *pxf = m_xform_range[xform_id];
+duckdb::unique_ptr<CXform> CXformFactory::Xform(CXform::EXformId xform_id) const {
+	auto pxf = m_xform_range[xform_id];
 	return pxf;
 }
 
@@ -291,7 +293,7 @@ CXform *CXformFactory::Xform(CXform::EXformId xform_id) const {
 //		Accessor by xform name
 //
 //---------------------------------------------------------------------------
-CXform *CXformFactory::Xform(const CHAR *xform_name) const {
+duckdb::unique_ptr<CXform> CXformFactory::Xform(const CHAR *xform_name) const {
 	auto itr = m_xform_dict.find(const_cast<CHAR *>(xform_name));
 	return itr->second;
 }
@@ -307,7 +309,7 @@ CXform *CXformFactory::Xform(const CHAR *xform_name) const {
 GPOS_RESULT CXformFactory::Init() {
 	GPOS_RESULT result = GPOS_OK;
 	// create xform factory instance
-	m_xform_factory = new CXformFactory();
+	m_xform_factory = make_uniq<CXformFactory>();
 	// instantiating the factory
 	m_xform_factory->Instantiate();
 	return result;
@@ -322,9 +324,9 @@ GPOS_RESULT CXformFactory::Init() {
 //
 //---------------------------------------------------------------------------
 void CXformFactory::Shutdown() {
-	CXformFactory *xform_factory = CXformFactory::XformFactory();
+	auto xform_factory = CXformFactory::XformFactory();
 	// destroy xform factory
-	CXformFactory::m_xform_factory = nullptr;
-	delete xform_factory;
+	CXformFactory::m_xform_factory.reset();
+	// delete xform_factory;
 }
 } // namespace gpopt

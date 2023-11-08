@@ -35,16 +35,18 @@ void LogicalComparisonJoin::Deserialize(LogicalComparisonJoin &comparison_join, 
 	comparison_join.delim_types = reader.ReadRequiredSerializableList<LogicalType, LogicalType>();
 }
 
-unique_ptr<LogicalOperator> LogicalComparisonJoin::Deserialize(LogicalDeserializationState &state, FieldReader &reader)
+unique_ptr<LogicalOperator>
+LogicalComparisonJoin::Deserialize(LogicalDeserializationState &state, FieldReader &reader)
 {
 	auto result = make_uniq<LogicalComparisonJoin>(JoinType::INVALID, state.type);
 	LogicalComparisonJoin::Deserialize(*result, state, reader);
 	return std::move(result);
 }
 
-CKeyCollection* LogicalComparisonJoin::DeriveKeyCollection(CExpressionHandle &exprhdl)
+duckdb::unique_ptr<CKeyCollection>
+LogicalComparisonJoin::DeriveKeyCollection(CExpressionHandle &exprhdl)
 {
-	return NULL;
+	return nullptr;
 }
 
 //---------------------------------------------------------------------------
@@ -55,20 +57,26 @@ CKeyCollection* LogicalComparisonJoin::DeriveKeyCollection(CExpressionHandle &ex
 //		Derive constraint property
 //
 //---------------------------------------------------------------------------
-CPropConstraint* LogicalComparisonJoin::DerivePropertyConstraint(CExpressionHandle &exprhdl)
+duckdb::unique_ptr<CPropConstraint>
+LogicalComparisonJoin::DerivePropertyConstraint(CExpressionHandle &exprhdl)
 {
 	return PpcDeriveConstraintPassThru(exprhdl, 0);
 }
 
 // Rehydrate expression from a given cost context and child expressions
-Operator* LogicalComparisonJoin::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan)
+duckdb::unique_ptr<Operator>
+LogicalComparisonJoin::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+									 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+									 duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan)
 {
-	CGroupExpression* pgexpr = pcc->m_group_expression;
+	auto pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
-	LogicalComparisonJoin* pexpr = new LogicalComparisonJoin(join_type);
-	for(auto &child : pdrgpexpr)
+	auto pexpr = make_uniq<LogicalComparisonJoin>(join_type);
+	// Need to delete
+	// for(auto &child : pdrgpexpr)
+	for(auto child : pdrgpexpr)
 	{
-		pexpr->AddChild(child->Copy());
+		pexpr->AddChild(child);
 	}
 	pexpr->m_cost = cost;
 	pexpr->m_group_expression = pgexpr;
@@ -115,7 +123,8 @@ unique_ptr<Operator> LogicalComparisonJoin::Copy() {
 	return unique_ptr_cast<LogicalComparisonJoin, Operator>(std::move(copy));
 }
 
-unique_ptr<Operator> LogicalComparisonJoin::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+unique_ptr<Operator>
+LogicalComparisonJoin::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	unique_ptr<LogicalComparisonJoin> copy = make_uniq<LogicalComparisonJoin>(this->join_type, this->logical_type);
 	/* LogicalComparisonJoin fields */
 	for(auto &child : this->conditions) {
@@ -155,9 +164,10 @@ unique_ptr<Operator> LogicalComparisonJoin::CopyWithNewGroupExpression(CGroupExp
 	return unique_ptr_cast<LogicalComparisonJoin, Operator>(std::move(copy));
 }
 
-unique_ptr<Operator> LogicalComparisonJoin::CopyWithNewChildren(CGroupExpression *pgexpr,
-                                                     duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-                                                     double cost) {
+unique_ptr<Operator>
+LogicalComparisonJoin::CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+                                           duckdb::vector<unique_ptr<Operator>> pdrgpexpr,
+                                           double cost) {
 	unique_ptr<LogicalComparisonJoin> copy = make_uniq<LogicalComparisonJoin>(this->join_type, this->logical_type);
 	/* LogicalComparisonJoin fields */
 	for(auto &child : this->conditions) {
@@ -215,32 +225,15 @@ void LogicalComparisonJoin::CE() {
 	if(this->has_estimated_cardinality) {
 		return;
 	}
-	idx_t relids = this->GetChildrenRelIds();
-	char* pos;
-	char* p;
-	char cmp[1000];
-	int relid_in_file;
-	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
-	while(fgets(cmp, 1000, fp) != NULL) {
-		if((pos = strchr(cmp, '\n')) != NULL) {
-			*pos = '\0';
-		}
-		p = strtok(cmp, ":");
-		relid_in_file = atoi(p);
-		if(relid_in_file == relids) {
-			p = strtok(NULL, ":");
-			double true_val = atof(p);
-			if(true_val < 9999999999999.0) {
-				fclose(fp);
-				this->has_estimated_cardinality = true;
-				this->estimated_cardinality = true_val;
-				return;
-			}
-		}
-	}
-	fclose(fp);
 	this->has_estimated_cardinality = true;
-	this->estimated_cardinality = 99999999.0;
+	idx_t relids = this->GetChildrenRelIds();
+	auto true_val = true_set.find(relids);
+	if(true_val != true_set.end()) {
+		this->estimated_cardinality = true_val->second;
+	} else {
+		this->estimated_cardinality = 9999999999.0;
+	}
+	// this->estimated_cardinality = 99999999.0;
 	return;
 }
 } // namespace duckdb

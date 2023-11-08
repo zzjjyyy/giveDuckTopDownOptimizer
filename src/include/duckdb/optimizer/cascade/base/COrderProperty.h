@@ -37,7 +37,7 @@ public:
 
 public:
 	// required sort order
-	COrderSpec *m_order_spec;
+	duckdb::unique_ptr<COrderSpec> m_order_spec;
 
 	// order matching type
 	EOrderMatching m_order_match_type;
@@ -47,7 +47,7 @@ public:
 
 public:
 	// ctor
-	COrderProperty(COrderSpec *pos, EOrderMatching eom);
+	COrderProperty(duckdb::unique_ptr<COrderSpec> pos, EOrderMatching eom);
 
 	// no copy ctor
 	COrderProperty(const COrderProperty &) = delete;
@@ -60,10 +60,13 @@ public:
 
 	// check if the given order specification is compatible with the
 	// order specification of this object for the specified matching type
-	bool FCompatible(COrderSpec *pos) const;
+	bool FCompatible(duckdb::unique_ptr<COrderSpec> pos) const;
 
 	// get order enforcing type for the given operator
-	EPropEnforcingType EorderEnforcingType(CExpressionHandle &exprhdl, PhysicalOperator *popPhysical, bool fOrderReqd) const;
+	EPropEnforcingType
+	EorderEnforcingType(CExpressionHandle &exprhdl,
+						duckdb::unique_ptr<PhysicalOperator> popPhysical,
+						bool fOrderReqd) const;
 
 	// check if operator requires an enforcer under given enforceable property
 	// based on the derived enforcing type
@@ -72,8 +75,10 @@ public:
 	}
 
 	// append enforcers to dynamic array for the given plan properties
-	void AppendEnforcers(CRequiredPhysicalProp *prpp, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
-	                     duckdb::unique_ptr<Operator> pexprChild, COrderProperty::EPropEnforcingType epet,
+	void AppendEnforcers(duckdb::unique_ptr<CRequiredPhysicalProp> prpp,
+						 duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr,
+	                     duckdb::unique_ptr<Operator> pexprChild,
+						 COrderProperty::EPropEnforcingType epet,
 	                     CExpressionHandle &exprhdl) {
 		if (FEnforce(epet)) {
 			m_order_spec->AppendEnforcers(exprhdl, prpp, pdrgpexpr, std::move(pexprChild));
@@ -81,7 +86,7 @@ public:
 	}
 
 	// matching function
-	bool Matches(COrderProperty *peo) {
+	bool Matches(duckdb::unique_ptr<COrderProperty> peo) {
 		return m_order_match_type == peo->m_order_match_type && m_order_spec->Matches(peo->m_order_spec);
 	}
 

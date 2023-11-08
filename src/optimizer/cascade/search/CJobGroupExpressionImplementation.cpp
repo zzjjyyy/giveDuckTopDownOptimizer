@@ -92,7 +92,7 @@ CJobGroupExpressionImplementation::~CJobGroupExpressionImplementation() {
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void CJobGroupExpressionImplementation::Init(CGroupExpression *pgexpr) {
+void CJobGroupExpressionImplementation::Init(duckdb::unique_ptr<CGroupExpression> pgexpr) {
 	CJobGroupExpression::Init(pgexpr);
 	GPOS_ASSERT(pgexpr->Pop()->FLogical());
 	m_job_state_machine.Init(rgeev6);
@@ -111,9 +111,10 @@ void CJobGroupExpressionImplementation::Init(CGroupExpression *pgexpr) {
 //		Schedule transformation jobs for all applicable xforms
 //
 //---------------------------------------------------------------------------
-void CJobGroupExpressionImplementation::ScheduleApplicableTransformations(CSchedulerContext *psc) {
+void
+CJobGroupExpressionImplementation::ScheduleApplicableTransformations(duckdb::unique_ptr<CSchedulerContext> psc) {
 	// get all applicable xforms
-	CXform_set *xform_set = ((LogicalOperator *)m_group_expression->m_operator.get())->XformCandidates();
+	auto xform_set = ((LogicalOperator *)m_group_expression->m_operator.get())->XformCandidates();
 	// intersect them with required xforms and schedule jobs
 	*xform_set &= *(CXformFactory::XformFactory()->XformImplementation());
 	*xform_set &= *(psc->m_engine->CurrentStageXforms());
@@ -129,7 +130,8 @@ void CJobGroupExpressionImplementation::ScheduleApplicableTransformations(CSched
 //		Schedule implementation jobs for all child groups
 //
 //---------------------------------------------------------------------------
-void CJobGroupExpressionImplementation::ScheduleChildGroupsJobs(CSchedulerContext *psc) {
+void
+CJobGroupExpressionImplementation::ScheduleChildGroupsJobs(duckdb::unique_ptr<CSchedulerContext> psc) {
 	ULONG arity = m_group_expression->Arity();
 	for (ULONG i = 0; i < arity; i++) {
 		CJobGroupImplementation::ScheduleJob(psc, (*(m_group_expression))[i], this);
@@ -146,13 +148,16 @@ void CJobGroupExpressionImplementation::ScheduleChildGroupsJobs(CSchedulerContex
 //
 //---------------------------------------------------------------------------
 CJobGroupExpressionImplementation::EEvent
-CJobGroupExpressionImplementation::EevtImplementChildren(CSchedulerContext *psc, CJob *pjOwner) {
+CJobGroupExpressionImplementation::EevtImplementChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+														 CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupExpressionImplementation *pjgei = PjConvert(pjOwner);
+	auto pjgei = PjConvert(pjOwner);
+#ifdef DEBUG
+	CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementChildren]");
+#endif
 	if (!pjgei->FChildrenScheduled()) {
 		pjgei->m_group_expression->SetState(CGroupExpression::estImplementing);
 		pjgei->ScheduleChildGroupsJobs(psc);
-		// CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementChildren]");
 		return eevImplementingChildren;
 	} else {
 		return eevChildrenImplemented;
@@ -167,13 +172,16 @@ CJobGroupExpressionImplementation::EevtImplementChildren(CSchedulerContext *psc,
 //		Implement group expression
 //
 //---------------------------------------------------------------------------
-CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::EevtImplementSelf(CSchedulerContext *psc,
-                                                                                               CJob *pjOwner) {
+CJobGroupExpressionImplementation::EEvent
+CJobGroupExpressionImplementation::EevtImplementSelf(duckdb::unique_ptr<CSchedulerContext> psc,
+                                                     CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupExpressionImplementation *pjgei = PjConvert(pjOwner);
+	auto pjgei = PjConvert(pjOwner);
+#ifdef DEBUG
+	CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementSelf]");
+#endif
 	if (!pjgei->FXformsScheduled()) {
 		pjgei->ScheduleApplicableTransformations(psc);
-		// CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementSelf]");
 		return eevImplementingSelf;
 	} else {
 		return eevSelfImplemented;
@@ -188,11 +196,14 @@ CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::Eev
 //		Finalize implementation
 //
 //---------------------------------------------------------------------------
-CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::EevtFinalize(CSchedulerContext *psc,
-                                                                                          CJob *pjOwner) {
-	// CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementFinalize]");
+CJobGroupExpressionImplementation::EEvent
+CJobGroupExpressionImplementation::EevtFinalize(duckdb::unique_ptr<CSchedulerContext> psc,
+                                                CJob *pjOwner) {
+#ifdef DEBUG
+	CJobGroupExpression::PrintJob(PjConvert(pjOwner), "[Expression: ImplementFinalize]");
+#endif
 	// get a job pointer
-	CJobGroupExpressionImplementation *pjgei = PjConvert(pjOwner);
+	auto pjgei = PjConvert(pjOwner);
 	pjgei->m_group_expression->SetState(CGroupExpression::estImplemented);
 	return eevFinalized;
 }
@@ -205,7 +216,8 @@ CJobGroupExpressionImplementation::EEvent CJobGroupExpressionImplementation::Eev
 //		Main job function
 //
 //---------------------------------------------------------------------------
-BOOL CJobGroupExpressionImplementation::FExecute(CSchedulerContext *psc) {
+bool
+CJobGroupExpressionImplementation::FExecute(duckdb::unique_ptr<CSchedulerContext> psc) {
 	return m_job_state_machine.FRun(psc, this);
 }
 
@@ -217,10 +229,12 @@ BOOL CJobGroupExpressionImplementation::FExecute(CSchedulerContext *psc) {
 //		Schedule a new group expression implementation job
 //
 //---------------------------------------------------------------------------
-void CJobGroupExpressionImplementation::ScheduleJob(CSchedulerContext *psc, CGroupExpression *pgexpr, CJob *pjParent) {
-	CJob *pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExpressionImplementation);
+void CJobGroupExpressionImplementation::ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+													duckdb::unique_ptr<CGroupExpression> pgexpr,
+													CJob *pjParent) {
+	auto pj = psc->m_job_factory->CreateJob(CJob::EjtGroupExpressionImplementation);
 	// initialize job
-	CJobGroupExpressionImplementation *pjige = PjConvert(pj);
+	auto pjige = PjConvert(pj);
 	pjige->Init(pgexpr);
 	psc->m_scheduler->Add(pjige, pjParent);
 }

@@ -20,8 +20,8 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type) {
 	/* Operator fields */
 	logical_type = type;
 	m_group_expression = nullptr;
-	m_derived_logical_property = new CDerivedLogicalProp();
-	m_required_logical_property = new CRequiredLogicalProp();
+	m_derived_logical_property = make_uniq<CDerivedLogicalProp>();
+	m_required_logical_property = make_uniq<CRequiredLogicalProp>();
 	m_cost = GPOPT_INVALID_COST;
 	estimated_cardinality = 0;
 	has_estimated_cardinality = false;
@@ -32,8 +32,8 @@ LogicalOperator::LogicalOperator(LogicalOperatorType type, vector<unique_ptr<Exp
 	logical_type = type;
 	has_estimated_cardinality = false;
 	m_group_expression = nullptr;
-	m_derived_logical_property = new CDerivedLogicalProp();
-	m_required_logical_property = new CRequiredLogicalProp();
+	m_derived_logical_property = make_uniq<CDerivedLogicalProp>();
+	m_required_logical_property = make_uniq<CRequiredLogicalProp>();
 	m_cost = GPOPT_INVALID_COST;
 	estimated_cardinality = 0;
 	this->expressions = std::move(expressions);
@@ -316,7 +316,8 @@ vector<idx_t> LogicalOperator::GetTableIndex() const {
 	return {};
 }
 
-unique_ptr<LogicalOperator> LogicalOperator::Copy(ClientContext &context) const {
+unique_ptr<LogicalOperator>
+LogicalOperator::Copy(ClientContext &context) const {
 	BufferedSerializer logical_op_serializer;
 	try {
 		this->Serialize(logical_op_serializer);
@@ -332,17 +333,19 @@ unique_ptr<LogicalOperator> LogicalOperator::Copy(ClientContext &context) const 
 	return op_copy;
 }
 
-CDerivedProperty *LogicalOperator::CreateDerivedProperty() {
+unique_ptr<CDerivedProperty>
+LogicalOperator::CreateDerivedProperty() {
 	if (m_derived_logical_property == nullptr) {
-		return new CDerivedLogicalProp();
+		return make_uniq<CDerivedLogicalProp>();
 	}
 
 	return m_derived_logical_property;
 }
 
-CRequiredProperty *LogicalOperator::CreateRequiredProperty() const {
+unique_ptr<CRequiredProperty>
+LogicalOperator::CreateRequiredProperty() const {
 	if (m_required_logical_property == nullptr) {
-		return new CRequiredLogicalProp();
+		return make_uniq<CRequiredLogicalProp>();
 	}
 
 	return m_required_logical_property;
@@ -356,13 +359,15 @@ CRequiredProperty *LogicalOperator::CreateRequiredProperty() const {
 //		Addref and return keys of n-th child
 //
 //---------------------------------------------------------------------------
-CKeyCollection *LogicalOperator::PkcDeriveKeysPassThru(CExpressionHandle &expression_handle, ULONG ul_child) {
-	CKeyCollection *pkc_left = expression_handle.GetRelationalProperties(ul_child)->GetKeyCollection();
+unique_ptr<CKeyCollection>
+LogicalOperator::PkcDeriveKeysPassThru(CExpressionHandle &expression_handle, ULONG ul_child) {
+	auto pkc_left = expression_handle.GetRelationalProperties(ul_child)->GetKeyCollection();
 	// key collection may be NULL
 	return pkc_left;
 }
 
-CKeyCollection *LogicalOperator::DeriveKeyCollection(CExpressionHandle &expression_handle) {
+duckdb::unique_ptr<CKeyCollection>
+LogicalOperator::DeriveKeyCollection(CExpressionHandle &expression_handle) {
 	return nullptr;
 }
 
@@ -394,9 +399,10 @@ ULONG LogicalOperator::DeriveJoinDepth(CExpressionHandle &expression_handle) {
 //		Shorthand to addref and pass through constraint from a given child
 //
 //---------------------------------------------------------------------------
-CPropConstraint *LogicalOperator::PpcDeriveConstraintPassThru(CExpressionHandle &expression_handle, ULONG ul_child) {
+duckdb::unique_ptr<CPropConstraint>
+LogicalOperator::PpcDeriveConstraintPassThru(CExpressionHandle &expression_handle, ULONG ul_child) {
 	// return constraint property of child
-	CPropConstraint *ppc = expression_handle.DerivePropertyConstraint(ul_child);
+	auto ppc = expression_handle.DerivePropertyConstraint(ul_child);
 	return ppc;
 }
 
@@ -409,28 +415,29 @@ CPropConstraint *LogicalOperator::PpcDeriveConstraintPassThru(CExpressionHandle 
 //		scalar children (predicates)
 //
 //---------------------------------------------------------------------------
-CPropConstraint *LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionHandle &expression_handle) {
+unique_ptr<CPropConstraint>
+LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionHandle &expression_handle) {
 	vector<vector<ColumnBinding>> pdrgpcrs;
-	vector<Expression *> pdrgpcnstr;
+	vector<unique_ptr<Expression>> pdrgpcnstr;
 	// collect constraint properties from relational children
 	// and predicates from scalar children
 	ULONG arity = expression_handle.Arity(0);
 	for (ULONG ul = 0; ul < arity; ul++) {
-		CPropConstraint *ppc = expression_handle.DerivePropertyConstraint(ul);
+		auto ppc = expression_handle.DerivePropertyConstraint(ul);
 		// equivalence classes coming from child
 		vector<vector<ColumnBinding>> pdrgpcrs_child = ppc->PdrgpcrsEquivClasses();
 		// merge with the equivalence classes we have so far
 		vector<vector<ColumnBinding>> pdrgpcrs_merged = CUtils::PdrgpcrsMergeEquivClasses(pdrgpcrs, pdrgpcrs_child);
 		pdrgpcrs = pdrgpcrs_merged;
 		// constraint coming from child
-		Expression *pcnstr = ppc->Pcnstr();
+		auto pcnstr = ppc->Pcnstr();
 		if (nullptr != pcnstr) {
 			pdrgpcnstr.push_back(pcnstr);
 		}
 	}
 	arity = expression_handle.Arity(1);
 	for (ULONG ul = 0; ul < arity; ul++) {
-		Expression *expression_scalar = expression_handle.PexprScalarExactChild(ul);
+		auto expression_scalar = expression_handle.PexprScalarExactChild(ul);
 		vector<ColumnBinding> v = expression_scalar->GetColumnBinding();
 		vector<vector<ColumnBinding>> pdrgpcrs_child;
 		pdrgpcrs_child = CUtils::AddEquivClassToArray(v, pdrgpcrs_child);
@@ -441,11 +448,11 @@ CPropConstraint *LogicalOperator::PpcDeriveConstraintFromPredicates(CExpressionH
 			pdrgpcrs = pdrgpcrs_merged;
 		}
 	}
-	Expression *pcnstr_new = new BoundConjunctionExpression(ExpressionType::CONJUNCTION_AND);
-	return new CPropConstraint(pdrgpcrs, pcnstr_new);
+	auto pcnstr_new = make_uniq<BoundConjunctionExpression>(ExpressionType::CONJUNCTION_AND);
+	return make_uniq<CPropConstraint>(pdrgpcrs, pcnstr_new);
 }
 
-void LogicalOperator::CloneORCAInfo(LogicalOperator *op) {
+void LogicalOperator::CloneORCAInfo(duckdb::unique_ptr<LogicalOperator> op) {
 	op->m_derived_logical_property = m_derived_logical_property;
 	op->m_derived_physical_property = m_derived_physical_property;
 	op->m_required_physical_property = m_required_physical_property;
@@ -454,14 +461,18 @@ void LogicalOperator::CloneORCAInfo(LogicalOperator *op) {
 	}
 	op->types = types;
 	op->estimated_cardinality = estimated_cardinality;
-	for (auto &child : expressions) {
-		op->expressions.push_back(child->Copy());
+	// Need to delete
+	// for (auto &child : expressions) {
+	for (auto child : expressions) {
+		op->expressions.push_back(child);
 	}
 	op->has_estimated_cardinality = has_estimated_cardinality;
 	op->logical_type = logical_type;
 	op->physical_type = physical_type;
-	for (auto &child : children) {
-		op->AddChild(child->Copy());
+	// Need to delete
+	// for (auto &child : children) {
+	for (auto child : children) {
+		op->AddChild(child);
 	}
 	op->m_group_expression = m_group_expression;
 	op->m_cost = m_cost;

@@ -34,9 +34,13 @@ public:
 public:
 	// ctor
 	CXform() = default;
-	explicit CXform(duckdb::unique_ptr<Operator> expression) : m_operator(std::move(expression)) {};
+	// Need to delete
+	// explicit CXform(duckdb::unique_ptr<Operator> expression) : m_operator(std::move(expression)) {};
+	explicit CXform(duckdb::unique_ptr<Operator> expression) : m_operator(expression) {};
+	
 	// dtor
 	virtual ~CXform() = default;
+	
 	// private copy ctor
 	CXform(CXform &);
 
@@ -238,7 +242,10 @@ public:
 		return false;
 	}
 	// actual transformation
-	virtual void Transform(CXformContext *pxfctxt, CXformResult *pxfres, Operator *pexpr) const = 0;
+	virtual void Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+						   duckdb::unique_ptr<CXformResult> pxfres,
+						   duckdb::unique_ptr<Operator> pexpr) const = 0;
+
 	// check compatibility with another xform
 	virtual bool FCompatible(CXform::EXformId) {
 		return true;

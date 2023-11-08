@@ -27,19 +27,24 @@ class CSearchStage;
 //---------------------------------------------------------------------------
 class CSearchStage {
 public:
-	CSearchStage(CXform_set *xform_set, ULONG time_threshold = gpos::ulong_max, double cost_threshold = 0.0);
+	CSearchStage(duckdb::unique_ptr<CXform_set> xform_set, ULONG time_threshold = gpos::ulong_max, double cost_threshold = 0.0);
 	virtual ~CSearchStage();
 
 	// set of xforms to be applied during stage
-	CXform_set *m_xforms;
+	duckdb::unique_ptr<CXform_set> m_xforms;
+	
 	// time threshold in milliseconds
 	ULONG m_time_threshold;
+
 	// cost threshold
 	double m_cost_threshold;
+
 	// best plan found at the end of search stage
 	duckdb::unique_ptr<Operator> m_best_expr;
+
 	// cost of best plan found
 	double m_best_cost;
+
 	// elapsed time
 	CTimerUser m_timer;
 
@@ -70,9 +75,11 @@ public:
 	}
 
 	// set best plan found at the end of search stage
-	void SetBestExpr(Operator *pexpr);
+	// Need to delete
+	// void SetBestExpr(Operator *pexpr);
+	void SetBestExpr(duckdb::unique_ptr<Operator> pexpr);
 
 	// generate default search strategy
-	static duckdb::vector<CSearchStage *> DefaultStrategy();
+	static duckdb::vector<duckdb::unique_ptr<CSearchStage>> DefaultStrategy();
 };
 } // namespace gpopt

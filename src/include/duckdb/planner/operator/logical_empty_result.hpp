@@ -51,19 +51,22 @@ protected:
 	}
 
 public:
-	CKeyCollection* DeriveKeyCollection(CExpressionHandle &exprhdl) override;
+	duckdb::unique_ptr<CKeyCollection> DeriveKeyCollection(CExpressionHandle &exprhdl) override;
 	
-	CPropConstraint* DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
+	duckdb::unique_ptr<CPropConstraint> DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 
 	ULONG DeriveJoinDepth(CExpressionHandle &exprhdl) override;
 
-	Operator* SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+				  duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 
 public:
 	//-------------------------------------------------------------------------------------
 	// Transformations
 	//-------------------------------------------------------------------------------------
 	// candidate set of xforms
-	CXform_set *XformCandidates() const override;
+	duckdb::unique_ptr<CXform_set> XformCandidates() const override;
 };
 } // namespace duckdb

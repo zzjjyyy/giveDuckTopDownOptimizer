@@ -24,7 +24,7 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CGroupProxy::CGroupProxy(CGroup* pgroup)
+CGroupProxy::CGroupProxy(duckdb::unique_ptr<CGroup> pgroup)
 	: m_pgroup(pgroup)
 {
 }
@@ -49,7 +49,7 @@ CGroupProxy::~CGroupProxy()
 //		Insert group expression into group
 //
 //---------------------------------------------------------------------------
-void CGroupProxy::Insert(CGroupExpression* pgexpr)
+void CGroupProxy::Insert(duckdb::unique_ptr<CGroupExpression> pgexpr)
 {
 	pgexpr->Init(m_pgroup, m_pgroup->m_num_exprs++);
 	m_pgroup->Insert(pgexpr);
@@ -63,7 +63,7 @@ void CGroupProxy::Insert(CGroupExpression* pgexpr)
 //		Move duplicate group expression to duplicates list
 //
 //---------------------------------------------------------------------------
-void CGroupProxy::MoveDuplicateGExpr(CGroupExpression* pgexpr)
+void CGroupProxy::MoveDuplicateGExpr(duckdb::unique_ptr<CGroupExpression> pgexpr)
 {
 	m_pgroup->MoveDuplicateGExpr(pgexpr);
 }
@@ -76,7 +76,7 @@ void CGroupProxy::MoveDuplicateGExpr(CGroupExpression* pgexpr)
 //		Initialize group's properties
 //
 //---------------------------------------------------------------------------
-void CGroupProxy::InitProperties(CDerivedProperty * pdp)
+void CGroupProxy::InitProperties(duckdb::unique_ptr<CDerivedProperty> pdp)
 {
 	m_pgroup->InitProperties(pdp);
 }
@@ -89,7 +89,7 @@ void CGroupProxy::InitProperties(CDerivedProperty * pdp)
 //		Retrieve first group expression iterator;
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression*>::iterator CGroupProxy::PgexprFirst()
+list<duckdb::unique_ptr<CGroupExpression>>::iterator CGroupProxy::PgexprFirst()
 {
 	return m_pgroup->FirstGroupExpr();
 }
@@ -104,7 +104,8 @@ list<CGroupExpression*>::iterator CGroupProxy::PgexprFirst()
 //		flag
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression*>::iterator CGroupProxy::PgexprSkip(list<CGroupExpression*>::iterator pgexprStart, bool fSkipLogical)
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CGroupProxy::PgexprSkip(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexprStart, bool fSkipLogical)
 {
 	auto iter = pgexprStart;
 	while (m_pgroup->m_group_exprs.end() != iter && fSkipLogical == (*iter)->m_operator->FLogical())
@@ -123,7 +124,8 @@ list<CGroupExpression*>::iterator CGroupProxy::PgexprSkip(list<CGroupExpression*
 //		expression;
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression*>::iterator CGroupProxy::PgexprSkipLogical(list<CGroupExpression*>::iterator pgexpr)
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CGroupProxy::PgexprSkipLogical(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexpr)
 {
 	return PgexprSkip(pgexpr, true);
 }
@@ -136,7 +138,8 @@ list<CGroupExpression*>::iterator CGroupProxy::PgexprSkipLogical(list<CGroupExpr
 //		Find the first logical group expression including the given expression
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression*>::iterator CGroupProxy::PgexprNextLogical(list<CGroupExpression*>::iterator pgexpr)
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CGroupProxy::PgexprNextLogical(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexpr)
 {
 	return PgexprSkip(pgexpr, false);
 }

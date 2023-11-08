@@ -29,6 +29,7 @@ public:
 	PhysicalTableScan(vector<LogicalType> types, TableFunction function, unique_ptr<FunctionData> bind_data,
 	                  vector<column_t> column_ids, vector<string> names, unique_ptr<TableFilterSet> table_filters,
 	                  idx_t estimated_cardinality);
+
 	//! Table scan that immediately projects out filter columns that are unused in the remainder of the query plan
 	PhysicalTableScan(vector<LogicalType> types, TableFunction function, unique_ptr<FunctionData> bind_data,
 	                  vector<LogicalType> returned_types, vector<column_t> column_ids, vector<idx_t> projection_ids,
@@ -36,16 +37,22 @@ public:
 
 	//! The table function
 	TableFunction function;
+
 	//! Bind data of the function
 	unique_ptr<FunctionData> bind_data;
+
 	//! The types of ALL columns that can be returned by the table function
 	vector<LogicalType> returned_types;
+
 	//! The column ids used within the table function
 	vector<column_t> column_ids;
+
 	//! The projected-out column ids
 	vector<idx_t> projection_ids;
+
 	//! The names of the columns
 	vector<string> names;
+	
 	//! The table filters
 	unique_ptr<TableFilterSet> table_filters;
 	
@@ -60,9 +67,12 @@ public:
 public:
 	unique_ptr<LocalSourceState> GetLocalSourceState(ExecutionContext &context,
 	                                                 GlobalSourceState &gstate) const override;
+
 	unique_ptr<GlobalSourceState> GetGlobalSourceState(ClientContext &context) const override;
+
 	void GetData(ExecutionContext &context, DataChunk &chunk, GlobalSourceState &gstate,
 	             LocalSourceState &lstate) const override;
+
 	idx_t GetBatchIndex(ExecutionContext &context, DataChunk &chunk, GlobalSourceState &gstate,
 	                    LocalSourceState &lstate) const override;
 
@@ -82,43 +92,52 @@ public:
 public:
 	size_t HashValue() const override;
 
-	COrderProperty::EPropEnforcingType EnforcingTypeOrder(CExpressionHandle &exprhdl, vector<BoundOrderByNode> &peo) const override;
+	COrderProperty::EPropEnforcingType
+	EnforcingTypeOrder(CExpressionHandle &exprhdl,
+					   vector<BoundOrderByNode> &peo) const override;
 
-	COrderSpec*RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *posRequired,
-							ULONG child_index,
-	                             vector<CDerivedProperty *> pdrgpdpCtxt,
-							ULONG ulOptReq) const override {
+	duckdb::unique_ptr<COrderSpec>
+	RequiredSortSpec(CExpressionHandle &exprhdl,
+					 duckdb::unique_ptr<COrderSpec> posRequired,
+					 ULONG child_index,
+	                 vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt,
+					 ULONG ulOptReq) const override {
 		return nullptr;
 	}
 
 	// derive sort order
-	COrderSpec*
+	duckdb::unique_ptr<COrderSpec>
 	PosDerive(CExpressionHandle &exprhdl) const override
 	{
 		// return empty sort order
-		return new COrderSpec();
+		return make_uniq<COrderSpec>();
 	}
 
-	BOOL FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
+	bool FProvidesReqdCols(CExpressionHandle &exprhdl,
+						   vector<ColumnBinding> pcrsRequired,
 	                       ULONG ulOptReq) const override;
 
-	CKeyCollection *DeriveKeyCollection(CExpressionHandle &exprhdl) override;
+	duckdb::unique_ptr<CKeyCollection> DeriveKeyCollection(CExpressionHandle &exprhdl) override;
 
-	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
+	duckdb::unique_ptr<CPropConstraint> DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 
 	ULONG DeriveJoinDepth(CExpressionHandle &exprhdl) override;
 
 	// Rehydrate expression from a given cost context and child expressions
-	Operator *SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-	                        CDrvdPropCtxtPlan *pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	              duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 
-	duckdb::unique_ptr<Operator> Copy() override;
+	unique_ptr<Operator> Copy() override;
 
-	duckdb::unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+	unique_ptr<Operator>
+	CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) override;
 
-	duckdb::unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr,
-	                                                 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-	                                                 double cost) override;
+	unique_ptr<Operator>
+	CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+	                    duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	                    double cost) override;
 
 	vector<ColumnBinding> GetColumnBindings() override {
 		return v_column_binding;

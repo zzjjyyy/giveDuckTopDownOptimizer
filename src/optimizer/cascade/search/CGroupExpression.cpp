@@ -38,9 +38,14 @@ const CGroupExpression CGroupExpression::M_INVALID_GROUP_EXPR;
 //		ctor
 //
 //---------------------------------------------------------------------------
-CGroupExpression::CGroupExpression(duckdb::unique_ptr<Operator> op, duckdb::vector<CGroup *> groups,
-                                   CXform::EXformId xform_id, CGroupExpression *group_expr_origin, bool is_intermediate)
-    : m_id(GPOPT_INVALID_GEXPR_ID), m_duplicate_group_expr(nullptr), m_operator(std::move(op)), m_child_groups(groups),
+CGroupExpression::CGroupExpression(duckdb::unique_ptr<Operator> op, duckdb::vector<duckdb::unique_ptr<CGroup>> groups,
+                                   CXform::EXformId xform_id, duckdb::unique_ptr<CGroupExpression> group_expr_origin,
+								   bool is_intermediate)
+    : m_id(GPOPT_INVALID_GEXPR_ID), m_duplicate_group_expr(nullptr),
+	  // Need to delete
+	  // m_operator(std::move(op)),
+	  m_operator(op),
+	  m_child_groups(groups),
       m_group(nullptr), m_xform_id_origin(xform_id), m_group_expr_origin(group_expr_origin),
       m_intermediate(is_intermediate), m_estate(estUnexplored), m_eol(EolLow), m_circular_dependency(ecdDefault) {
 	// store sorted array of children for faster comparison
@@ -74,7 +79,7 @@ CGroupExpression::~CGroupExpression() {
 //---------------------------------------------------------------------------
 void CGroupExpression::CleanupContexts() {
 	// need to suspend cancellation while cleaning up
-	{ m_cost_context_map.clear(); }
+	// { m_cost_context_map.clear(); }
 }
 
 //---------------------------------------------------------------------------
@@ -86,7 +91,7 @@ void CGroupExpression::CleanupContexts() {
 //
 //
 //---------------------------------------------------------------------------
-void CGroupExpression::Init(CGroup *pgroup, ULONG id) {
+void CGroupExpression::Init(duckdb::unique_ptr<CGroup> pgroup, ULONG id) {
 	SetGroup(pgroup);
 	SetId(id);
 	SetOptimizationLevel();
@@ -133,8 +138,8 @@ void CGroupExpression::SetOptimizationLevel() {
 //		This method can be used to reject such plans.
 //
 //---------------------------------------------------------------------------
-bool CGroupExpression::FValidContext(COptimizationContext *poc,
-                                     duckdb::vector<COptimizationContext *> child_optimization_contexts) {
+bool CGroupExpression::FValidContext(duckdb::unique_ptr<COptimizationContext> poc,
+                                     duckdb::vector<duckdb::unique_ptr<COptimizationContext>> child_optimization_contexts) {
 	return true;
 }
 
@@ -158,7 +163,7 @@ void CGroupExpression::SetId(ULONG id) {
 //		Set group pointer of expression
 //
 //---------------------------------------------------------------------------
-void CGroupExpression::SetGroup(CGroup *pgroup) {
+void CGroupExpression::SetGroup(duckdb::unique_ptr<CGroup> pgroup) {
 	m_group = pgroup;
 }
 
@@ -170,10 +175,10 @@ void CGroupExpression::SetGroup(CGroup *pgroup) {
 //		Check if cost context already exists in group expression hash table
 //
 //---------------------------------------------------------------------------
-bool CGroupExpression::FCostContextExists(COptimizationContext *poc,
-                                          duckdb::vector<COptimizationContext *> optimization_contexts) {
+bool CGroupExpression::FCostContextExists(duckdb::unique_ptr<COptimizationContext> poc,
+                                          duckdb::vector<duckdb::unique_ptr<COptimizationContext>> optimization_contexts) {
 	// lookup context based on required properties
-	CCostContext *pccFound;
+	duckdb::unique_ptr<CCostContext> pccFound = nullptr;
 	CostContextMap::iterator itr;
 	{ itr = m_cost_context_map.find(poc->HashValue()); }
 	while (m_cost_context_map.end() != itr) {
@@ -195,11 +200,11 @@ bool CGroupExpression::FCostContextExists(COptimizationContext *poc,
 //			Remove cost context in hash table;
 //
 //---------------------------------------------------------------------------
-CCostContext *CGroupExpression::CostContextRemove(COptimizationContext *poc, ULONG id) {
+duckdb::unique_ptr<CCostContext> CGroupExpression::CostContextRemove(duckdb::unique_ptr<COptimizationContext> poc, ULONG id) {
 	auto pccFound_iter = m_cost_context_map.find(poc->HashValue());
 	while (m_cost_context_map.end() != pccFound_iter) {
 		if (id == pccFound_iter->second->m_optimization_request_num) {
-			CCostContext *pccFound = pccFound_iter->second;
+			auto pccFound = pccFound_iter->second;
 			m_cost_context_map.erase(pccFound_iter);
 			return pccFound;
 		}
@@ -218,12 +223,12 @@ CCostContext *CGroupExpression::CostContextRemove(COptimizationContext *poc, ULO
 //			return the context that is kept in hash table
 //
 //---------------------------------------------------------------------------
-CCostContext *CGroupExpression::CostContextInsertBest(CCostContext *pcc) {
-	COptimizationContext *poc = pcc->m_poc;
+duckdb::unique_ptr<CCostContext> CGroupExpression::CostContextInsertBest(duckdb::unique_ptr<CCostContext> pcc) {
+	auto poc = pcc->m_poc;
 	const ULONG optimization_request_num = pcc->m_optimization_request_num;
 	// remove existing cost context, if any
-	CCostContext *pccExisting = CostContextRemove(poc, optimization_request_num);
-	CCostContext *pccKept = nullptr;
+	auto pccExisting = CostContextRemove(poc, optimization_request_num);
+	duckdb::unique_ptr<CCostContext> pccKept = nullptr;
 	// compare existing context with given context
 	if (nullptr == pccExisting || pcc->FBetterThan(pccExisting)) {
 		// insert new context
@@ -250,9 +255,12 @@ CCostContext *CGroupExpression::CostContextInsertBest(CCostContext *pcc) {
 //		the function returns the cost context containing the computed cost
 //
 //---------------------------------------------------------------------------
-CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *opt_context, ULONG opt_request_num,
-                                               duckdb::vector<COptimizationContext *> opt_contexts, bool is_pruned,
-                                               double cost_lower_bound) {
+duckdb::unique_ptr<CCostContext>
+CGroupExpression::PccComputeCost(duckdb::unique_ptr<CGroupExpression> this_gexpr,
+								 duckdb::unique_ptr<COptimizationContext> opt_context,
+								 ULONG opt_request_num,
+                                 duckdb::vector<duckdb::unique_ptr<COptimizationContext>> opt_contexts,
+								 bool is_pruned, double cost_lower_bound) {
 	if (!is_pruned && !FValidContext(opt_context, opt_contexts)) {
 		return nullptr;
 	}
@@ -260,13 +268,13 @@ CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *opt_context
 	if (FCostContextExists(opt_context, opt_contexts)) {
 		return nullptr;
 	}
-	CCostContext *cost_context = new CCostContext(opt_context, opt_request_num, this);
+	auto cost_context = make_uniq<CCostContext>(opt_context, opt_request_num, this_gexpr);
 	bool is_valid = true;
 	// computing cost
 	cost_context->SetState(CCostContext::estCosting);
 	if (!is_pruned) {
 		cost_context->SetChildContexts(opt_contexts);
-		is_valid = cost_context->IsValid();
+		is_valid = cost_context->IsValid(cost_context);
 		if (is_valid) {
 			double cost = CostCompute(cost_context);
 			cost_context->SetCost(cost);
@@ -292,9 +300,11 @@ CCostContext *CGroupExpression::PccComputeCost(COptimizationContext *opt_context
 //		the given required properties
 //
 //---------------------------------------------------------------------------
-double CGroupExpression::CostLowerBound(CRequiredPhysicalProp *input_required_prop_plan, CCostContext *child_cost_context,
+double CGroupExpression::CostLowerBound(duckdb::unique_ptr<CGroupExpression> this_expr,
+										duckdb::unique_ptr<CRequiredPhysicalProp> input_required_prop_plan,
+										duckdb::unique_ptr<CCostContext> child_cost_context,
                                         ULONG child_index) {
-	CPartialPlan *ppp = new CPartialPlan(this, input_required_prop_plan, child_cost_context, child_index);
+	auto ppp = make_uniq<CPartialPlan>(this_expr, input_required_prop_plan, child_cost_context, child_index);
 	auto itr = m_partial_plan_cost_map.find(ppp->HashValue());
 	if (itr != m_partial_plan_cost_map.end()) {
 		return itr->second;
@@ -337,13 +347,13 @@ void CGroupExpression::ResetState() {
 //		Costing scheme.
 //
 //---------------------------------------------------------------------------
-double CGroupExpression::CostCompute(CCostContext *pcc) const {
+double CGroupExpression::CostCompute(duckdb::unique_ptr<CCostContext> pcc) const {
 	// prepare cost array
-	duckdb::vector<COptimizationContext *> pdrgpoc = pcc->m_optimization_contexts;
+	duckdb::vector<duckdb::unique_ptr<COptimizationContext>> pdrgpoc = pcc->m_optimization_contexts;
 	duckdb::vector<double> pdrgpcostChildren;
 	const ULONG length = pdrgpoc.size();
 	for (ULONG ul = 0; ul < length; ul++) {
-		COptimizationContext *pocChild = pdrgpoc[ul];
+		auto pocChild = pdrgpoc[ul];
 		pdrgpcostChildren.emplace_back(pocChild->m_best_cost_context->m_cost);
 	}
 	double cost = pcc->CostCompute(pdrgpcostChildren);
@@ -371,11 +381,11 @@ bool CGroupExpression::FTransitioned(EState estate) const {
 //		Lookup cost context in hash table;
 //
 //---------------------------------------------------------------------------
-CCostContext *CGroupExpression::CostContextLookup(COptimizationContext *poc, ULONG optimization_request_num) {
+duckdb::unique_ptr<CCostContext> CGroupExpression::CostContextLookup(duckdb::unique_ptr<COptimizationContext> poc, ULONG optimization_request_num) {
 	auto pccFound_iter = m_cost_context_map.find(poc->HashValue());
 	while (m_cost_context_map.end() != pccFound_iter) {
 		if (optimization_request_num == pccFound_iter->second->m_optimization_request_num) {
-			CCostContext *pccFound = pccFound_iter->second;
+			auto pccFound = pccFound_iter->second;
 			return pccFound;
 		}
 		++pccFound_iter;
@@ -391,10 +401,11 @@ CCostContext *CGroupExpression::CostContextLookup(COptimizationContext *poc, ULO
 //		Lookup all valid cost contexts matching given optimization context
 //
 //---------------------------------------------------------------------------
-duckdb::vector<CCostContext *> CGroupExpression::LookupAllMatchedCostContexts(COptimizationContext *poc) {
-	duckdb::vector<CCostContext *> pdrgpcc;
+duckdb::vector<duckdb::unique_ptr<CCostContext>>
+CGroupExpression::LookupAllMatchedCostContexts(duckdb::unique_ptr<COptimizationContext> poc) {
+	duckdb::vector<duckdb::unique_ptr<CCostContext>> pdrgpcc;
 	CostContextMap::iterator itr;
-	CCostContext *pccFound = nullptr;
+	duckdb::unique_ptr<CCostContext> pccFound = nullptr;
 	bool fValid = false;
 	{
 		itr = m_cost_context_map.find(poc->HashValue());
@@ -423,7 +434,7 @@ duckdb::vector<CCostContext *> CGroupExpression::LookupAllMatchedCostContexts(CO
 //		Insert a cost context in hash table;
 //
 //---------------------------------------------------------------------------
-CCostContext *CGroupExpression::CostContextInsert(CCostContext *pcc) {
+duckdb::unique_ptr<CCostContext> CGroupExpression::CostContextInsert(duckdb::unique_ptr<CCostContext> pcc) {
 	// HERE BE DRAGONS
 	// See comment in CCache::InsertEntry
 	auto pccFound_iter = m_cost_context_map.find(pcc->m_poc->HashValue());
@@ -445,11 +456,11 @@ CCostContext *CGroupExpression::CostContextInsert(CCostContext *pcc) {
 //		Pre-processing before applying transformation
 //
 //---------------------------------------------------------------------------
-void CGroupExpression::PreprocessTransform(CXform *pxform) {
+void CGroupExpression::PreprocessTransform(duckdb::unique_ptr<CGroupExpression> this_expr, duckdb::unique_ptr<CXform> pxform) {
 	if (pxform->FExploration() && CXformExploration::Pxformexp(pxform)->FNeedsStats()) {
 		// derive stats on container group before applying xform
 		CExpressionHandle exprhdl;
-		exprhdl.Attach(this);
+		exprhdl.Attach(this_expr);
 	}
 }
 
@@ -461,7 +472,7 @@ void CGroupExpression::PreprocessTransform(CXform *pxform) {
 //		Post-processing after applying transformation
 //
 //---------------------------------------------------------------------------
-void CGroupExpression::PostprocessTransform(CXform *pxform) {
+void CGroupExpression::PostprocessTransform(duckdb::unique_ptr<CXform> pxform) {
 }
 
 //---------------------------------------------------------------------------
@@ -472,33 +483,39 @@ void CGroupExpression::PostprocessTransform(CXform *pxform) {
 //		Transform group expression using the given xform
 //
 //---------------------------------------------------------------------------
-void CGroupExpression::Transform(CXform *pxform, CXformResult *results, ULONG *elapsed_time, ULONG *num_bindings) {
+void CGroupExpression::Transform(duckdb::unique_ptr<CGroupExpression> this_expr, duckdb::unique_ptr<CXform> pxform,
+								 duckdb::unique_ptr<CXformResult> results,
+								 ULONG *elapsed_time, ULONG *num_bindings) {
 	// check xform promise
 	CExpressionHandle exprhdl;
-	exprhdl.Attach(this);
+	exprhdl.Attach(this_expr);
 	exprhdl.DeriveProps(nullptr);
 	if (CXform::ExfpNone == pxform->XformPromise(exprhdl)) {
 		return;
 	}
 	// pre-processing before applying xform to group expression
-	PreprocessTransform(pxform);
+	PreprocessTransform(this_expr, pxform);
 	// extract memo bindings to apply xform
 	CBinding binding;
-	CXformContext *pxfctxt = new CXformContext();
-	COptimizerConfig *optconfig = COptCtxt::PoctxtFromTLS()->m_optimizer_config;
+	auto pxfctxt = make_uniq<CXformContext>();
+	auto optconfig = COptCtxt::PoctxtFromTLS()->m_optimizer_config;
 	ULONG bindThreshold = optconfig->m_hint->UlXformBindThreshold();
-	Operator *pexprPattern = pxform->m_operator.get();
-	Operator *pexpr = binding.PexprExtract(this, pexprPattern, nullptr);
+	auto pexprPattern = pxform->m_operator;
+	auto pexpr = binding.PexprExtract(this_expr, pexprPattern, nullptr);
 	while (nullptr != pexpr) {
 		++(*num_bindings);
+		// Need to delete
+		// pxform->Transform(pxfctxt, results, pexpr);
 		pxform->Transform(pxfctxt, results, pexpr);
 		if ((bindThreshold != 0 && (*num_bindings) > bindThreshold)
 		 	 || pxform->IsApplyOnce()) {
 			// do not apply xform to other possible patterns
 			break;
 		}
-		Operator *pexprLast = pexpr;
-		pexpr = binding.PexprExtract(this, pexprPattern, pexprLast);
+		// Need to delete
+		// Operator *pexprLast = pexpr;
+		auto pexprLast = pexpr;
+		pexpr = binding.PexprExtract(this_expr, pexprPattern, pexprLast);
 	}
 	// post-processing before applying xform to group expression
 	PostprocessTransform(pxform);
@@ -513,7 +530,7 @@ void CGroupExpression::Transform(CXform *pxform, CXformResult *results, ULONG *e
 //		passed expression
 //
 //---------------------------------------------------------------------------
-bool CGroupExpression::FMatchNonScalarChildren(CGroupExpression *group_expr) const {
+bool CGroupExpression::FMatchNonScalarChildren(duckdb::unique_ptr<CGroupExpression> group_expr) const {
 	if (0 == Arity()) {
 		return (group_expr->Arity() == 0);
 	}
@@ -538,7 +555,7 @@ bool CGroupExpression::Matches(const CGroupExpression *group_expr) const {
 		return false;
 	}
 	// match operators
-	if (!m_operator->Matches(group_expr->m_operator.get())) {
+	if (!m_operator->Matches(m_operator, group_expr->m_operator)) {
 		return false;
 	}
 	// compare inputs
@@ -562,7 +579,7 @@ bool CGroupExpression::Matches(const CGroupExpression *group_expr) const {
 //		static hash function for operator and group references
 //
 //---------------------------------------------------------------------------
-size_t CGroupExpression::HashValue(Operator *pop, duckdb::vector<CGroup *> groups) {
+size_t CGroupExpression::HashValue(duckdb::unique_ptr<Operator> pop, duckdb::vector<duckdb::unique_ptr<CGroup>> groups) {
 	// ULONG ulHash = Operator::HashValue(pop);
 	size_t ulHash = pop->HashValue();
 	size_t arity = groups.size();
@@ -610,12 +627,12 @@ bool CGroupExpression::ContainsCircularDependencies() {
 		return false;
 	}
 	// we are still in exploration phase, check if there are any circular dependencies
-	duckdb::vector<CGroup *> child_groups = m_child_groups;
+	auto child_groups = m_child_groups;
 	for (ULONG ul = 0; ul < child_groups.size(); ul++) {
-		CGroup *child_group = child_groups[ul];
+		auto child_group = child_groups[ul];
 		if (child_group->m_is_scalar)
 			continue;
-		CGroup *child_duplicate_group = child_group->m_group_for_duplicate_groups;
+		auto child_duplicate_group = child_group->m_group_for_duplicate_groups;
 		if (child_duplicate_group != nullptr) {
 			ULONG child_duplicate_group_id = child_duplicate_group->m_id;
 			ULONG current_group_id = m_group->m_id;

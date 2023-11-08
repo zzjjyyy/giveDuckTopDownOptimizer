@@ -33,9 +33,10 @@ unique_ptr<LogicalOperator> LogicalEmptyResult::Deserialize(LogicalDeserializati
 	return std::move(result);
 }
 
-CPropConstraint* LogicalEmptyResult::DerivePropertyConstraint(CExpressionHandle &exprhdl)
+duckdb::unique_ptr<CPropConstraint>
+LogicalEmptyResult::DerivePropertyConstraint(CExpressionHandle &exprhdl)
 {
-	return NULL;
+	return nullptr;
 }
 
 ULONG LogicalEmptyResult::DeriveJoinDepth(CExpressionHandle &exprhdl)
@@ -44,26 +45,30 @@ ULONG LogicalEmptyResult::DeriveJoinDepth(CExpressionHandle &exprhdl)
 }
 	
 // Rehydrate expression from a given cost context and child expressions
-Operator* LogicalEmptyResult::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan)
+duckdb::unique_ptr<Operator>
+LogicalEmptyResult::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+								  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+								  duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan)
 {
-	LogicalEmptyResult* pexpr = new LogicalEmptyResult(unique_ptr_cast<Operator, LogicalOperator>(pdrgpexpr[0]->Copy()));
+	auto pexpr = make_uniq<LogicalEmptyResult>(unique_ptr_cast<Operator, LogicalOperator>(pdrgpexpr[0]->Copy()));
 	pexpr->m_cost = pcc->m_cost;
 	pexpr->m_group_expression = pcc->m_group_expression;
 	return pexpr;
 }
 
-CKeyCollection* LogicalEmptyResult::DeriveKeyCollection(CExpressionHandle &exprhdl)
+duckdb::unique_ptr<CKeyCollection> LogicalEmptyResult::DeriveKeyCollection(CExpressionHandle &exprhdl)
 {
-	return NULL;
+	return nullptr;
 }
 
 //-------------------------------------------------------------------------------------
 // Transformations
 //-------------------------------------------------------------------------------------
 // candidate set of xforms
-CXform_set * LogicalEmptyResult::XformCandidates() const
+duckdb::unique_ptr<CXform_set>
+LogicalEmptyResult::XformCandidates() const
 {
-	CXform_set * xform_set = new CXform_set();
+	auto xform_set = make_uniq<CXform_set>();
 	return xform_set;
 }
 } // namespace duckdb

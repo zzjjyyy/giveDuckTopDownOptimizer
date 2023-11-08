@@ -27,26 +27,33 @@ idx_t LogicalTopN::EstimateCardinality(ClientContext &context)
 	return child_cardinality;
 }
 
-CKeyCollection* LogicalTopN::DeriveKeyCollection(CExpressionHandle &exprhdl)
+duckdb::unique_ptr<CKeyCollection>
+LogicalTopN::DeriveKeyCollection(CExpressionHandle &exprhdl)
 {
 	const ULONG arity = exprhdl.Arity();
 	return PkcDeriveKeysPassThru(exprhdl, arity - 1);
 }
 	
-CPropConstraint* LogicalTopN::DerivePropertyConstraint(CExpressionHandle &exprhdl)
+duckdb::unique_ptr<CPropConstraint>
+LogicalTopN::DerivePropertyConstraint(CExpressionHandle &exprhdl)
 {
 	return PpcDeriveConstraintPassThru(exprhdl, exprhdl.Arity() - 1);
 }
 
-Operator* LogicalTopN::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan)
+duckdb::unique_ptr<Operator>
+LogicalTopN::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+						   duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+						   duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan)
 {
-	CGroupExpression* pgexpr = pcc->m_group_expression;
+	auto pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	LogicalTopN* tmp = (LogicalTopN*)pgexpr->m_operator.get();
-	LogicalTopN* pexpr = new LogicalTopN(tmp->orders, tmp->limit, tmp->offset);
-	for(auto &child : pdrgpexpr)
+	auto pexpr = make_uniq<LogicalTopN>(tmp->orders, tmp->limit, tmp->offset);
+	// Need to delete
+	// for (auto &child : pdrgpexpr)
+	for (auto child : pdrgpexpr)
 	{
-		pexpr->AddChild(child->Copy());
+		pexpr->AddChild(child);
 	}
 	pexpr->m_cost = cost;
 	pexpr->m_group_expression = pgexpr;
@@ -61,9 +68,10 @@ Operator* LogicalTopN::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set * LogicalTopN::XformCandidates() const
+duckdb::unique_ptr<CXform_set>
+LogicalTopN::XformCandidates() const
 {
-	CXform_set * xform_set = new CXform_set();
+	auto xform_set = make_uniq<CXform_set>();
 	(void) xform_set->set(CXform::ExfImplementLimit);
 	(void) xform_set->set(CXform::ExfSplitLimit);
 	return xform_set;

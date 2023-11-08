@@ -9,9 +9,13 @@
 namespace duckdb {
 
 BaseStatistics::BaseStatistics() : type(LogicalType::INVALID) {
+	has_null = false;
+	has_no_null = false;
 }
 
 BaseStatistics::BaseStatistics(LogicalType type) {
+	has_null = false;
+	has_no_null = false;
 	Construct(*this, std::move(type));
 }
 

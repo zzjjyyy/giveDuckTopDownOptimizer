@@ -38,11 +38,13 @@ class CDerivedPhysicalProp;
 class CDerivedPhysicalProp : public CDerivedProperty {
 public:
 	CDerivedPhysicalProp();
+
 	CDerivedPhysicalProp(const CDerivedPhysicalProp &) = delete;
+
 	virtual ~CDerivedPhysicalProp();
 
 	// derived sort order
-	COrderSpec *m_sort_order;
+	duckdb::unique_ptr<COrderSpec> m_sort_order;
 
 	// derived cte map
 	// CCTEMap* m_pcm;
@@ -57,10 +59,11 @@ public:
 	}
 
 	// derivation function
-	void Derive(gpopt::CExpressionHandle &pop, CDerivedPropertyContext *pdpctxt) override;
+	void Derive(gpopt::CExpressionHandle &pop, duckdb::unique_ptr<CDerivedPropertyContext> pdpctxt) override;
 
 	// short hand for conversion
-	static CDerivedPhysicalProp *DrvdPlanProperty(CDerivedProperty *pdp);
+	static duckdb::unique_ptr<CDerivedPhysicalProp>
+	DrvdPlanProperty(duckdb::unique_ptr<CDerivedProperty> pdp);
 
 	// cte map
 	// CCTEMap* GetCostModel() const
@@ -70,10 +73,12 @@ public:
 
 	// hash function
 	virtual size_t HashValue() const;
+
 	// equality function
-	virtual ULONG Equals(const CDerivedPhysicalProp *pdpplan) const;
+	virtual ULONG Equals(const duckdb::unique_ptr<CDerivedPhysicalProp> pdpplan) const;
+
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CRequiredPhysicalProp *prpp) const override;
+	virtual bool FSatisfies(const duckdb::unique_ptr<CRequiredPhysicalProp> prpp) const override;
 }; // class CDerivedPhysicalProp
 } // namespace gpopt
 #endif

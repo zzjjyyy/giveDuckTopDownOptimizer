@@ -76,8 +76,9 @@ public:
 	                                                GlobalOperatorState &gstate, OperatorState &state) const;
 
 	// create base container of derived properties
-	CDerivedProperty *CreateDerivedProperty() override;
-	CRequiredProperty * CreateRequiredProperty() const override;
+	duckdb::unique_ptr<CDerivedProperty> CreateDerivedProperty() override;
+	
+	duckdb::unique_ptr<CRequiredProperty> CreateRequiredProperty() const override;
 
 	virtual bool ParallelOperator() const {
 		return false;
@@ -96,7 +97,11 @@ public:
 	// virtual CCTEMap *PcmDerive() const;
 
 	// order matching type
-	virtual COrderProperty::EOrderMatching OrderMatching(CRequiredPhysicalProp *, ULONG, vector<CDerivedProperty *>, ULONG);
+	virtual COrderProperty::EOrderMatching
+	OrderMatching(duckdb::unique_ptr<CRequiredPhysicalProp>,
+				  ULONG,
+				  vector<duckdb::unique_ptr<CDerivedProperty>>,
+				  ULONG);
 
 public:
 	static unique_ptr<Expression> ExpressionPassThrough(const PhysicalOperator *op, Expression *expr);
@@ -106,9 +111,12 @@ public:
 	                                                               vector<BoundOrderByNode> &peo) const;
 
 	// compute required sort order of the n-th child
-	virtual COrderSpec *RequiredSortSpec(CExpressionHandle &handle, COrderSpec *order_spec, ULONG child_index,
-	                                     vector<CDerivedProperty *> children_derived_property,
-	                                     ULONG num_opt_request) const;
+	virtual duckdb::unique_ptr<COrderSpec>
+	RequiredSortSpec(CExpressionHandle &handle,
+					 duckdb::unique_ptr<COrderSpec> order_spec,
+					 ULONG child_index,
+	                 vector<duckdb::unique_ptr<CDerivedProperty>> children_derived_property,
+	                 ULONG num_opt_request) const;
 
 	virtual bool FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
 	                               ULONG ulOptReq) const {
@@ -116,8 +124,8 @@ public:
 	}
 
 	// derive sort order
-	virtual COrderSpec *PosDerive(gpopt::CExpressionHandle &exprhdl) const {
-		return new COrderSpec();
+	virtual duckdb::unique_ptr<COrderSpec> PosDerive(gpopt::CExpressionHandle &exprhdl) const {
+		return make_uniq<COrderSpec>();
 	}
 
 public:
@@ -206,9 +214,12 @@ public:
 	virtual void BuildPipelines(Pipeline &current, MetaPipeline &meta_pipeline);
 
 	// compute required output columns of the n-th child
-	virtual vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
-	                                           ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt,
-	                                           ULONG ulOptReq) {
+	virtual vector<ColumnBinding>
+	PcrsRequired(CExpressionHandle &exprhdl,
+				 vector<ColumnBinding> pcrsRequired,
+	             ULONG child_index,
+				 vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt,
+	             ULONG ulOptReq) {
 		return children[child_index]->GetColumnBindings();
 	}
 

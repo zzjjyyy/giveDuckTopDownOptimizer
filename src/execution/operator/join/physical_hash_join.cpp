@@ -935,7 +935,8 @@ unique_ptr<Operator> PhysicalHashJoin::Copy() {
 	return unique_ptr_cast<PhysicalHashJoin, Operator>(std::move(copy));
 }
 
-unique_ptr<Operator> PhysicalHashJoin::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+unique_ptr<Operator>
+PhysicalHashJoin::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	LogicalComparisonJoin join(JoinType::INNER);
 	join.types = this->types; 
 	vector<JoinCondition> v;
@@ -972,9 +973,10 @@ unique_ptr<Operator> PhysicalHashJoin::CopyWithNewGroupExpression(CGroupExpressi
 	return unique_ptr_cast<PhysicalHashJoin, Operator>(std::move(copy));
 }
 
-unique_ptr<Operator> PhysicalHashJoin::CopyWithNewChildren(CGroupExpression *pgexpr,
-                                                     duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-                                                     double cost) {
+unique_ptr<Operator>
+PhysicalHashJoin::CopyWithNewChildren(unique_ptr<CGroupExpression>pgexpr,
+                                      duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                      double cost) {
 	LogicalComparisonJoin join(JoinType::INNER);
 	join.types = this->types; 
 	vector<JoinCondition> v;

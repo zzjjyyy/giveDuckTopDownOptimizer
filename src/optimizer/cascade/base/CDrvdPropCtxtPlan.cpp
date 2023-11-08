@@ -45,9 +45,9 @@ CDrvdPropCtxtPlan::~CDrvdPropCtxtPlan()
 //		Copy function
 //
 //---------------------------------------------------------------------------
-CDerivedPropertyContext * CDrvdPropCtxtPlan::PdpctxtCopy() const
+duckdb::unique_ptr<CDerivedPropertyContext> CDrvdPropCtxtPlan::PdpctxtCopy() const
 {
-	CDrvdPropCtxtPlan* pdpctxtplan = new CDrvdPropCtxtPlan();
+	duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan = make_uniq<CDrvdPropCtxtPlan>();
 	return pdpctxtplan;
 }
 
@@ -59,7 +59,7 @@ CDerivedPropertyContext * CDrvdPropCtxtPlan::PdpctxtCopy() const
 //		Add props to context
 //
 //---------------------------------------------------------------------------
-void CDrvdPropCtxtPlan::AddProps(CDerivedProperty * pdp)
+void CDrvdPropCtxtPlan::AddProps(duckdb::unique_ptr<CDerivedProperty> pdp)
 {
 	return;
 }

@@ -309,7 +309,7 @@ void Binder::BindWhereStarExpression(unique_ptr<ParsedExpression> &expr) {
 
 unique_ptr<BoundQueryNode> Binder::BindSelectNode(SelectNode &statement, unique_ptr<BoundTableRef> from_table) {
 	D_ASSERT(from_table);
-	D_ASSERT(!statement.from_table);
+	// D_ASSERT(!statement.from_table);
 	auto result = make_uniq<BoundSelectNode>();
 	result->projection_index = GenerateTableIndex();
 	result->group_index = GenerateTableIndex();

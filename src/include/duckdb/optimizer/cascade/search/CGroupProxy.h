@@ -32,11 +32,11 @@ class CGroupProxy
 {
 public:
 	// group we're operating on
-	CGroup*  m_pgroup;
+	duckdb::unique_ptr<CGroup> m_pgroup;
 
 public:
 	// ctor
-	explicit CGroupProxy(CGroup* pgroup);
+	explicit CGroupProxy(duckdb::unique_ptr<CGroup> pgroup);
 
 	// dtor
 	~CGroupProxy();
@@ -55,28 +55,29 @@ public:
 	}
 
 	// skip group expressions starting from the given expression;
-	list<CGroupExpression*>::iterator PgexprSkip(list<CGroupExpression*>::iterator pgexprStart, bool fSkipLogical);
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	PgexprSkip(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexprStart, bool fSkipLogical);
 
 	// insert group expression
-	void Insert(CGroupExpression* pgexpr);
+	void Insert(duckdb::unique_ptr<CGroupExpression> pgexpr);
 
 	// move duplicate group expression to duplicates list
-	void MoveDuplicateGExpr(CGroupExpression* pgexpr);
+	void MoveDuplicateGExpr(duckdb::unique_ptr<CGroupExpression> pgexpr);
 
 	// initialize group's properties;
-	void InitProperties(CDerivedProperty * ppdp);
+	void InitProperties(duckdb::unique_ptr<CDerivedProperty> ppdp);
 
 	// retrieve first group expression
-	list<CGroupExpression*>::iterator PgexprFirst();
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator PgexprFirst();
 
 	// get the first non-logical group expression following the given expression
-	list<CGroupExpression*>::iterator PgexprSkipLogical(list<CGroupExpression*>::iterator pgexpr);
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator PgexprSkipLogical(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexpr);
 
 	// get the next logical group expression following the given expression
-	list<CGroupExpression*>::iterator PgexprNextLogical(list<CGroupExpression*>::iterator pgexpr);
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator PgexprNextLogical(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexpr);
 
 	// lookup best expression under optimization context
-	CGroupExpression* PgexprLookup(COptimizationContext* poc) const;
+	duckdb::unique_ptr<CGroupExpression> PgexprLookup(duckdb::unique_ptr<COptimizationContext> poc) const;
 };	// class CGroupProxy
 }  // namespace gpopt
 #endif

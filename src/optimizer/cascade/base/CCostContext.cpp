@@ -30,11 +30,19 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CCostContext::CCostContext(COptimizationContext *poc, ULONG ulOptReq, CGroupExpression *pgexpr)
-    : m_cost(GPOPT_INVALID_COST), m_estate(estUncosted), m_group_expression(pgexpr), m_group_expr_for_stats(nullptr),
-      m_derived_prop_plan(nullptr), m_optimization_request_num(ulOptReq), m_fPruned(false), m_poc(poc) {
+CCostContext::CCostContext(duckdb::unique_ptr<COptimizationContext> poc,
+						   ULONG ulOptReq,
+						   duckdb::unique_ptr<CGroupExpression> pgexpr)
+    : m_cost(GPOPT_INVALID_COST),
+	  m_estate(estUncosted),
+	  m_group_expression(pgexpr),
+	  m_group_expr_for_stats(nullptr),
+      m_derived_prop_plan(nullptr),
+	  m_optimization_request_num(ulOptReq),
+	  m_fPruned(false),
+	  m_poc(poc) {
 	if (m_group_expression != nullptr) {
-		CGroupExpression *pgexprForStats = m_group_expression->m_group->BestPromiseGroupExpr(m_group_expression);
+		auto pgexprForStats = m_group_expression->m_group->BestPromiseGroupExpr(m_group_expression->m_group, m_group_expression);
 		if (nullptr != pgexprForStats) {
 			m_group_expr_for_stats = pgexprForStats;
 		}
@@ -76,13 +84,13 @@ bool CCostContext::FNeedsNewStats() const {
 //		Derive properties of the plan carried by cost context
 //
 //---------------------------------------------------------------------------
-void CCostContext::DerivePlanProps() {
+void CCostContext::DerivePlanProps(duckdb::unique_ptr<CCostContext> this_contxt) {
 	if (nullptr == m_derived_prop_plan) {
 		// derive properties of the plan carried by cost context
 		CExpressionHandle handle;
-		handle.Attach(this);
+		handle.Attach(this_contxt);
 		handle.DerivePlanPropsForCostContext();
-		CDerivedPhysicalProp *plan_property = CDerivedPhysicalProp::DrvdPlanProperty(handle.DerivedProperty());
+		auto plan_property = CDerivedPhysicalProp::DrvdPlanProperty(handle.DerivedProperty());
 		m_derived_prop_plan = plan_property;
 	}
 }
@@ -107,14 +115,15 @@ bool CCostContext::operator==(const CCostContext &cc) const {
 //		Check validity by comparing derived and required properties
 //
 //---------------------------------------------------------------------------
-bool CCostContext::IsValid() {
+bool CCostContext::IsValid(duckdb::unique_ptr<CCostContext> this_contxt) {
 	// obtain relational properties from group
-	CDerivedLogicalProp *prop_relation =
+	auto prop_relation =
 	    CDerivedLogicalProp::GetRelationalProperties(m_group_expression->m_group->m_derived_properties);
 	// derive plan properties
-	DerivePlanProps();
+	DerivePlanProps(this_contxt);
 	// checking for required properties satisfaction
-	bool is_valid = m_poc->m_required_plan_properties->FSatisfied(prop_relation, m_derived_prop_plan);
+	bool is_valid =
+		m_poc->m_required_plan_properties->FSatisfied(m_poc->m_required_plan_properties, prop_relation, m_derived_prop_plan);
 	return is_valid;
 }
 
@@ -129,7 +138,9 @@ bool CCostContext::IsValid() {
 //		context in output argument
 //
 //---------------------------------------------------------------------------
-void CCostContext::BreakCostTiesForJoinPlans(CCostContext *pccFst, CCostContext *pccSnd, CCostContext **ppccPrefered,
+void CCostContext::BreakCostTiesForJoinPlans(duckdb::unique_ptr<CCostContext> pccFst,
+											 duckdb::unique_ptr<CCostContext> pccSnd,
+											 duckdb::unique_ptr<CCostContext> *ppccPrefered,
                                              bool *pfTiesResolved) {
 	// for two join plans with the same estimated rows in both children,
 	// prefer the plan that has smaller tree depth on the inner side,
@@ -179,7 +190,7 @@ void CCostContext::BreakCostTiesForJoinPlans(CCostContext *pccFst, CCostContext 
 //		based on cost?
 //
 //---------------------------------------------------------------------------
-bool CCostContext::FBetterThan(CCostContext *pcc) const {
+bool CCostContext::FBetterThan(duckdb::unique_ptr<CCostContext> pcc) const {
 	double dCostDiff = (this->m_cost - pcc->m_cost);
 	if (dCostDiff < 0.0) {
 		// if current context has a strictly smaller cost, then it is preferred

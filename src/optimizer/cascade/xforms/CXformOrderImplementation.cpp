@@ -47,11 +47,14 @@ CXform::EXformPromise CXformOrderImplementation::XformPromise(CExpressionHandle 
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformOrderImplementation::Transform(CXformContext *context, CXformResult *result, Operator *op) const {
+void CXformOrderImplementation::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+				   						  duckdb::unique_ptr<CXformResult> result,
+				   						  duckdb::unique_ptr<Operator> op) const {
 	D_ASSERT(op->children.size() == 1);
-
-	auto child = op->children[0]->Copy();
-	LogicalOrder *order = (LogicalOrder *)op;
+	// Need to delete
+	// auto child = op->children[0]->Copy();
+	auto child = op->children[0];
+	auto order = unique_ptr_cast<Operator, LogicalOrder>(op);
 	if (!order->orders.empty()) {
 		// projection based on children's output.
 		duckdb::vector<idx_t> projections;
@@ -73,7 +76,7 @@ void CXformOrderImplementation::Transform(CXformContext *context, CXformResult *
 		                                               order->estimated_cardinality);
 		physical_order->is_enforced = false;
 		physical_order->AddChild(std::move(child));
-		result->Add(move(physical_order));
+		result->Add(std::move(physical_order));
 	} else {
 		result->Add(std::move(child));
 	}

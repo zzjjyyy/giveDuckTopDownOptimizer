@@ -27,7 +27,9 @@ public:
 
 	EXformPromise XformPromise(CExpressionHandle &expression_handle) const override;
 
-	void Transform(CXformContext *xform_context, CXformResult *xform_result, Operator *expression) const override;
+	void Transform(duckdb::unique_ptr<CXformContext> xform_context,
+				   duckdb::unique_ptr<CXformResult> xform_result,
+				   duckdb::unique_ptr<Operator> expression) const override;
 
 private:
 	CXformDummyScanImplementation(const CXformDummyScanImplementation &);

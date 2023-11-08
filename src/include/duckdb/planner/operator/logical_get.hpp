@@ -24,33 +24,47 @@ public:
 
 	//! The table index in the current bind context
 	idx_t table_index;
+	
 	//! The function that is called
 	TableFunction function;
+
 	//! The bind data of the function
 	duckdb::unique_ptr<FunctionData> bind_data;
+
 	//! The types of ALL columns that can be returned by the table function
 	duckdb::vector<LogicalType> returned_types;
+
 	//! The names of ALL columns that can be returned by the table function
 	duckdb::vector<string> names;
+
 	//! Bound column IDs
 	duckdb::vector<column_t> column_ids;
+
 	//! Columns that are used outside of the scan
 	duckdb::vector<idx_t> projection_ids;
+
 	//! Filters pushed down for table scan
 	TableFilterSet table_filters;
+
 	//! The set of input parameters for the table function
 	duckdb::vector<Value> parameters;
+
 	//! The set of named input parameters for the table function
 	named_parameter_map_t named_parameters;
+
 	//! The set of named input table types for the table-in table-out function
 	duckdb::vector<LogicalType> input_table_types;
+
 	//! The set of named input table names for the table-in table-out function
 	duckdb::vector<string> input_table_names;
+
 	//! For a table-in-out function, the set of projected input columns
 	duckdb::vector<column_t> projected_input;
 
 	string GetName() const override;
+
 	string ParamsToString() const override;
+
 	//! Returns the underlying table that is being scanned, or nullptr if there is none
 	TableCatalogEntry *GetTable() const;
 
@@ -77,21 +91,25 @@ public:
 		return 1;
 	}
 
-	CXform_set *XformCandidates() const override;
+	duckdb::unique_ptr<CXform_set> XformCandidates() const override;
 
-	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
+	duckdb::unique_ptr<CPropConstraint> DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 
 	// Rehydrate expression from a given cost context and child expressions
-	Operator *SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-	                        CDrvdPropCtxtPlan *pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	              duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 
-	duckdb::unique_ptr<Operator> Copy() override;
+	unique_ptr<Operator> Copy() override;
 
-	duckdb::unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+	unique_ptr<Operator>
+	CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) override;
 
-	duckdb::unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr,
-	                                                 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-	                                                 double cost) override;
+	unique_ptr<Operator>
+	CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+	                    duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	                    double cost) override;
 
 	void CE() override;
 

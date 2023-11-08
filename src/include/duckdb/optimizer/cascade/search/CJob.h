@@ -94,23 +94,36 @@ public:
 	};
 
 public:
-	CJob() : m_parent_jobs(nullptr), m_job_queue(nullptr), m_reference_cnt(0), m_id(0), m_is_initialized(false) {
+	CJob()
+		: m_parent_jobs(nullptr),
+		  m_job_queue(nullptr),
+		  m_reference_cnt(0),
+		  m_id(0),
+		  m_is_initialized(false) {
 	}
+
 	CJob(const CJob &) = delete;
+	
 	virtual ~CJob() = default;
 
 	// parent job
 	CJob *m_parent_jobs;
+
 	// assigned job queue
 	CJobQueue *m_job_queue;
+
 	// reference counter
 	ULONG_PTR m_reference_cnt;
+
 	// job id - set by job factory
 	ULONG m_id;
+
 	// job type
 	EJobType m_job_type;
+
 	// flag indicating if job is initialized
 	bool m_is_initialized;
+	
 	// link for job queueing
 	SLink m_link_queue;
 
@@ -134,38 +147,47 @@ public:
 	CJob *PJobParent() const {
 		return m_parent_jobs;
 	}
+
 	// set parent
 	void SetParent(CJob *pj) {
 		m_parent_jobs = pj;
 	}
+
 	// increment reference counter
 	void IncRefs() {
 		m_reference_cnt++;
 	}
+
 	// decrement reference counter
 	ULONG_PTR DecrRefs() {
 		return m_reference_cnt--;
 	}
+
 	// id accessor
 	ULONG Id() const {
 		return m_id;
 	}
+	
 	// check if job is initialized
 	bool FInit() const {
 		return m_is_initialized;
 	}
+
 	// mark job as initialized
 	void SetInit() {
 		m_is_initialized = true;
 	}
+
 	// type accessor
 	EJobType JobType() const {
 		return m_job_type;
 	}
+
 	// job queue accessor
 	CJobQueue *JobQueue() const {
 		return m_job_queue;
 	}
+
 	// set job queue
 	void SetJobQueue(CJobQueue *pjq) {
 		m_job_queue = pjq;
@@ -174,11 +196,14 @@ public:
 public:
 	// reset job
 	virtual void Reset();
+
 	// actual job execution given a scheduling context
 	// returns true if job completes, false if it is suspended
-	virtual bool FExecute(CSchedulerContext *psc) {
+	virtual bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) {
 		return true;
 	}
+
 	// cleanup internal state
 	virtual void Cleanup() {};
 }; // class CJob

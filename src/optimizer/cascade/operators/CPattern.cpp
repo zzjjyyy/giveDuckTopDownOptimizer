@@ -21,7 +21,8 @@ using namespace duckdb;
 //		expression has to take care of this on a higher level
 //
 //---------------------------------------------------------------------------
-CDerivedProperty *CPattern::CreateDerivedProperty() {
+duckdb::unique_ptr<CDerivedProperty>
+CPattern::CreateDerivedProperty() {
 	return nullptr;
 }
 
@@ -34,7 +35,8 @@ CDerivedProperty *CPattern::CreateDerivedProperty() {
 //		expression has to take care of this on a higher level
 //
 //---------------------------------------------------------------------------
-CRequiredProperty *CPattern::CreateRequiredProperty() const {
+duckdb::unique_ptr<CRequiredProperty>
+CPattern::CreateRequiredProperty() const {
 	return nullptr;
 }
 
@@ -46,8 +48,8 @@ CRequiredProperty *CPattern::CreateRequiredProperty() const {
 //		match against an operator
 //
 //---------------------------------------------------------------------------
-bool CPattern::Matches(Operator *pop) {
-	return logical_type == pop->logical_type && physical_type == pop->physical_type;
+bool CPattern::Matches(duckdb::unique_ptr<Operator> this_op, duckdb::unique_ptr<Operator> pop) {
+	return this_op->logical_type == pop->logical_type && this_op->physical_type == pop->physical_type;
 }
 
 //---------------------------------------------------------------------------

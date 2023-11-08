@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <iostream>
 #include "duckdb/optimizer/cascade/assert.h"
+#include "duckdb/common/helper.hpp"
 
 #define GPOS_SIZEOF(x) ((gpos::ULONG) sizeof(x))
 #define GPOS_ARRAY_SIZE(x) (GPOS_SIZEOF(x) / GPOS_SIZEOF(x[0]))

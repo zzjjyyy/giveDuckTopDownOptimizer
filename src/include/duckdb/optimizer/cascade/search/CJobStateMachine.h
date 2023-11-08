@@ -72,7 +72,7 @@ template <class TEnumState, TEnumState estSentinel, class TEnumEvent, TEnumEvent
 {
 public:
 	// pointer to job action function
-	typedef TEnumEvent (*PFuncAction)(CSchedulerContext* psc, CJob* pjOwner);
+	typedef TEnumEvent (*PFuncAction)(duckdb::unique_ptr<CSchedulerContext> psc, CJob *pjOwner);
 
 	// shorthand for state machine
 	typedef CStateMachine<TEnumState, estSentinel, TEnumEvent, eevSentinel> SM;
@@ -108,7 +108,7 @@ public:
 	}
 
 	// run the state machine
-	bool FRun(CSchedulerContext* psc, CJob* pjOwner)
+	bool FRun(duckdb::unique_ptr<CSchedulerContext> psc, CJob* pjOwner)
 	{
 		TEnumState estCurrent = estSentinel;
 		TEnumState estNext = estSentinel;

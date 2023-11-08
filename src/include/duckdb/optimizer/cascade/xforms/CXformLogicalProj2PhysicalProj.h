@@ -31,18 +31,24 @@ public:
 
 	// dtor
 	~CXformLogicalProj2PhysicalProj() override = default;
+	
 	// ident accessors
 	EXformId ID() const override {
 		return ExfLogicalProj2PhysicalProj;
 	}
+
 	// return a string for xform name
 	const CHAR *Name() const override {
 		return "CXformLogicalProj2PhysicalProj";
 	}
+
 	// compute xform promise for a given expression handle
 	EXformPromise XformPromise(CExpressionHandle &expression_handle) const override;
+
 	// actual transform
-	void Transform(CXformContext *pxfctxt, CXformResult *pxfres, Operator *pexpr) const override;
+	void Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+				   duckdb::unique_ptr<CXformResult> pxfres,
+				   duckdb::unique_ptr<Operator> pexpr) const override;
 };
 } // namespace gpopt
 #endif

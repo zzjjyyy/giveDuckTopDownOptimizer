@@ -22,8 +22,10 @@ public:
 
 	//! The table index in the current bind context
 	idx_t table_index;
+	
 	//! The types of the chunk
 	vector<LogicalType> chunk_types;
+
 	//! The chunk collection to scan
 	unique_ptr<ColumnDataCollection> collection;
 
@@ -44,15 +46,17 @@ protected:
 
 public:
 	// ----------------- ORCA -------------------------
-	CKeyCollection *DeriveKeyCollection(CExpressionHandle &expression_handle) override;
+	duckdb::unique_ptr<CKeyCollection> DeriveKeyCollection(CExpressionHandle &expression_handle) override;
 
-	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &expression_handle) override;
+	duckdb::unique_ptr<CPropConstraint> DerivePropertyConstraint(CExpressionHandle &expression_handle) override;
 
 	// Rehydrate expression from a given cost context and child expressions
-	Operator *SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-	                        CDrvdPropCtxtPlan *pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	              duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 
 	// Transformations: candidate set of xforms
-	CXform_set *XformCandidates() const override;
+	duckdb::unique_ptr<CXform_set> XformCandidates() const override;
 };
 } // namespace duckdb

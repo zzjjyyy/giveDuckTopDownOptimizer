@@ -69,10 +69,11 @@ CXform::EXformPromise CXformPushGbBelowJoin::XformPromise(CExpressionHandle &exp
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformPushGbBelowJoin::Transform(CXformContext *pxfctxt,
-                                      CXformResult *pxfres, Operator *pexpr) const
+void CXformPushGbBelowJoin::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+				   					  duckdb::unique_ptr<CXformResult> pxfres,
+				   					  duckdb::unique_ptr<Operator> pexpr) const
 {
-    LogicalAggregate *op_agg = static_cast<LogicalAggregate *>(pexpr);
+    auto op_agg = unique_ptr_cast<Operator, LogicalAggregate>(pexpr);
     if (op_agg->groups.empty()) {
         return;
     }

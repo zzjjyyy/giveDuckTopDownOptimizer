@@ -32,8 +32,12 @@ public:
 	static void ConstructFullOuterJoinResult(bool *found_match, ColumnDataCollection &input, DataChunk &result,
 	                                         ColumnDataScanState &scan_state);
 
-	vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
-	                                    ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) override;
+	vector<ColumnBinding>
+	PcrsRequired(CExpressionHandle &exprhdl,
+				 vector<ColumnBinding> pcrsRequired,
+	             ULONG child_index,
+				 vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt,
+				 ULONG ulOptReq) override;
 
 	void CE() override;
 

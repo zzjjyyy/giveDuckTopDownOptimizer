@@ -87,7 +87,7 @@ CJobGroupImplementation::~CJobGroupImplementation() {
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void CJobGroupImplementation::Init(CGroup *pgroup) {
+void CJobGroupImplementation::Init(duckdb::unique_ptr<CGroup> pgroup) {
 	CJobGroup::Init(pgroup);
 	m_jsm.Init(rgeev4);
 	// set job actions
@@ -106,12 +106,12 @@ void CJobGroupImplementation::Init(CGroup *pgroup) {
 //		the function returns true if it could schedule any new jobs
 //
 //---------------------------------------------------------------------------
-bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext *psc) {
+bool CJobGroupImplementation::FScheduleGroupExpressions(duckdb::unique_ptr<CSchedulerContext> psc) {
 	auto pgexprLast = m_last_scheduled_expr;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
 	while (m_pgroup->m_group_exprs.end() != itr) {
-		CGroupExpression *pgexpr = *itr;
+		auto pgexpr = *itr;
 		if (!pgexpr->FTransitioned(CGroupExpression::estImplemented) && !pgexpr->ContainsCircularDependencies()) {
 			CJobGroupExpressionImplementation::ScheduleJob(psc, pgexpr, this);
 			pgexprLast = itr;
@@ -136,15 +136,18 @@ bool CJobGroupImplementation::FScheduleGroupExpressions(CSchedulerContext *psc) 
 //		Start group implementation
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation(CSchedulerContext *psc,
-                                                                                 CJob *pjOwner) {
+CJobGroupImplementation::EEvent
+CJobGroupImplementation::EevtStartImplementation(duckdb::unique_ptr<CSchedulerContext> psc,
+                                                 CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupImplementation *pjgi = ConvertJob(pjOwner);
-	CGroup *pgroup = pjgi->m_pgroup;
+	auto pjgi = ConvertJob(pjOwner);
+#ifdef DEBUG
+	CJobGroup::PrintJob(pjgi, "[StartImplementation]");
+#endif
+	auto pgroup = pjgi->m_pgroup;
 	if (!pgroup->FExplored()) {
 		// schedule a child exploration job
 		CJobGroupExploration::ScheduleJob(psc, pgroup, pjgi);
-		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementation]");
 		return eevExploring;
 	} else {
 		// move group to implementation state
@@ -169,14 +172,18 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtStartImplementation
 //		Implement child group expressions
 //
 //---------------------------------------------------------------------------
-CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(CSchedulerContext *psc, CJob *pjOwner) {
+CJobGroupImplementation::EEvent
+CJobGroupImplementation::EevtImplementChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+											   CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupImplementation *pjgi = ConvertJob(pjOwner);
+	auto pjgi = ConvertJob(pjOwner);
+#ifdef DEBUG
+	CJobGroup::PrintJob(pjgi, "[StartImplementChildren]");
+#endif
 	if (pjgi->FScheduleGroupExpressions(psc)) {
-		if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
-			start_implementation = clock();
-		}
-		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartImplementChildren]");
+		// if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
+		//    start_implementation = clock();
+		// }
 		// implementation is in progress
 		return eevImplementing;
 	} else {
@@ -187,11 +194,11 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(C
 		}
 		// if this is the root, complete implementation phase
 		if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
-			end_implementation = clock();
-			implementation_time = double(end_implementation - start_implementation) / CLOCKS_PER_SEC;
-			FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
-			fprintf(time_f, "imple = %lf s, ", implementation_time);
-			fclose(time_f);
+			// end_implementation = clock();
+			// implementation_time = double(end_implementation - start_implementation) / CLOCKS_PER_SEC;
+			// FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			// fprintf(time_f, "imple = %lf s, ", implementation_time);
+			// fclose(time_f);
 			psc->m_engine->FinalizeImplementation();
 		}
 		return eevImplemented;
@@ -206,7 +213,8 @@ CJobGroupImplementation::EEvent CJobGroupImplementation::EevtImplementChildren(C
 //		Main job function
 //
 //---------------------------------------------------------------------------
-bool CJobGroupImplementation::FExecute(CSchedulerContext *psc) {
+bool
+CJobGroupImplementation::FExecute(duckdb::unique_ptr<CSchedulerContext> psc) {
 	return m_jsm.FRun(psc, this);
 }
 
@@ -218,10 +226,12 @@ bool CJobGroupImplementation::FExecute(CSchedulerContext *psc) {
 //		Schedule a new group implementation job
 //
 //---------------------------------------------------------------------------
-void CJobGroupImplementation::ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent) {
-	CJob *pj = psc->m_job_factory->CreateJob(CJob::EjtGroupImplementation);
+void CJobGroupImplementation::ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+										  duckdb::unique_ptr<CGroup> pgroup,
+										  CJob *pjParent) {
+	auto pj = psc->m_job_factory->CreateJob(CJob::EjtGroupImplementation);
 	// initialize job
-	CJobGroupImplementation *pjgi = ConvertJob(pj);
+	auto pjgi = ConvertJob(pj);
 	pjgi->Init(pgroup);
 	psc->m_scheduler->Add(pjgi, pjParent);
 }

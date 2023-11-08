@@ -87,19 +87,27 @@ string PhysicalProjection::ParamsToString() const
 	return extra_info;
 }
 
-Operator* PhysicalProjection::SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan)
+duckdb::unique_ptr<Operator>
+PhysicalProjection::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+								  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+								  duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan)
 {
-	CGroupExpression* pgexpr = pcc->m_group_expression;
+	auto pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	duckdb::vector<unique_ptr<Expression>> v;
-    for(auto &child : ((PhysicalProjection*)pgexpr->m_operator.get())->select_list)
+    // Need to delete
+	// for(auto &child : ((PhysicalProjection*)pgexpr->m_operator.get())->select_list)
+	for(auto child : ((PhysicalProjection*)pgexpr->m_operator.get())->select_list)
     {
-        v.push_back(child->Copy());
+        v.push_back(child);
     }
-	PhysicalProjection* pexpr = new PhysicalProjection(((PhysicalProjection*)pgexpr->m_operator.get())->types, std::move(v), ((PhysicalProjection*)pgexpr->m_operator.get())->estimated_cardinality);
-	for(auto &child : pdrgpexpr)
+	auto pexpr =
+		make_uniq<PhysicalProjection>(((PhysicalProjection*)pgexpr->m_operator.get())->types, v, ((PhysicalProjection*)pgexpr->m_operator.get())->estimated_cardinality);
+	// Need to delete
+	// for(auto &child : pdrgpexpr)
+	for(auto child : pdrgpexpr)
 	{
-		pexpr->AddChild(child->Copy());
+		pexpr->AddChild(child);
 	}
 	pexpr->m_cost = cost;
 	pexpr->m_group_expression = pgexpr;
@@ -141,7 +149,8 @@ duckdb::unique_ptr<Operator> PhysicalProjection::Copy()
 	return unique_ptr_cast<PhysicalProjection, Operator>(std::move(result));
 }
 
-duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGroupExpression* pgexpr)
+duckdb::unique_ptr<Operator>
+PhysicalProjection::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr)
 {
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
 	for(auto &child : this->select_list)
@@ -176,7 +185,10 @@ duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewGroupExpression(CGro
 	return unique_ptr_cast<PhysicalProjection, Operator>(std::move(result));
 }
 	
-duckdb::unique_ptr<Operator> PhysicalProjection::CopyWithNewChildren(CGroupExpression* pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr, double cost)
+duckdb::unique_ptr<Operator>
+PhysicalProjection::CopyWithNewChildren(duckdb::unique_ptr<CGroupExpression> pgexpr,
+										duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+										double cost)
 {
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
 	for(auto &child : this->select_list) {

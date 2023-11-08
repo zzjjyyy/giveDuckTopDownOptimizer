@@ -44,10 +44,10 @@ public:
 	typedef CJobStateMachine<EState, estSentinel, EEvent, eevSentinel> JSM;
 
 	// target group expression
-	CGroupExpression* m_pgexpr;
+	duckdb::unique_ptr<CGroupExpression> m_pgexpr;
 
 	// xform to apply to group expression
-	CXform* m_xform;
+	duckdb::unique_ptr<CXform> m_xform;
 
 	// job state machine
 	JSM m_jsm;
@@ -64,19 +64,27 @@ public:
 
 public:
 	// apply transformation action
-	static EEvent EevtTransform(CSchedulerContext* psc, CJob* pj);
+	static EEvent
+	EevtTransform(duckdb::unique_ptr<CSchedulerContext> psc,
+				  CJob *pj);
 
 	// initialize job
-	void Init(CGroupExpression* pgexpr, CXform* pxform);
+	void Init(duckdb::unique_ptr<CGroupExpression> pgexpr,
+			  duckdb::unique_ptr<CXform> pxform);
 
 	// schedule a new transformation job
-	static void ScheduleJob(CSchedulerContext* psc, CGroupExpression* pgexpr, CXform* pxform, CJob* pjParent);
+	static void ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+	                        duckdb::unique_ptr<CGroupExpression> pgexpr,
+							duckdb::unique_ptr<CXform> pxform,
+							CJob *pjParent);
 
 	// job's main function
-	virtual bool FExecute(CSchedulerContext* psc);
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) override;
 
 	// conversion function
-	static CJobTransformation* PjConvert(CJob* pj)
+	static CJobTransformation*
+	PjConvert(CJob *pj)
 	{
 		return dynamic_cast<CJobTransformation*>(pj);
 	}

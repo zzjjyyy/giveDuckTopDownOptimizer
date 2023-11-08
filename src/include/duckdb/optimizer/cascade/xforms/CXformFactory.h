@@ -24,47 +24,60 @@ using namespace gpos;
 class CXformFactory {
 public:
 	// range of all xforms
-	CXform *m_xform_range[CXform::ExfSentinel];
+	duckdb::unique_ptr<CXform> m_xform_range[CXform::ExfSentinel];
 	// name -> xform map
-	unordered_map<CHAR *, CXform *> m_xform_dict;
+	unordered_map<CHAR *, duckdb::unique_ptr<CXform>> m_xform_dict;
 	// bitset of exploration xforms
-	CXform_set *m_exploration_xforms;
+	duckdb::unique_ptr<CXform_set> m_exploration_xforms;
 	// bitset of implementation xforms
-	CXform_set *m_implementation_xforms;
+	duckdb::unique_ptr<CXform_set> m_implementation_xforms;
 	// global instance
-	static CXformFactory *m_xform_factory;
+	static duckdb::unique_ptr<CXformFactory> m_xform_factory;
 
 public:
 	// ctor
 	explicit CXformFactory();
-	// np copy ctor
+
+	// no copy ctor
 	CXformFactory(const CXformFactory &) = delete;
+
 	// dtor
 	~CXformFactory();
 
 public:
 	// actual adding of xform
-	void Add(CXform *xform);
+	void Add(duckdb::unique_ptr<CXform> xform);
+
 	// create all xforms
 	void Instantiate();
+
 	// accessor by xform id
-	CXform *Xform(CXform::EXformId xform_id) const;
+	duckdb::unique_ptr<CXform> Xform(CXform::EXformId xform_id) const;
+
 	// accessor by xform name
-	CXform *Xform(const CHAR *xform_name) const;
+	duckdb::unique_ptr<CXform> Xform(const CHAR *xform_name) const;
+
 	// accessor of exploration xforms
-	CXform_set *XformExploration() const {
+	duckdb::unique_ptr<CXform_set>
+	XformExploration() const {
 		return m_exploration_xforms;
 	}
+	
 	// accessor of implementation xforms
-	CXform_set *XformImplementation() const {
+	duckdb::unique_ptr<CXform_set>
+	XformImplementation() const {
 		return m_implementation_xforms;
 	}
+
 	// global accessor
-	static CXformFactory *XformFactory() {
+	static duckdb::unique_ptr<CXformFactory>
+	XformFactory() {
 		return m_xform_factory;
 	}
+
 	// initialize global factory instance
 	static GPOS_RESULT Init();
+	
 	// destroy global factory instance
 	void Shutdown();
 }; // class CXformFactory

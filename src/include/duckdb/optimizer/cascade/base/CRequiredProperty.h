@@ -84,8 +84,11 @@ public:
 	}
 
 	// required properties computation function
-	virtual void Compute(CExpressionHandle &exprhdl, CRequiredProperty *prpInput, ULONG child_index,
-	                     duckdb::vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptRe) = 0;
+	virtual void Compute(CExpressionHandle &exprhdl,
+						 duckdb::unique_ptr<CRequiredProperty> prpInput,
+						 ULONG child_index,
+	                     duckdb::vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt,
+						 ULONG ulOptRe) = 0;
 }; // class CRequiredProperty
 } // namespace gpopt
 #endif

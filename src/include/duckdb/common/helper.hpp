@@ -88,9 +88,12 @@ unique_ptr<S> make_unique_base(Args &&... args) {
 }
 #endif // DUCKDB_ENABLE_DEPRECATED_API
 
+// Need to delete
 template <typename T, typename S>
 unique_ptr<S> unique_ptr_cast(unique_ptr<T> src) {
-	return unique_ptr<S>(static_cast<S *>(src.release()));
+	// return unique_ptr<S>(static_cast<S *>(src.release()));
+	using _Sp = unique_ptr<S>;
+	return _Sp(src, static_cast<typename _Sp::element_type*>(src.get()));
 }
 
 struct SharedConstructor {

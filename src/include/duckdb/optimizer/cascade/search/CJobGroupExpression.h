@@ -29,16 +29,20 @@ class CJobGroupExpression : public gpopt::CJob {
 public:
 	CJobGroupExpression() : m_group_expression(nullptr) {
 	}
+
 	CJobGroupExpression(const CJobGroupExpression &) = delete;
+	
 	~CJobGroupExpression() override {
 	}
 
 	// true if job has scheduled child group jobs
 	bool m_children_scheduled;
+
 	// true if job has scheduled transformation jobs
 	bool m_xforms_scheduled;
+
 	// target group expression
-	CGroupExpression *m_group_expression;
+	duckdb::unique_ptr<CGroupExpression> m_group_expression;
 
 public:
 	// has job scheduled child groups ?
@@ -61,26 +65,29 @@ public:
 		m_xforms_scheduled = true;
 	}
 
-	virtual // initialize job
-	    void
-	    Init(CGroupExpression *pgexpr);
+	virtual void
+	Init(duckdb::unique_ptr<CGroupExpression> pgexpr);
 
 	// schedule transformation jobs for applicable xforms
-	virtual void ScheduleApplicableTransformations(CSchedulerContext *psc) = 0;
+	virtual void
+	ScheduleApplicableTransformations(duckdb::unique_ptr<CSchedulerContext> psc) = 0;
 
 	// schedule jobs for all child groups
-	virtual void ScheduleChildGroupsJobs(CSchedulerContext *psc) = 0;
+	virtual void
+	ScheduleChildGroupsJobs(duckdb::unique_ptr<CSchedulerContext> psc) = 0;
 
 	// schedule transformation jobs for the given set of xforms
-	void ScheduleTransformations(CSchedulerContext *psc, CXform_set *xform_set);
+	void ScheduleTransformations(duckdb::unique_ptr<CSchedulerContext> psc,
+								 duckdb::unique_ptr<CXform_set> xform_set);
 
 	// job's function
-	bool FExecute(CSchedulerContext *psc) override = 0;
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) override = 0;
 
 	static void PrintJob(CJobGroupExpression *job, std::string info) {
-		CGroup *group = job->m_group_expression->m_group;
-		CGroupExpression *expr = group->m_group_exprs.front();
-		Operator *op = expr->m_operator.get();
+		auto group = job->m_group_expression->m_group;
+		auto expr = group->m_group_exprs.front();
+		auto op = expr->m_operator;
 
 		std::string op_names = "Logical Type: " + LogicalOperatorToString(op->logical_type);
 		size_t group_id = group->m_id;

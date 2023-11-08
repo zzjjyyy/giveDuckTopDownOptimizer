@@ -8,14 +8,16 @@
 #include "duckdb/planner/operator/logical_dummy_scan.hpp"
 
 namespace gpopt {
-CXform::EXformPromise CXformDummyScanImplementation::XformPromise(CExpressionHandle &expression_handle) const {
+CXform::EXformPromise
+CXformDummyScanImplementation::XformPromise(CExpressionHandle &expression_handle) const {
 	return CXform::ExfpHigh;
 }
 
-void CXformDummyScanImplementation::Transform(CXformContext *xform_context, CXformResult *xform_result,
-                                              Operator *expression) const {
-	LogicalDummyScan *logical_dummy_scan = static_cast<LogicalDummyScan *>(expression);
-	duckdb::unique_ptr<PhysicalDummyScan> alternative_expression =
+void CXformDummyScanImplementation::Transform(duckdb::unique_ptr<CXformContext> xform_context,
+											  duckdb::unique_ptr<CXformResult> xform_result,
+                                              duckdb::unique_ptr<Operator> expression) const {
+	auto logical_dummy_scan = unique_ptr_cast<Operator, LogicalDummyScan>(expression);
+	auto alternative_expression =
 	    make_uniq<PhysicalDummyScan>(logical_dummy_scan->types, logical_dummy_scan->estimated_cardinality);
 	alternative_expression->v_column_binding = logical_dummy_scan->GetColumnBindings();
 	xform_result->Add(std::move(alternative_expression));

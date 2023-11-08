@@ -28,44 +28,68 @@ public:
     //		Determine if disjoint
     //
     //---------------------------------------------------------------------------
-    static bool IsDisjoint(duckdb::vector<ColumnBinding> pcrs1, duckdb::vector<ColumnBinding> pcrs2);
+    static bool
+    IsDisjoint(duckdb::vector<ColumnBinding> pcrs1,
+               duckdb::vector<ColumnBinding> pcrs2);
     
     // add an equivalence class (col ref set) to the array. If the new equiv
 	// class contains columns from existing equiv classes, then these are merged
-    static duckdb::vector<duckdb::vector<ColumnBinding>> AddEquivClassToArray(duckdb::vector<ColumnBinding> pcrsNew, duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs);
+    static duckdb::vector<duckdb::vector<ColumnBinding>>
+    AddEquivClassToArray(duckdb::vector<ColumnBinding> pcrsNew,
+                         duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs);
 
     // merge 2 arrays of equivalence classes
-	static duckdb::vector<duckdb::vector<ColumnBinding>> PdrgpcrsMergeEquivClasses(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsFst, duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsSnd);
+	static duckdb::vector<duckdb::vector<ColumnBinding>>
+    PdrgpcrsMergeEquivClasses(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsFst,
+                              duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsSnd);
 
-    static bool Equals(duckdb::vector<ColumnBinding> first, duckdb::vector<ColumnBinding> second);
+    static bool
+    Equals(duckdb::vector<ColumnBinding> first,
+           duckdb::vector<ColumnBinding> second);
 
-    static bool ContainsAll(duckdb::vector<ColumnBinding> first, duckdb::vector<ColumnBinding> second);
+    static bool
+    ContainsAll(duckdb::vector<ColumnBinding> first,
+                duckdb::vector<ColumnBinding> second);
 
-    static bool ContainsAll(duckdb::vector<BoundOrderByNode> &parent, duckdb::vector<BoundOrderByNode> &child);
+    static bool
+    ContainsAll(duckdb::vector<BoundOrderByNode> &parent,
+                duckdb::vector<BoundOrderByNode> &child);
 
     // check if a given operator is an enforcer
-	static bool FEnforcer(Operator* pop);
+	static bool FEnforcer(duckdb::unique_ptr<Operator> pop);
 
     // return the number of occurrences of the given expression in the given
 	// array of expressions
-	static ULONG UlOccurrences(Operator* pexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr);
+	static ULONG
+    UlOccurrences(duckdb::unique_ptr<Operator> pexpr,
+                  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr);
 
-    static bool FMatchChildrenOrdered(Operator* pexprLeft, Operator* pexprRight);
+    static bool
+    FMatchChildrenOrdered(duckdb::unique_ptr<Operator> pexprLeft,
+                          duckdb::unique_ptr<Operator> pexprRight);
 
-    static bool FMatchChildrenUnordered(Operator* pexprLeft, Operator* pexprRight);
+    static bool
+    FMatchChildrenUnordered(duckdb::unique_ptr<Operator> pexprLeft,
+                            duckdb::unique_ptr<Operator> pexprRight);
 
-    static bool Equals(Operator* pexprLeft, Operator* pexprRight);
+    static bool
+    Equals(duckdb::unique_ptr<Operator> pexprLeft,
+           duckdb::unique_ptr<Operator> pexprRight);
 
-    static bool Equals(duckdb::vector<Operator*> pdrgpexprLeft, duckdb::vector<Operator*> pdrgpexprRight);
+    static bool
+    Equals(duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexprLeft,
+           duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexprRight);
 
     // check existence of subqueries or Apply operators in deep expression tree
-    static bool FHasSubquery(Operator* pexpr, bool fCheckRoot);
+    static bool
+    FHasSubquery(duckdb::unique_ptr<Operator> pexpr,
+                 bool fCheckRoot);
 
     // comparison function for pointers
-	static int PtrCmp(const void *p1, const void *p2)
+	static int PtrCmp(const duckdb::unique_ptr<void> p1, const duckdb::unique_ptr<void> p2)
 	{
-		ULONG_PTR ulp1 = *(ULONG_PTR*) p1;
-		ULONG_PTR ulp2 = *(ULONG_PTR*) p2;
+		ULONG_PTR ulp1 = *(ULONG_PTR*) p1.get();
+		ULONG_PTR ulp2 = *(ULONG_PTR*) p2.get();
 		if (ulp1 < ulp2)
 		{
 			return -1;

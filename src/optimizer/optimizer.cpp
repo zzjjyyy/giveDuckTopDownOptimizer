@@ -75,6 +75,7 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 
 	Verify(*logical_plan);
 	this->plan = std::move(logical_plan);
+
 	// first we perform expression rewrites using the ExpressionRewriter
 	// this does not change the logical plan structure, but only simplifies the expression trees
 	RunOptimizer(OptimizerType::EXPRESSION_REWRITER, [&]() { rewriter.VisitOperator(*plan); });
@@ -105,6 +106,7 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 			JoinOrderOptimizer optimizer(context);
 			plan = optimizer.Optimize(std::move(plan));
 		});
+		/*
 		// removes any redundant DelimGets/DelimJoins
 		RunOptimizer(OptimizerType::DELIMINATOR, [&]() {
 			Deliminator deliminator(context);
@@ -153,6 +155,7 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 				optimizer_extension.optimize_function(context, optimizer_extension.optimizer_info.get(), plan);
 			});
 		}
+		*/
 	}
 	unique_ptr<Operator> tmp_plan = unique_ptr_cast<LogicalOperator, Operator>(std::move(plan));
 	Planner::VerifyPlan(context, tmp_plan);
@@ -161,7 +164,6 @@ unique_ptr<LogicalOperator> Optimizer::Optimize(unique_ptr<Operator> plan_p) {
 	// print the logical plan
 	// Printer::Print("Input Logical Plan: \n");
 	// final_plan->Print();
-
 	return final_plan;
 }
 } // namespace duckdb

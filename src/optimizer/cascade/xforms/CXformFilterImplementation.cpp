@@ -33,7 +33,8 @@ CXformFilterImplementation::CXformFilterImplementation() : CXformImplementation(
 //		Compute promise of xform
 //
 //---------------------------------------------------------------------------
-CXform::EXformPromise CXformFilterImplementation::XformPromise(CExpressionHandle &expression_handle) const {
+CXform::EXformPromise
+CXformFilterImplementation::XformPromise(CExpressionHandle &expression_handle) const {
 	return CXform::ExfpMedium;
 }
 
@@ -45,18 +46,25 @@ CXform::EXformPromise CXformFilterImplementation::XformPromise(CExpressionHandle
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformFilterImplementation::Transform(CXformContext *xform_context, CXformResult *xform_result,
-                                           Operator *expression) const {
-	LogicalFilter *operator_filter = static_cast<LogicalFilter *>(expression);
+void CXformFilterImplementation::Transform(duckdb::unique_ptr<CXformContext> xform_context,
+										   duckdb::unique_ptr<CXformResult> xform_result,
+                                           duckdb::unique_ptr<Operator> expression) const {
+	auto operator_filter = unique_ptr_cast<Operator, LogicalFilter>(expression);
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
 	for (auto &child : operator_filter->expressions) {
-		v.push_back(child->Copy());
+		// Need to delete
+		// v.push_back(child->Copy());
+		v.push_back(child);
 	}
 	// create alternative expression
 	duckdb::unique_ptr<PhysicalFilter> alternative_expression =
 	    make_uniq<PhysicalFilter>(operator_filter->types, std::move(v), operator_filter->estimated_cardinality);
-	for (auto &child : expression->children) {
-		alternative_expression->AddChild(child->Copy());
+	// Need to delete
+	// for (auto &child : expression->children) {
+	for (auto child : expression->children) {
+		// Need to delete
+		// alternative_expression->AddChild(child->Copy());
+		alternative_expression->AddChild(child);
 	}
 	// Cardinality Estimation
 	alternative_expression->CE();

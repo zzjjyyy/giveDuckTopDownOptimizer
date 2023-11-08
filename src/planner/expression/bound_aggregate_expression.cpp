@@ -103,4 +103,12 @@ unique_ptr<Expression> BoundAggregateExpression::Deserialize(ExpressionDeseriali
 	                                           distinct ? AggregateType::DISTINCT : AggregateType::NON_DISTINCT);
 }
 
+vector<ColumnBinding> BoundAggregateExpression::GetColumnBinding() {
+	vector<ColumnBinding> res;
+	for(auto& child : children) {
+		vector<ColumnBinding> v = child->GetColumnBinding();
+		res.insert(res.end(), v.begin(), v.end());
+	}
+	return res;
+}
 } // namespace duckdb

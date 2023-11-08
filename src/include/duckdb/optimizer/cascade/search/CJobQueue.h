@@ -29,7 +29,7 @@ class CJobQueue
 {
 private:
 	// main job
-	CJob* m_pj;
+	CJob *m_pj;
 
 	// flag indicating if main job has completed
 	bool m_fCompleted;
@@ -46,7 +46,7 @@ public:
 	CJobQueue()
 		: m_pj(NULL), m_fCompleted(false)
 	{
-		CJob* tmp = new CJob();
+		auto tmp = new CJob();
 		SIZE_T ptr = (SIZE_T)(&(tmp->m_link_queue)) - (SIZE_T)tmp;
 		m_listjQueued.Init((gpos::ULONG)ptr);
 		delete tmp;
@@ -65,10 +65,10 @@ public:
 	}
 
 	// add job as a waiter;
-	EJobQueueResult EjqrAdd(CJob* pj);
+	EJobQueueResult EjqrAdd(CJob *pj);
 
 	// notify waiting jobs of job completion
-	void NotifyCompleted(CSchedulerContext* psc);
+	void NotifyCompleted(duckdb::unique_ptr<CSchedulerContext> psc);
 };	// class CJobQueue
 }  // namespace gpopt
 #endif

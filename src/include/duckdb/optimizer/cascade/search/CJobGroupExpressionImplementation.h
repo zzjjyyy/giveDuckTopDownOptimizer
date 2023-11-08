@@ -47,7 +47,9 @@ public:
 
 public:
 	CJobGroupExpressionImplementation();
+	
 	CJobGroupExpressionImplementation(const CJobGroupExpressionImplementation &) = delete;
+
 	virtual ~CJobGroupExpressionImplementation();
 
 	// job state machine
@@ -55,26 +57,44 @@ public:
 
 public:
 	// initialize job
-	void Init(CGroupExpression *pgexpr);
+	void Init(duckdb::unique_ptr<CGroupExpression> pgexpr);
+
 	// job's function
-	bool FExecute(CSchedulerContext *psc) override;
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) override;
 
 	// schedule transformation jobs for applicable xforms
-	void ScheduleApplicableTransformations(CSchedulerContext *psc) override;
+	void
+	ScheduleApplicableTransformations(duckdb::unique_ptr<CSchedulerContext> psc) override;
+
 	// schedule implementation jobs for all child groups
-	void ScheduleChildGroupsJobs(CSchedulerContext *psc) override;
+	void
+	ScheduleChildGroupsJobs(duckdb::unique_ptr<CSchedulerContext> psc) override;
 
 	// implement child groups action
-	static EEvent EevtImplementChildren(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtImplementChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+						  CJob *pj);
+
 	// implement group expression action
-	static EEvent EevtImplementSelf(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtImplementSelf(duckdb::unique_ptr<CSchedulerContext> psc,
+					  CJob *pj);
+
 	// finalize action
-	static EEvent EevtFinalize(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtFinalize(duckdb::unique_ptr<CSchedulerContext> psc,
+				 CJob *pj);
+
 	// schedule a new group expression implementation job
-	static void ScheduleJob(CSchedulerContext *psc, CGroupExpression *pgexpr, CJob *pjParent);
+	static void ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+							duckdb::unique_ptr<CGroupExpression> pgexpr,
+							CJob *pjParent);
+	
 	// conversion function
-	static CJobGroupExpressionImplementation *PjConvert(CJob *pj) {
-		return dynamic_cast<CJobGroupExpressionImplementation *>(pj);
+	static CJobGroupExpressionImplementation*
+	PjConvert(CJob *pj) {
+		return dynamic_cast<CJobGroupExpressionImplementation*>(pj);
 	}
 }; // class CJobGroupExpressionImplementation
 } // namespace gpopt

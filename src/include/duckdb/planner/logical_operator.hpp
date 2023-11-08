@@ -47,43 +47,55 @@ public:
 	// ---------------------------- ORCA -------------------------------------
 	ULONG DeriveJoinDepth(CExpressionHandle &exprhdl) override;
 
-	CDerivedProperty *CreateDerivedProperty() override;
+	duckdb::unique_ptr<CDerivedProperty> CreateDerivedProperty() override;
 
-	CRequiredProperty *CreateRequiredProperty() const override;
+	duckdb::unique_ptr<CRequiredProperty> CreateRequiredProperty() const override;
 
-	static CKeyCollection *PkcDeriveKeysPassThru(CExpressionHandle &expression_handle, ULONG ulChild);
+	static duckdb::unique_ptr<CKeyCollection>
+	PkcDeriveKeysPassThru(CExpressionHandle &expression_handle, ULONG ulChild);
 
-	CPropConstraint *PpcDeriveConstraintFromPredicates(CExpressionHandle &exprhdl);
+	duckdb::unique_ptr<CPropConstraint>
+	PpcDeriveConstraintFromPredicates(CExpressionHandle &exprhdl);
 
-	static CPropConstraint *PpcDeriveConstraintPassThru(CExpressionHandle &exprhdl, ULONG ulChild);
+	static duckdb::unique_ptr<CPropConstraint>
+	PpcDeriveConstraintPassThru(CExpressionHandle &exprhdl, ULONG ulChild);
 
-	CKeyCollection *DeriveKeyCollection(CExpressionHandle &exprhdl) override;
+	duckdb::unique_ptr<CKeyCollection>
+	DeriveKeyCollection(CExpressionHandle &exprhdl) override;
 
 	// Transformations: it outputs the candidate set of xforms
-	virtual CXform_set *XformCandidates() const {
+	virtual duckdb::unique_ptr<CXform_set>
+	XformCandidates() const {
 		return nullptr;
 	}
 
-	void CloneORCAInfo(LogicalOperator *op);
+	void CloneORCAInfo(duckdb::unique_ptr<LogicalOperator> op);
 
 	// ---------------------------- DuckDB -------------------------------------
-
 	vector<ColumnBinding> GetColumnBindings() override;
+
 	static vector<ColumnBinding> GenerateColumnBindings(idx_t table_idx, idx_t column_count);
+
 	static vector<LogicalType> MapTypes(const vector<LogicalType> &types, const vector<idx_t> &projection_map);
+
 	static vector<ColumnBinding> MapBindings(const vector<ColumnBinding> &types, const vector<idx_t> &projection_map);
+
 	DUCKDB_API void Print();
+
 	//! Debug method: verify that the integrity of expressions & child nodes are maintained
 	virtual void Verify(ClientContext &context);
 
 	virtual string GetName() const;
+
 	virtual string ParamsToString() const;
+
 	string ToString() const override;
 
 	vector<const_reference<LogicalOperator>> GetChildren() const {
 		vector<const_reference<LogicalOperator>> result;
+		// Need to delete
 		for (auto &child : children) {
-			result.push_back(*static_cast<LogicalOperator *>(child.get()));
+			result.push_back(*(LogicalOperator*)child.get());
 		}
 		return result;
 	}
@@ -93,7 +105,7 @@ public:
 	//! Serializes a LogicalOperator to a stand-alone binary blob
 	void Serialize(Serializer &serializer) const override;
 	//! Serializes an LogicalOperator to a stand-alone binary blob
-	void Serialize(FieldWriter &writer) const override = 0;
+	void Serialize(FieldWriter &writer) const override {};
 
 	static unique_ptr<LogicalOperator> Deserialize(Deserializer &deserializer, PlanDeserializationState &state);
 

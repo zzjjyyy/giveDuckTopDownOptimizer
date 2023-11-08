@@ -48,10 +48,15 @@
 #include "duckdb/transaction/meta_transaction.hpp"
 #include "duckdb/transaction/transaction.hpp"
 #include "duckdb/transaction/transaction_manager.hpp"
+#include "duckdb/optimizer/cascade/base.h"
 
 double exploration_time;
 
 double implementation_time;
+
+namespace gpos {
+	std::unordered_map<int, double> true_set;
+}
 
 namespace duckdb {
 struct ActiveQueryContext {
@@ -345,6 +350,24 @@ shared_ptr<PreparedStatementData> ClientContext::CreatePreparedStatement(ClientC
 	unique_ptr<PhysicalOperator> physical_plan;
 	if (config.enable_optimizer && plan->RequireOptimizer()) {
 		profiler.StartPhase("optimizer");
+		// load the true cardinality
+		true_set.clear();
+		char* pos;
+		char* p;
+		char cmp[1000];
+		int relid_in_file;
+		FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
+		while(fgets(cmp, 1000, fp) != NULL) {
+			if((pos = strchr(cmp, '\n')) != NULL) {
+				*pos = '\0';
+			}
+			p = strtok(cmp, ":");
+			relid_in_file = atoi(p);
+			p = strtok(NULL, ":");
+			double true_val = atof(p);
+			gpos::true_set.insert(make_pair(relid_in_file, true_val));
+		}
+		fclose(fp);
 		if (statement_type == StatementType::SELECT_STATEMENT) {
 			clock_t start, end;
 			start = clock();
@@ -358,21 +381,21 @@ shared_ptr<PreparedStatementData> ClientContext::CreatePreparedStatement(ClientC
 			physical_plan = cascade.Optimize(std::move(logical_plan));
 			end = clock();
 			FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
-			fprintf(time_f, "time = %lf s\n", double(end - start) / CLOCKS_PER_SEC);
+			fprintf(time_f, "%lf\n", double(end - start) / CLOCKS_PER_SEC);
 			fclose(time_f);
 		} else {
 			clock_t start, end;
 			start = clock();
 			Optimizer optimizer(*planner.binder, *this);
-			plan = optimizer.Optimize(std::move(plan));
-			D_ASSERT(plan);
+			unique_ptr<LogicalOperator> new_plan = optimizer.Optimize(std::move(plan));
 			// now convert logical query plan into a physical query plan
 			PhysicalPlanGenerator physical_planner(*this);
-			physical_plan = physical_planner.CreatePlan(unique_ptr_cast<Operator, LogicalOperator>(std::move(plan)));
+			physical_plan = physical_planner.CreatePlan(std::move(new_plan));
+			// physical_plan = physical_planner.CreatePlan(unique_ptr_cast<Operator, LogicalOperator>(std::move(new_plan)));
 			end = clock();
 			if (statement_type == StatementType::SELECT_STATEMENT) {
 				FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
-				fprintf(time_f, "time = %lf s\n", double(end - start) / CLOCKS_PER_SEC);
+				fprintf(time_f, "%lf\n", double(end - start) / CLOCKS_PER_SEC);
 				fclose(time_f);
 			}
 		}

@@ -19,11 +19,13 @@ vector<ColumnBinding> LogicalOrder::GetColumnBindings() {
 	return result;
 }
 
-CKeyCollection *LogicalOrder::DeriveKeyCollection(CExpressionHandle &exprhdl) {
+duckdb::unique_ptr<CKeyCollection>
+LogicalOrder::DeriveKeyCollection(CExpressionHandle &exprhdl) {
 	return nullptr;
 }
 
-CPropConstraint *LogicalOrder::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
+duckdb::unique_ptr<CPropConstraint>
+LogicalOrder::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
 	return nullptr;
 }
 
@@ -43,7 +45,7 @@ unique_ptr<LogicalOperator> LogicalOrder::Deserialize(LogicalDeserializationStat
 duckdb::unique_ptr<Operator> LogicalOrder::Copy() {
 	auto copy = make_uniq<LogicalOrder>(orders);
 	copy->projections = projections;
-	CloneORCAInfo(copy.get());
+	CloneORCAInfo(copy);
 	return move(copy);
 }
 } // namespace duckdb

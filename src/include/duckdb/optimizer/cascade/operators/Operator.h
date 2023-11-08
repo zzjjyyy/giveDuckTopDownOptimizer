@@ -47,29 +47,40 @@ public:
 public:
 	//! The set of children of the operator
 	duckdb::vector<duckdb::unique_ptr<Operator>> children;
+
 	LogicalOperatorType logical_type = LogicalOperatorType::LOGICAL_INVALID;
+
 	PhysicalOperatorType physical_type = PhysicalOperatorType::INVALID;
 
 	// --------------------------- ORCA ------------------------
-	CGroupExpression *m_group_expression;
+	duckdb::unique_ptr<CGroupExpression> m_group_expression;
+
 	//! derived relational properties
-	CDerivedLogicalProp *m_derived_logical_property;
+	duckdb::unique_ptr<CDerivedLogicalProp> m_derived_logical_property;
+
 	//! derived properties of the carried plan
-	CDerivedPhysicalProp *m_derived_physical_property;
+	duckdb::unique_ptr<CDerivedPhysicalProp> m_derived_physical_property;
+
 	//! required relational properties
-	CRequiredLogicalProp *m_required_logical_property;
+	duckdb::unique_ptr<CRequiredLogicalProp> m_required_logical_property;
+
 	//! required plan properties
-	CRequiredPhysicalProp *m_required_physical_property;
+	duckdb::unique_ptr<CRequiredPhysicalProp> m_required_physical_property;
+
 	double m_cost;
 
 	// --------------------------- DuckDB ----------------------
 	duckdb::unique_ptr<EstimatedProperties> estimated_props;
+
 	//! The types returned by this operator. Set by calling Operator::ResolveTypes.
 	duckdb::vector<LogicalType> types;
+
 	//! Estimated Cardinality
 	idx_t estimated_cardinality;
+
 	//! The set of expressions contained within the operator, if any
 	duckdb::vector<duckdb::unique_ptr<Expression>> expressions;
+
 	bool has_estimated_cardinality = false;
 
 public:
@@ -97,8 +108,11 @@ public:
 
 	// ------------------------------------- ORCA ------------------------------------
 	// Rehydrate expression from a given cost context and child expressions
-	static Operator *PexprRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdrgpexpr,
-	                                CDrvdPropCtxtPlan *pdpctxtplan);
+	static duckdb::unique_ptr<Operator>
+	PexprRehydrate(duckdb::unique_ptr<CCostContext> cost_context,
+				   duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	               duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan);
+
 	// get the suitable derived property type based on operator
 	CDerivedProperty::EPropType Ept() const;
 
@@ -110,20 +124,27 @@ public:
 		}
 		return children.size();
 	}
+
 	// get expression's derived property given its type
-	CDerivedProperty *Pdp(const CDerivedProperty::EPropType ept) const;
+	duckdb::unique_ptr<CDerivedProperty> Pdp(const CDerivedProperty::EPropType ept) const;
 
-	duckdb::vector<CFunctionalDependency *> DeriveFunctionalDependencies(CExpressionHandle &expression_handle);
+	duckdb::vector<duckdb::unique_ptr<CFunctionalDependency>> DeriveFunctionalDependencies(CExpressionHandle &expression_handle);
 
-	CRequiredPhysicalProp *PrppCompute(CRequiredPhysicalProp *required_properties_input);
+	duckdb::unique_ptr<CRequiredPhysicalProp>
+	PrppCompute(duckdb::unique_ptr<Operator> this_operator,
+				duckdb::unique_ptr<CRequiredPhysicalProp> required_properties_input);
 
-	CRequiredPhysicalProp *PrppDecorate(CRequiredPhysicalProp *required_properties_input);
+	duckdb::unique_ptr<CRequiredPhysicalProp>
+	PrppDecorate(duckdb::unique_ptr<CRequiredPhysicalProp> required_properties_input);
 
-	CDerivedProperty *PdpDerive(CDrvdPropCtxtPlan *pdpctxtL = nullptr);
+	duckdb::unique_ptr<CDerivedProperty>
+	PdpDerive(duckdb::unique_ptr<Operator> this_operator,
+			  duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtL = nullptr);
 
-	bool FMatchPattern(CGroupExpression *group_expression);
+	bool FMatchPattern(duckdb::unique_ptr<CGroupExpression> group_expression);
+
 	// hash function
-	static size_t HashValue(const Operator *op);
+	static size_t HashValue(const duckdb::unique_ptr<Operator> op);
 
 	virtual size_t HashValue() const;
 
@@ -132,11 +153,11 @@ public:
 	virtual void ResolveTypes() {};
 
 	// ------------------------------------- ORCA ------------------------------------
-	virtual CKeyCollection *DeriveKeyCollection(CExpressionHandle &expression_handle) {
+	virtual duckdb::unique_ptr<CKeyCollection> DeriveKeyCollection(CExpressionHandle &expression_handle) {
 		return nullptr;
 	}
 
-	virtual CPropConstraint *DerivePropertyConstraint(CExpressionHandle &expression_handle) {
+	virtual duckdb::unique_ptr<CPropConstraint> DerivePropertyConstraint(CExpressionHandle &expression_handle) {
 		return nullptr;
 	}
 
@@ -144,16 +165,20 @@ public:
 		return 0;
 	}
 
-	virtual Operator *SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-	                                CDrvdPropCtxtPlan *pdpctxtplan) {
+	virtual duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	             duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
 		return nullptr;
 	}
+
 	//! create container for derived properties
-	virtual CDerivedProperty *CreateDerivedProperty() {
+	virtual duckdb::unique_ptr<CDerivedProperty> CreateDerivedProperty() {
 		return nullptr;
 	}
+
 	//! create container for required properties
-	virtual CRequiredProperty *CreateRequiredProperty() const {
+	virtual duckdb::unique_ptr<CRequiredProperty> CreateRequiredProperty() const {
 		return nullptr;
 	}
 
@@ -181,17 +206,19 @@ public:
 		return false;
 	};
 	//! match function, abstract to enforce an implementation for each new operator
-	virtual bool Matches(Operator *pop) {
-		return this == pop;
+	virtual bool Matches(duckdb::unique_ptr<Operator> this_pop, duckdb::unique_ptr<Operator> pop) {
+		return this_pop == pop;
 	};
 
 	virtual duckdb::unique_ptr<Operator> Copy();
 
-	virtual duckdb::unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *group_expression);
+	virtual duckdb::unique_ptr<Operator>
+	CopyWithNewGroupExpression(duckdb::unique_ptr<CGroupExpression> group_expression);
 
-	virtual duckdb::unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *group_expression,
-	                                                         duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-	                                                         double cost);
+	virtual duckdb::unique_ptr<Operator>
+	CopyWithNewChildren(duckdb::unique_ptr<CGroupExpression> group_expression,
+	                    duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	                    double cost);
 
 	virtual void CE();
 

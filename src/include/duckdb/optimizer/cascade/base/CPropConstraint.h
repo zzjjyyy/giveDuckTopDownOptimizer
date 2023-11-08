@@ -36,18 +36,19 @@ private:
 	std::unordered_map<ULONG, duckdb::vector<ColumnBinding>> m_phmcrcrs;
 
 	// constraint
-	Expression* m_pcnstr;
-
-	// hidden copy ctor
-	CPropConstraint(const CPropConstraint &);
+	duckdb::unique_ptr<Expression> m_pcnstr;
 
 	// initialize mapping from columns to equivalence classes
 	void InitHashMap();
 
 public:
 	// ctor
-	CPropConstraint(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs, Expression* pcnstr);
-
+	CPropConstraint(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs,
+					duckdb::unique_ptr<Expression> pcnstr);
+	
+	// no copy ctor
+	CPropConstraint(const CPropConstraint &) = delete;
+	
 	// dtor
 	virtual ~CPropConstraint();
 
@@ -70,13 +71,13 @@ public:
 	}
 
 	// constraint
-	Expression* Pcnstr() const
+	duckdb::unique_ptr<Expression> Pcnstr() const
 	{
 		return m_pcnstr;
 	}
 
 	// is this a contradiction
-	BOOL FContradiction() const;
+	bool FContradiction() const;
 
 	// scalar expression on given column mapped from all constraints
 	// on its equivalent columns

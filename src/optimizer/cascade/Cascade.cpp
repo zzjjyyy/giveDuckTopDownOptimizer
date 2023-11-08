@@ -77,19 +77,20 @@ duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<Logica
 	// init query context, it describes the requirements of the query output.
 	duckdb::vector<ULONG *> output_column_ids(1, nullptr);
 	duckdb::vector<std::string> output_column_names(1, "A");
-	CQueryContext *query_context =
+	auto query_context =
 	    CQueryContext::QueryContextGenerate(std::move(plan), output_column_ids, output_column_names, true);
 
 	// init orca engine
 	CEngine engine;
-	vector<CSearchStage *> search_strategy;
+	vector<duckdb::unique_ptr<CSearchStage>> search_strategy;
 	engine.Init(query_context, search_strategy);
 
 	// optimize
 	engine.Optimize();
 	duckdb::unique_ptr<PhysicalOperator> physical_plan =
-	    duckdb::unique_ptr<PhysicalOperator>((PhysicalOperator *)engine.PreviousSearchStage()->m_best_expr.release());
-
+	// Need to delete
+	//     duckdb::unique_ptr<PhysicalOperator>((PhysicalOperator *)engine.PreviousSearchStage()->m_best_expr.release());
+			unique_ptr_cast<Operator, PhysicalOperator>(engine.PreviousSearchStage()->m_best_expr);
 	/* I comment here */
 	// CExpression* physical_plan = engine.ExprExtractPlan();
 	// CheckCTEConsistency(physical_plan);
@@ -98,9 +99,9 @@ duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<Logica
 	task_proxy.DestroyAll();
 	worker.release();
 
-	FILE* f_pair = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
-	fprintf(f_pair, "Considered join pairs: %d, ", enumeration_pairs);
-	fclose(f_pair);
+	// FILE* f_pair = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+	// fprintf(f_pair, "Considered join pairs: %d, ", enumeration_pairs);
+	// fclose(f_pair);
 
 	// print physical plan
 	// Printer::Print("Physical Plan: \n");

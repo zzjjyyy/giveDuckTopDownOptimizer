@@ -29,7 +29,9 @@ public:
 
 	//! Input data
 	vector<BoundOrderByNode> orders;
+
 	vector<idx_t> projections;
+	
 	// whether or not the order is enforced (i.e. the order is guaranteed to be correct)
 	bool is_enforced;
 
@@ -37,14 +39,19 @@ public:
 	COrderProperty::EPropEnforcingType EnforcingTypeOrder(CExpressionHandle &exprhdl,
 	                                                      vector<BoundOrderByNode> &peo) const override;
 
-	COrderSpec *RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *posRequired, ULONG child_index,
-	                             vector<CDerivedProperty *> pdrgpdpCtxt, ULONG ulOptReq) const override;
+	duckdb::unique_ptr<COrderSpec>
+	RequiredSortSpec(CExpressionHandle &exprhdl,
+					 duckdb::unique_ptr<COrderSpec> posRequired,
+					 ULONG child_index,
+	                 vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt,
+					 ULONG ulOptReq) const override;
 
 	bool FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
 	                       ULONG ulOptReq) const override;
 
-	COrderSpec *PosDerive(gpopt::CExpressionHandle &exprhdl) const override {
-		COrderSpec *result = new COrderSpec();
+	duckdb::unique_ptr<COrderSpec>
+	PosDerive(gpopt::CExpressionHandle &exprhdl) const override {
+		auto result = make_uniq<COrderSpec>();
 		for (auto &child : orders) {
 			result->Append(child.type, child.null_order, child.expression.get());
 		}
@@ -53,28 +60,38 @@ public:
 
 	vector<ColumnBinding> GetColumnBindings() override;
 
-	vector<ColumnBinding> PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrsRequired,
-	                                   ULONG child_index, vector<CDerivedProperty *> pdrgpdpCtxt,
-	                                   ULONG ulOptReq) override;
+	vector<ColumnBinding>
+	PcrsRequired(CExpressionHandle &exprhdl,
+				 vector<ColumnBinding> pcrsRequired,
+	             ULONG child_index,
+				 vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdpCtxt,
+	             ULONG ulOptReq) override;
 
-	CKeyCollection *DeriveKeyCollection(CExpressionHandle &exprhdl) override {
-		return NULL;
+	duckdb::unique_ptr<CKeyCollection>
+	DeriveKeyCollection(CExpressionHandle &exprhdl) override {
+		return nullptr;
 	}
 
-	CPropConstraint *DerivePropertyConstraint(CExpressionHandle &exprhdl) override {
-		return NULL;
+	duckdb::unique_ptr<CPropConstraint>
+	DerivePropertyConstraint(CExpressionHandle &exprhdl) override {
+		return nullptr;
 	}
 
 	// Rehydrate expression from a given cost context and child expressions
-	Operator *SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-	                        CDrvdPropCtxtPlan *pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+	             duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 
 	unique_ptr<Operator> Copy() override;
 
-	unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+	unique_ptr<Operator>
+	CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) override;
 
-	unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr, vector<unique_ptr<Operator>> pdrgpexpr,
-	                                         double cost) override;
+	unique_ptr<Operator>
+	CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+						vector<unique_ptr<Operator>> pdrgpexpr,
+	                    double cost) override;
 
 	void CE() override;
 
@@ -134,10 +151,12 @@ public:
 	static void ScheduleMergeTasks(Pipeline &pipeline, Event &event, OrderGlobalSinkState &state);
 
 public:
-	COrderSpec *OrderSpec() {
-		COrderSpec *result = new COrderSpec();
-		for (auto &child : orders) {
-			result->order_nodes.emplace_back(child.Copy());
+	duckdb::unique_ptr<COrderSpec> OrderSpec() {
+		auto result = make_uniq<COrderSpec>();
+		// Need to delete
+		// for (auto &child : orders) {
+		for (auto child : orders) {
+			result->order_nodes.emplace_back(child);
 		}
 		return result;
 	}

@@ -46,18 +46,26 @@ CXform::EXformPromise CXformLogicalProj2PhysicalProj::XformPromise(CExpressionHa
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformLogicalProj2PhysicalProj::Transform(CXformContext *pxfctxt, CXformResult *pxfres, Operator *pexpr) const {
-	LogicalProjection *operator_proj = static_cast<LogicalProjection *>(pexpr);
+void CXformLogicalProj2PhysicalProj::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+											   duckdb::unique_ptr<CXformResult> pxfres,
+											   duckdb::unique_ptr<Operator> pexpr) const {
+	auto operator_proj = unique_ptr_cast<Operator, LogicalProjection>(pexpr);
 	// create/extract components for alternative
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
 	for (auto &child : operator_proj->expressions) {
-		v.push_back(child->Copy());
+		// Need to delete
+		// v.push_back(child->Copy());
+		v.push_back(child);
 	}
 	// create alternative expression
 	duckdb::unique_ptr<PhysicalProjection> alternative_expression =
 	    make_uniq<PhysicalProjection>(operator_proj->types, std::move(v), operator_proj->estimated_cardinality);
-	for (auto &child : pexpr->children) {
-		alternative_expression->AddChild(child->Copy());
+	// Need to delete
+	// for (auto &child : pexpr->children) {
+	for (auto child : pexpr->children) {
+		// Need to delete
+		// alternative_expression->AddChild(child->Copy());
+		alternative_expression->AddChild(child);
 	}
 	alternative_expression->v_column_binding = operator_proj->GetColumnBindings();
 	// Cardinality Estimation

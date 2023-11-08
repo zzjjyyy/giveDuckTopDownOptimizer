@@ -31,9 +31,11 @@ ULONG PhysicalDummyScan::DeriveJoinDepth(CExpressionHandle &exprhdl) {
 	return 1;
 }
 
-Operator *PhysicalDummyScan::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-                                           CDrvdPropCtxtPlan *pdpctxtplan) {
-	PhysicalDummyScan *expr = new PhysicalDummyScan(types, estimated_cardinality);
+duckdb::unique_ptr<Operator>
+PhysicalDummyScan::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+								 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                 duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
+	auto expr = make_uniq<PhysicalDummyScan>(types, estimated_cardinality);
 	expr->m_cost = pcc->m_cost;
 	expr->m_group_expression = pcc->m_group_expression;
 	return expr;
@@ -45,14 +47,16 @@ duckdb::unique_ptr<Operator> PhysicalDummyScan::Copy() {
 	return unique_ptr_cast<PhysicalDummyScan, Operator>(std::move(copy));
 }
 
-duckdb::unique_ptr<Operator> PhysicalDummyScan::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+unique_ptr<Operator>
+PhysicalDummyScan::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	auto copy = Copy();
 	copy->m_group_expression = pgexpr;
 	return copy;
 }
 
-duckdb::unique_ptr<Operator>
-PhysicalDummyScan::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+unique_ptr<Operator>
+PhysicalDummyScan::CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+									   duckdb::vector<unique_ptr<Operator>> pdrgpexpr,
                                        double cost) {
 	auto copy = Copy();
 	for (auto &child : pdrgpexpr) {

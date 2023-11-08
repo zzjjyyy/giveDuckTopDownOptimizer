@@ -33,7 +33,7 @@ using namespace gpopt;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-SContextLink::SContextLink(CCostContext *pccParent, ULONG child_index, COptimizationContext *poc)
+SContextLink::SContextLink(duckdb::unique_ptr<CCostContext> pccParent, ULONG child_index, duckdb::unique_ptr<COptimizationContext> poc)
     : m_parent_cost_context(pccParent), m_ulChildIndex(child_index), m_poc(poc) {
 }
 
@@ -70,7 +70,7 @@ bool SContextLink::operator==(const SContextLink &pclink2) const {
 		if (nullptr == this->m_poc || nullptr == pclink2.m_poc) {
 			return (nullptr == this->m_poc && nullptr == pclink2.m_poc);
 		}
-		return COptimizationContext::Equals(*this->m_poc, *pclink2.m_poc);
+		return COptimizationContext::Equals(this->m_poc, pclink2.m_poc);
 	}
 	return fEqual;
 }
@@ -100,11 +100,12 @@ CGroup::CGroup(bool fScalar)
 //---------------------------------------------------------------------------
 CGroup::~CGroup() {
 	// cleaning-up group expressions
-	list<CGroupExpression *>::iterator pgexpr_iter = m_group_exprs.begin();
-	CGroupExpression *pgexpr = *pgexpr_iter;
+	/*
+	auto pgexpr_iter = m_group_exprs.begin();
+	auto pgexpr = *pgexpr_iter;
 	while (nullptr != pgexpr) {
 		pgexpr_iter++;
-		CGroupExpression *pgexprNext = *pgexpr_iter;
+		auto pgexprNext = *pgexpr_iter;
 		pgexpr->CleanupContexts();
 		pgexpr = pgexprNext;
 	}
@@ -119,6 +120,7 @@ CGroup::~CGroup() {
 	}
 	// cleanup optimization contexts
 	m_sht.clear();
+	*/
 }
 
 //---------------------------------------------------------------------------
@@ -130,16 +132,16 @@ CGroup::~CGroup() {
 //		 optimization context
 //
 //---------------------------------------------------------------------------
-void CGroup::UpdateBestCost(COptimizationContext *poc, CCostContext *pcc) {
+void CGroup::UpdateBestCost(duckdb::unique_ptr<COptimizationContext> poc, duckdb::unique_ptr<CCostContext> pcc) {
 	CGroup::opt_context_hashmap_t::iterator itr;
-	COptimizationContext *pocFound = nullptr;
+	duckdb::unique_ptr<COptimizationContext> pocFound = nullptr;
 	{
 		// scope for accessor
 		itr = m_sht.find(poc->HashValue());
 		pocFound = itr->second;
 	}
 	// update best cost context
-	CCostContext *pccBest = pocFound->m_best_cost_context;
+	auto pccBest = pocFound->m_best_cost_context;
 	if (GPOPT_INVALID_COST != pcc->m_cost && (nullptr == pccBest || pcc->FBetterThan(pccBest))) {
 		pocFound->SetBest(pcc);
 	}
@@ -153,11 +155,14 @@ void CGroup::UpdateBestCost(COptimizationContext *poc, CCostContext *pcc) {
 //		Lookup a given context in contexts hash table
 //
 //---------------------------------------------------------------------------
-COptimizationContext *CGroup::PocLookup(CRequiredPhysicalProp *prpp, ULONG search_stage_index) {
+duckdb::unique_ptr<COptimizationContext>
+CGroup::PocLookup(duckdb::unique_ptr<CGroup> this_group,
+				  duckdb::unique_ptr<CRequiredPhysicalProp> prpp,
+				  ULONG search_stage_index) {
 	duckdb::vector<ColumnBinding> v;
-	COptimizationContext *poc =
-	    new COptimizationContext(this, prpp, new CRequiredLogicalProp(v), search_stage_index);
-	COptimizationContext *poc_found = nullptr;
+	duckdb::unique_ptr<COptimizationContext> poc =
+	    make_uniq<COptimizationContext>(this_group, prpp, make_uniq<CRequiredLogicalProp>(v), search_stage_index);
+	duckdb::unique_ptr<COptimizationContext> poc_found = nullptr;
 	{
 		auto itr = m_sht.find(poc->HashValue());
 		poc_found = itr->second;
@@ -174,15 +179,18 @@ COptimizationContext *CGroup::PocLookup(CRequiredPhysicalProp *prpp, ULONG searc
 //		properties
 //
 //---------------------------------------------------------------------------
-COptimizationContext *CGroup::PocLookupBest(ULONG ul_search_stages, CRequiredPhysicalProp *required_properties) {
-	COptimizationContext *poc_best = nullptr;
-	CCostContext *pcc_best = nullptr;
+duckdb::unique_ptr<COptimizationContext>
+CGroup::PocLookupBest(duckdb::unique_ptr<CGroup> this_group,
+					  ULONG ul_search_stages,
+					  duckdb::unique_ptr<CRequiredPhysicalProp> required_properties) {
+	duckdb::unique_ptr<COptimizationContext> poc_best = nullptr;
+	duckdb::unique_ptr<CCostContext> pcc_best = nullptr;
 	for (ULONG ul = 0; ul < ul_search_stages; ul++) {
-		COptimizationContext *poc_current = PocLookup(required_properties, ul);
+		auto poc_current = PocLookup(this_group, required_properties, ul);
 		if (nullptr == poc_current) {
 			continue;
 		}
-		CCostContext *pcc_current = poc_current->m_best_cost_context;
+		duckdb::unique_ptr<CCostContext> pcc_current = poc_current->m_best_cost_context;
 		if (nullptr == pcc_best || (nullptr != pcc_current && pcc_current->FBetterThan(pcc_best))) {
 			poc_best = poc_current;
 			pcc_best = pcc_current;
@@ -199,8 +207,8 @@ COptimizationContext *CGroup::PocLookupBest(ULONG ul_search_stages, CRequiredPhy
 //		Lookup a context by id
 //
 //---------------------------------------------------------------------------
-COptimizationContext *CGroup::Ppoc(ULONG id) const {
-	COptimizationContext *poc = nullptr;
+duckdb::unique_ptr<COptimizationContext> CGroup::Ppoc(ULONG id) const {
+	duckdb::unique_ptr<COptimizationContext> poc = nullptr;
 	auto iter = m_sht.begin();
 	while (iter != m_sht.end()) {
 		{
@@ -224,14 +232,14 @@ COptimizationContext *CGroup::Ppoc(ULONG id) const {
 //		return either the inserted or the existing matching context
 //
 //---------------------------------------------------------------------------
-COptimizationContext *CGroup::PocInsert(COptimizationContext *poc) {
+duckdb::unique_ptr<COptimizationContext> CGroup::PocInsert(duckdb::unique_ptr<COptimizationContext> poc) {
 	auto itr = m_sht.find(poc->HashValue());
 	if (m_sht.end() == itr) {
 		poc->SetId((ULONG)IncreaseOptContextsNumber());
 		m_sht.insert(make_pair(poc->HashValue(), poc));
 		return poc;
 	}
-	COptimizationContext *pocFound = itr->second;
+	duckdb::unique_ptr<COptimizationContext> pocFound = itr->second;
 	return pocFound;
 }
 
@@ -243,9 +251,9 @@ COptimizationContext *CGroup::PocInsert(COptimizationContext *poc) {
 //		Lookup best group expression under optimization context
 //
 //---------------------------------------------------------------------------
-CGroupExpression *CGroup::BestExpression(COptimizationContext *poc) {
+duckdb::unique_ptr<CGroupExpression> CGroup::BestExpression(duckdb::unique_ptr<COptimizationContext> poc) {
 	auto itr = m_sht.find(poc->HashValue());
-	COptimizationContext *poc_found = itr->second;
+	duckdb::unique_ptr<COptimizationContext> poc_found = itr->second;
 	if (nullptr != poc_found) {
 		return poc_found->BestExpression();
 	}
@@ -273,7 +281,7 @@ void CGroup::SetId(ULONG id) {
 //		Initialize group's properties
 //
 //---------------------------------------------------------------------------
-void CGroup::InitProperties(CDerivedProperty *pdp) {
+void CGroup::InitProperties(duckdb::unique_ptr<CDerivedProperty> pdp) {
 	m_derived_properties = pdp;
 }
 
@@ -315,7 +323,7 @@ size_t CGroup::HashValue() const {
 //		Insert group expression
 //
 //---------------------------------------------------------------------------
-void CGroup::Insert(CGroupExpression *pgexpr) {
+void CGroup::Insert(duckdb::unique_ptr<CGroupExpression> pgexpr) {
 	m_group_exprs.emplace_back(pgexpr);
 	if (pgexpr->m_operator->FLogical()) {
 		m_has_new_logical_operators = true;
@@ -333,10 +341,16 @@ void CGroup::Insert(CGroupExpression *pgexpr) {
 //		Move duplicate group expression to duplicates list
 //
 //---------------------------------------------------------------------------
-void CGroup::MoveDuplicateGExpr(CGroupExpression *pgexpr) {
+void CGroup::MoveDuplicateGExpr(duckdb::unique_ptr<CGroupExpression> pgexpr) {
+	// need to delete
+	// m_group_exprs.clear();
+	// m_num_exprs = 0;
+
 	m_group_exprs.remove(pgexpr);
 	m_num_exprs--;
-	m_duplicate_group_exprs.emplace_back(pgexpr);
+
+	// need to delete
+	// m_duplicate_group_exprs.emplace_back(pgexpr);
 }
 
 //---------------------------------------------------------------------------
@@ -347,7 +361,7 @@ void CGroup::MoveDuplicateGExpr(CGroupExpression *pgexpr) {
 //		Retrieve first expression in group
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression *>::iterator CGroup::FirstGroupExpr() {
+list<duckdb::unique_ptr<CGroupExpression>>::iterator CGroup::FirstGroupExpr() {
 	return m_group_exprs.begin();
 }
 
@@ -359,7 +373,7 @@ list<CGroupExpression *>::iterator CGroup::FirstGroupExpr() {
 //		Retrieve next expression in group
 //
 //---------------------------------------------------------------------------
-list<CGroupExpression *>::iterator CGroup::NextGroupExpr(list<CGroupExpression *>::iterator pgexpr_iter) {
+list<duckdb::unique_ptr<CGroupExpression>>::iterator CGroup::NextGroupExpr(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexpr_iter) {
 	return pgexpr_iter++;
 }
 
@@ -371,11 +385,12 @@ list<CGroupExpression *>::iterator CGroup::NextGroupExpr(list<CGroupExpression *
 //		Determine whether two arrays of groups are equivalent
 //
 //---------------------------------------------------------------------------
-bool CGroup::FMatchGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckdb::vector<CGroup *> pdrgpgroupSnd) {
+bool CGroup::FMatchGroups(duckdb::vector<duckdb::unique_ptr<CGroup>> pdrgpgroupFst,
+						  duckdb::vector<duckdb::unique_ptr<CGroup>> pdrgpgroupSnd) {
 	ULONG arity = pdrgpgroupFst.size();
 	for (ULONG i = 0; i < arity; i++) {
-		CGroup *pgroupFst = pdrgpgroupFst[i];
-		CGroup *pgroupSnd = pdrgpgroupSnd[i];
+		auto pgroupFst = pdrgpgroupFst[i];
+		auto pgroupSnd = pdrgpgroupSnd[i];
 		if (pgroupFst != pgroupSnd && !FDuplicateGroups(pgroupFst, pgroupSnd)) {
 			return false;
 		}
@@ -391,14 +406,15 @@ bool CGroup::FMatchGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckdb::vector
 //		 Matching of pairs of arrays of groups while skipping scalar groups
 //
 //---------------------------------------------------------------------------
-bool CGroup::FMatchNonScalarGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckdb::vector<CGroup *> pdrgpgroupSnd) {
+bool CGroup::FMatchNonScalarGroups(duckdb::vector<duckdb::unique_ptr<CGroup>> pdrgpgroupFst,
+								   duckdb::vector<duckdb::unique_ptr<CGroup>> pdrgpgroupSnd) {
 	if (pdrgpgroupFst.size() != pdrgpgroupSnd.size()) {
 		return false;
 	}
 	ULONG arity = pdrgpgroupFst.size();
 	for (ULONG i = 0; i < arity; i++) {
-		CGroup *pgroupFst = pdrgpgroupFst[i];
-		CGroup *pgroupSnd = pdrgpgroupSnd[i];
+		auto pgroupFst = pdrgpgroupFst[i];
+		auto pgroupSnd = pdrgpgroupSnd[i];
 		if (pgroupFst->m_is_scalar) {
 			// skip scalar groups
 			continue;
@@ -418,9 +434,9 @@ bool CGroup::FMatchNonScalarGroups(duckdb::vector<CGroup *> pdrgpgroupFst, duckd
 //		Determine whether two groups are equivalent
 //
 //---------------------------------------------------------------------------
-bool CGroup::FDuplicateGroups(CGroup *pgroupFst, CGroup *pgroupSnd) {
-	CGroup *pgroupFstDup = pgroupFst->m_group_for_duplicate_groups;
-	CGroup *pgroupSndDup = pgroupSnd->m_group_for_duplicate_groups;
+bool CGroup::FDuplicateGroups(duckdb::unique_ptr<CGroup> pgroupFst, duckdb::unique_ptr<CGroup> pgroupSnd) {
+	auto pgroupFstDup = pgroupFst->m_group_for_duplicate_groups;
+	auto pgroupSndDup = pgroupSnd->m_group_for_duplicate_groups;
 	return (pgroupFst == pgroupSnd) || (pgroupFst == pgroupSndDup) || (pgroupSnd == pgroupFstDup) ||
 	       (nullptr != pgroupFstDup && nullptr != pgroupSndDup && pgroupFstDup == pgroupSndDup);
 }
@@ -433,10 +449,10 @@ bool CGroup::FDuplicateGroups(CGroup *pgroupFst, CGroup *pgroupSnd) {
 //		Add duplicate group
 //
 //---------------------------------------------------------------------------
-void CGroup::AddDuplicateGrp(CGroup *pgroup) {
+void CGroup::AddDuplicateGrp(duckdb::unique_ptr<CGroup> this_group, duckdb::unique_ptr<CGroup> pgroup) {
 	// add link following monotonic ordering of group IDs
-	CGroup *pgroupSrc = this;
-	CGroup *pgroupDest = pgroup;
+	auto pgroupSrc = this_group;
+	auto pgroupDest = pgroup;
 	if (this->m_id > pgroup->m_id) {
 		std::swap(pgroupSrc, pgroupDest);
 	}
@@ -465,7 +481,7 @@ void CGroup::ResolveDuplicateMaster() {
 	if (!FDuplicateGroup()) {
 		return;
 	}
-	CGroup *pgroupTarget = m_group_for_duplicate_groups;
+	auto pgroupTarget = m_group_for_duplicate_groups;
 	while (nullptr != pgroupTarget->m_group_for_duplicate_groups) {
 		pgroupTarget = pgroupTarget->m_group_for_duplicate_groups;
 	}
@@ -487,10 +503,10 @@ void CGroup::MergeGroup() {
 	}
 	// resolve target group
 	ResolveDuplicateMaster();
-	CGroup *pgroupTarget = m_group_for_duplicate_groups;
+	auto pgroupTarget = m_group_for_duplicate_groups;
 	// move group expressions from this group to target
 	while (!m_group_exprs.empty()) {
-		CGroupExpression *pgexpr = m_group_exprs.front();
+		auto pgexpr = m_group_exprs.front();
 		m_group_exprs.pop_front();
 		m_num_exprs--;
 		pgexpr->Reset(pgroupTarget, pgroupTarget->m_num_exprs++);
@@ -508,16 +524,17 @@ void CGroup::MergeGroup() {
 //
 //
 //---------------------------------------------------------------------------
-void CGroup::CreateDummyCostContext() {
-	CGroupExpression *pgexprFirst;
+void CGroup::CreateDummyCostContext(duckdb::unique_ptr<CGroup> this_group) {
+	duckdb::unique_ptr<CGroupExpression> pgexprFirst;
 	{
-		CGroupProxy gp(this);
+		CGroupProxy gp(this_group);
 		pgexprFirst = *(gp.PgexprFirst());
 	}
 	duckdb::vector<ColumnBinding> v;
-	COptimizationContext *poc =
-	    new COptimizationContext(this, CRequiredPhysicalProp::PrppEmpty(), new CRequiredLogicalProp(v), 0);
-	m_dummy_cost_context = new CCostContext(poc, 0, pgexprFirst);
+	auto req_logicalprop = make_uniq<CRequiredLogicalProp>(v);
+	duckdb::unique_ptr<COptimizationContext> poc =
+	    make_uniq<COptimizationContext>(this_group, CRequiredPhysicalProp::PrppEmpty(), req_logicalprop, 0);
+	m_dummy_cost_context = make_uniq<CCostContext>(poc, 0, pgexprFirst);
 	m_dummy_cost_context->SetState(CCostContext::estCosting);
 	m_dummy_cost_context->SetCost(0.0);
 	m_dummy_cost_context->SetState(CCostContext::estCosted);
@@ -536,9 +553,10 @@ void CGroup::CreateDummyCostContext() {
 //
 //---------------------------------------------------------------------------
 void CGroup::RecursiveBuildTreeMap(
-    COptimizationContext *poc, CCostContext *pccParent, CGroupExpression *pgexprCurrent, ULONG child_index,
-    CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> *ptmap) {
-	duckdb::vector<CCostContext *> pdrgpcc = pgexprCurrent->LookupAllMatchedCostContexts(poc);
+    duckdb::unique_ptr<COptimizationContext> poc, duckdb::unique_ptr<CCostContext> pccParent,
+	duckdb::unique_ptr<CGroupExpression> pgexprCurrent, ULONG child_index,
+    duckdb::unique_ptr<CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals>> ptmap) {
+	auto pdrgpcc = pgexprCurrent->LookupAllMatchedCostContexts(poc);
 	const ULONG ulCCSize = pdrgpcc.size();
 	if (0 == ulCCSize) {
 		// current group expression has no valid implementations of optimization context
@@ -546,22 +564,22 @@ void CGroup::RecursiveBuildTreeMap(
 	}
 	// iterate over all valid implementations of given optimization context
 	for (ULONG ulCC = 0; ulCC < ulCCSize; ulCC++) {
-		CCostContext *pccCurrent = pdrgpcc[ulCC];
+		auto pccCurrent = pdrgpcc[ulCC];
 		if (nullptr != pccParent) {
 			// link parent cost context to child cost context
 			ptmap->Insert(pccParent, child_index, pccCurrent);
 		}
-		duckdb::vector<COptimizationContext *> pdrgpoc = pccCurrent->m_optimization_contexts;
+		duckdb::vector<duckdb::unique_ptr<COptimizationContext> > pdrgpoc = pccCurrent->m_optimization_contexts;
 		if (0 != pdrgpoc.size()) {
 			// process children recursively
 			const ULONG arity = pgexprCurrent->Arity();
 			for (ULONG ul = 0; ul < arity; ul++) {
-				CGroup *pgroupChild = (*pgexprCurrent)[ul];
-				COptimizationContext *pocChild = nullptr;
+				auto pgroupChild = (*pgexprCurrent)[ul];
+				duckdb::unique_ptr<COptimizationContext> pocChild = nullptr;
 				if (!pgroupChild->m_is_scalar) {
 					pocChild = pdrgpoc[ul];
 				}
-				pgroupChild->BuildTreeMap(pocChild, pccCurrent, ul, ptmap);
+				pgroupChild->BuildTreeMap(pgroupChild, pocChild, pccCurrent, ul, ptmap);
 			}
 		}
 	}
@@ -578,9 +596,9 @@ void CGroup::RecursiveBuildTreeMap(
 //
 //
 //---------------------------------------------------------------------------
-void CGroup::BuildTreeMap(
-    COptimizationContext *poc, CCostContext *pccParent, ULONG child_index,
-    CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals> *ptmap) {
+void CGroup::BuildTreeMap(duckdb::unique_ptr<CGroup> this_group,
+    duckdb::unique_ptr<COptimizationContext> poc, duckdb::unique_ptr<CCostContext> pccParent, ULONG child_index,
+    duckdb::unique_ptr<CTreeMap<CCostContext, Operator, CDrvdPropCtxtPlan, CCostContext::HashValue, CCostContext::Equals>> ptmap) {
 	// check if link has been processed before,
 	// this is crucial to eliminate unnecessary recursive calls
 	SContextLink pclink(pccParent, child_index, poc);
@@ -588,11 +606,11 @@ void CGroup::BuildTreeMap(
 		// link is already processed
 		return;
 	}
-	list<CGroupExpression *>::iterator itr;
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
 	// start with first non-logical group expression
-	CGroupExpression *pgexprCurrent = nullptr;
+	duckdb::unique_ptr<CGroupExpression> pgexprCurrent = nullptr;
 	{
-		CGroupProxy gp(this);
+		CGroupProxy gp(this_group);
 		itr = gp.m_pgroup->m_group_exprs.begin();
 		itr = gp.PgexprSkipLogical(itr);
 		pgexprCurrent = *itr;
@@ -607,13 +625,13 @@ void CGroup::BuildTreeMap(
 			// recursively link group's dummy context to child contexts
 			const ULONG arity = pgexprCurrent->Arity();
 			for (ULONG ul = 0; ul < arity; ul++) {
-				CGroup *pgroupChild = (*pgexprCurrent)[ul];
-				pgroupChild->BuildTreeMap(nullptr, m_dummy_cost_context, ul, ptmap);
+				auto pgroupChild = (*pgexprCurrent)[ul];
+				pgroupChild->BuildTreeMap(pgroupChild, nullptr, m_dummy_cost_context, ul, ptmap);
 			}
 		}
 		// move to next non-logical group expression
 		{
-			CGroupProxy gp(this);
+			CGroupProxy gp(this_group);
 			itr = gp.PgexprSkipLogical(itr);
 			pgexprCurrent = *itr;
 		}
@@ -631,17 +649,21 @@ void CGroup::BuildTreeMap(
 //		same children as given expression
 //
 //---------------------------------------------------------------------------
-CGroupExpression *CGroup::BestPromiseGroupExpr(CGroupExpression *pgexprToMatch) {
+duckdb::unique_ptr<CGroupExpression>
+CGroup::BestPromiseGroupExpr(duckdb::unique_ptr<CGroup> this_group,
+							 duckdb::unique_ptr<CGroupExpression> pgexprToMatch) {
 	duckdb::vector<ColumnBinding> v;
-	CGroupExpression *pgexprCurrent = nullptr;
-	CGroupExpression *pgexprBest = nullptr;
-	list<CGroupExpression *>::iterator itr;
+	duckdb::unique_ptr<CGroupExpression> pgexprCurrent = nullptr;
+	duckdb::unique_ptr<CGroupExpression> pgexprBest = nullptr;
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
 	// get first logical group expression
 	{
-		CGroupProxy gp(this);
+		CGroupProxy gp(this_group);
 		itr = gp.m_pgroup->m_group_exprs.begin();
 		itr = gp.PgexprNextLogical(itr);
-		pgexprCurrent = *itr;
+		if(gp.m_pgroup->m_group_exprs.end() != itr) {
+			pgexprCurrent = *itr;
+		}
 	}
 	while (m_group_exprs.end() != itr) {
 		if (pgexprCurrent->FMatchNonScalarChildren(pgexprToMatch)) {
@@ -649,10 +671,12 @@ CGroupExpression *CGroup::BestPromiseGroupExpr(CGroupExpression *pgexprToMatch) 
 		}
 		// move to next logical group expression
 		{
-			CGroupProxy gp(this);
+			CGroupProxy gp(this_group);
 			++itr;
 			itr = gp.PgexprNextLogical(itr);
-			pgexprCurrent = *itr;
+			if(m_group_exprs.end() != itr) {
+				pgexprCurrent = *itr;
+			}
 		}
 	}
 	return pgexprBest;
@@ -667,17 +691,17 @@ CGroupExpression *CGroup::BestPromiseGroupExpr(CGroupExpression *pgexprToMatch) 
 //		resetting state is not thread-safe
 //
 //---------------------------------------------------------------------------
-void CGroup::ResetGroupState() {
+void CGroup::ResetGroupState(duckdb::unique_ptr<CGroup> this_group) {
 	// reset group expression states
-	list<CGroupExpression *>::iterator pgexpr_iter = m_group_exprs.begin();
+	auto pgexpr_iter = m_group_exprs.begin();
 	while (m_group_exprs.end() != pgexpr_iter) {
-		CGroupExpression *pgexpr = *pgexpr_iter;
+		auto pgexpr = *pgexpr_iter;
 		pgexpr->ResetState();
 		pgexpr_iter++;
 	}
 	// reset group state
 	{
-		CGroupProxy gp(this);
+		CGroupProxy gp(this_group);
 		m_estate = estUnexplored;
 	}
 }
@@ -703,8 +727,8 @@ void CGroup::ResetLinkMap() {
 //		Reset group job queues;
 //
 //---------------------------------------------------------------------------
-void CGroup::ResetGroupJobQueues() {
-	CGroupProxy gp(this);
+void CGroup::ResetGroupJobQueues(duckdb::unique_ptr<CGroup> this_group) {
+	CGroupProxy gp(this_group);
 	m_explore_job_queue.Reset();
 	m_impl_job_queue.Reset();
 }
@@ -718,7 +742,8 @@ void CGroup::ResetGroupJobQueues() {
 //		in current group, and satisfying the given required properties
 //
 //---------------------------------------------------------------------------
-double CGroup::CostLowerBound(CRequiredPhysicalProp *prppInput) {
+double CGroup::CostLowerBound(duckdb::unique_ptr<CGroup> this_group, 
+							  duckdb::unique_ptr<CRequiredPhysicalProp> prppInput) {
 	auto iter = m_cost_lower_bounds_map.find(prppInput);
 	double pcostLowerBound = GPOPT_INFINITE_COST;
 	if (m_cost_lower_bounds_map.end() != iter) {
@@ -727,10 +752,10 @@ double CGroup::CostLowerBound(CRequiredPhysicalProp *prppInput) {
 	}
 	double costLowerBound = GPOPT_INFINITE_COST;
 	// start with first non-logical group expression
-	CGroupExpression *pgexprCurrent = nullptr;
-	list<CGroupExpression *>::iterator itr;
+	duckdb::unique_ptr<CGroupExpression> pgexprCurrent = nullptr;
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
 	{
-		CGroupProxy gp(this);
+		CGroupProxy gp(this_group);
 		itr = gp.m_pgroup->m_group_exprs.begin();
 		itr = gp.PgexprSkipLogical(itr);
 		pgexprCurrent = *itr;
@@ -740,19 +765,19 @@ double CGroup::CostLowerBound(CRequiredPhysicalProp *prppInput) {
 		// the same group that contains it,
 		// since an enforcer must reside on top of another operator from the same
 		// group, it cannot produce a better cost lower-bound and can be skipped here
-		if (!CUtils::FEnforcer(pgexprCurrent->m_operator.get())) {
-			double costLowerBoundGExpr = pgexprCurrent->CostLowerBound(prppInput, nullptr, gpos::ulong_max);
+		if (!CUtils::FEnforcer(pgexprCurrent->m_operator)) {
+			double costLowerBoundGExpr = pgexprCurrent->CostLowerBound(pgexprCurrent, prppInput, nullptr, gpos::ulong_max);
 			if (costLowerBoundGExpr < costLowerBound) {
 				costLowerBound = costLowerBoundGExpr;
 			}
 		}
 		// move to next non-logical group expression
 		{
-			CGroupProxy gp(this);
+			CGroupProxy gp(this_group);
 			itr = gp.PgexprSkipLogical(itr);
 			pgexprCurrent = *itr;
 		}
 	}
-	m_cost_lower_bounds_map.insert(map<CRequiredPhysicalProp *, double>::value_type(prppInput, costLowerBound));
+	m_cost_lower_bounds_map.insert(map<duckdb::unique_ptr<CRequiredPhysicalProp>, double>::value_type(prppInput, costLowerBound));
 	return costLowerBound;
 }

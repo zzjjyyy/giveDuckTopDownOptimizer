@@ -293,13 +293,14 @@ unique_ptr<Operator> PhysicalHashAggregate::Copy() {
 	return unique_ptr_cast<PhysicalHashAggregate, Operator>(std::move(copy));
 }
 
-unique_ptr<Operator> PhysicalHashAggregate::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+unique_ptr<Operator>
+PhysicalHashAggregate::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	auto copy = this->Copy();
 	copy->m_group_expression = pgexpr;
 	return copy;
 }
 
-unique_ptr<Operator> PhysicalHashAggregate::CopyWithNewChildren(CGroupExpression *pgexpr,
+unique_ptr<Operator> PhysicalHashAggregate::CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
 																vector<unique_ptr<Operator>> pdrgpexpr,
 	                                         					double cost) {
 	/* PhysicalHashAggregate fields */

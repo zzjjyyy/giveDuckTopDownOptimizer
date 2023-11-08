@@ -22,7 +22,10 @@ namespace gpopt
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CPartialPlan::CPartialPlan(CGroupExpression* pgexpr, CRequiredPhysicalProp * prpp, CCostContext* pccChild, ULONG child_index)
+CPartialPlan::CPartialPlan(duckdb::unique_ptr<CGroupExpression> pgexpr,
+				 		   duckdb::unique_ptr<CRequiredPhysicalProp> prpp,
+				 		   duckdb::unique_ptr<CCostContext> pccChild,
+				 		   ULONG child_index)
 	: m_pgexpr(pgexpr), m_prpp(prpp), m_pccChild(pccChild), m_ulChildIndex(child_index)
 {
 }
@@ -47,13 +50,15 @@ CPartialPlan::~CPartialPlan()
 //		Extract costing info from children
 //
 //---------------------------------------------------------------------------
-void CPartialPlan::ExtractChildrenCostingInfo(ICostModel* pcm, CExpressionHandle &exprhdl, ICostModel::SCostingInfo* pci)
+void CPartialPlan::ExtractChildrenCostingInfo(duckdb::unique_ptr<ICostModel> pcm,
+											  CExpressionHandle &exprhdl,
+											  duckdb::unique_ptr<ICostModel::SCostingInfo> pci)
 {
 	const ULONG arity = m_pgexpr->Arity();
 	ULONG ulIndex = 0;
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
-		CGroup* pgroupChild = (*m_pgexpr)[ul];
+		auto pgroupChild = (*m_pgexpr)[ul];
 		if (pgroupChild->m_is_scalar)
 		{
 			// skip scalar children
@@ -106,7 +111,7 @@ double CPartialPlan::CostCompute()
 	exprhdl.DeriveProps(NULL);
 	exprhdl.InitReqdProps(m_prpp);
 	// create array of child derived properties
-	duckdb::vector<CDerivedProperty *> pdrgpdp;
+	duckdb::vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdp;
 	const ULONG arity = m_pgexpr->Arity();
 	for (ULONG ul = 0; ul < arity; ul++)
 	{
@@ -143,7 +148,7 @@ double CPartialPlan::CostCompute()
 //		Hash function
 //
 //---------------------------------------------------------------------------
-size_t CPartialPlan::HashValue(const CPartialPlan *ppp)
+size_t CPartialPlan::HashValue(const duckdb::unique_ptr<CPartialPlan> ppp)
 {
 	size_t ulHash = ppp->m_pgexpr->HashValue();
 	return CombineHashes(ulHash, CRequiredPhysicalProp::UlHashForCostBounding(ppp->m_prpp));
@@ -157,9 +162,10 @@ size_t CPartialPlan::HashValue(const CPartialPlan *ppp)
 //		Equality function
 //
 //---------------------------------------------------------------------------
-bool CPartialPlan::Equals(const CPartialPlan *pppFst, const CPartialPlan *pppSnd)
+bool CPartialPlan::Equals(const duckdb::unique_ptr<CPartialPlan> pppFst,
+						  const duckdb::unique_ptr<CPartialPlan> pppSnd)
 {
-	BOOL fEqual = false;
+	bool fEqual = false;
 	if (NULL == pppFst->m_pccChild || NULL == pppSnd->m_pccChild)
 	{
 		fEqual = (NULL == pppFst->m_pccChild && NULL == pppSnd->m_pccChild);

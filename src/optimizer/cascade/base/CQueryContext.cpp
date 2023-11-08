@@ -22,7 +22,7 @@ using namespace duckdb;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CQueryContext::CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPhysicalProp *property,
+CQueryContext::CQueryContext(duckdb::unique_ptr<Operator> expr, duckdb::unique_ptr<CRequiredPhysicalProp> property,
                              duckdb::vector<ColumnBinding> col_ids, duckdb::vector<std::string> col_names,
                              bool derive_stats)
     : m_required_plan_property(property), m_required_output_cols(col_ids), m_derivation_stats(derive_stats) {
@@ -58,11 +58,12 @@ CQueryContext::~CQueryContext() {
 // 		 Return top level operator in the given expression
 //
 //---------------------------------------------------------------------------
-LogicalOperator *CQueryContext::PopTop(LogicalOperator *pexpr) {
+duckdb::unique_ptr<LogicalOperator>
+CQueryContext::PopTop(duckdb::unique_ptr<LogicalOperator> pexpr) {
 	// skip CTE anchors if any
-	LogicalOperator *pexprCurr = pexpr;
+	auto pexprCurr = pexpr;
 	while (LogicalOperatorType::LOGICAL_CTE_REF == pexprCurr->logical_type) {
-		pexprCurr = (LogicalOperator *)pexprCurr->children[0].get();
+		pexprCurr = unique_ptr_cast<Operator, LogicalOperator>(pexprCurr->children[0]);
 	}
 	return pexprCurr;
 }
@@ -76,18 +77,24 @@ LogicalOperator *CQueryContext::PopTop(LogicalOperator *pexpr) {
 //		output column ref ids
 //
 //---------------------------------------------------------------------------
-CQueryContext *CQueryContext::QueryContextGenerate(duckdb::unique_ptr<Operator> expr, duckdb::vector<ULONG *> col_ids,
-                                                   duckdb::vector<std::string> col_names, bool derive_stats) {
+duckdb::unique_ptr<CQueryContext>
+CQueryContext::QueryContextGenerate(duckdb::unique_ptr<Operator> expr,
+									duckdb::vector<ULONG *> col_ids,
+                                    duckdb::vector<std::string> col_names,
+									bool derive_stats) {
 	duckdb::vector<ColumnBinding> required_cols;
 	duckdb::vector<ColumnBinding> sort_order;
 	// Collect required properties (property_plan) at the top level:
-	COrderSpec *spec = new COrderSpec();
+	auto spec = make_uniq<COrderSpec>();
 
 	// remove orderbys in this logical plan, and add order requirements to the order spec.
 	if (expr->logical_type == LogicalOperatorType::LOGICAL_ORDER_BY) {
 		LogicalOrder *order = (LogicalOrder *)expr.get();
-		for (auto &child : order->orders)
-			spec->order_nodes.emplace_back(child.type, child.null_order, child.expression->Copy());
+		for (auto &child : order->orders) {
+			// Need to delete
+			// spec->order_nodes.emplace_back(child.type, child.null_order, child.expression->Copy());
+			spec->order_nodes.emplace_back(child.type, child.null_order, child.expression);
+		}
 		expr = std::move(expr->children[0]);
 	}
 	//	for (size_t i = 0; i < expr->children.size(); i++)
@@ -96,10 +103,10 @@ CQueryContext *CQueryContext::QueryContextGenerate(duckdb::unique_ptr<Operator> 
 	//	((LogicalOperator *)expr.get())->Print();
 
 	// construct the physical property
-	COrderProperty *order_property = new COrderProperty(spec, COrderProperty::EomSatisfy);
-	CRequiredPhysicalProp *physical_property = new CRequiredPhysicalProp(required_cols, order_property);
+	auto order_property = make_uniq<COrderProperty>(spec, COrderProperty::EomSatisfy);
+	auto physical_property = make_uniq<CRequiredPhysicalProp>(required_cols, order_property);
 
-	return new CQueryContext(std::move(expr), physical_property, sort_order, col_names, derive_stats);
+	return make_uniq<CQueryContext>(expr, physical_property, sort_order, col_names, derive_stats);
 }
 
 void CQueryContext::RemoveOrderBy(COrderSpec *spec, Operator *parent, Operator *op, size_t child_idx) {
@@ -107,7 +114,9 @@ void CQueryContext::RemoveOrderBy(COrderSpec *spec, Operator *parent, Operator *
 		D_ASSERT(op->children.size() == 1);
 		auto orderby = (LogicalOrder *)op;
 		for (auto &it : orderby->orders) {
-			spec->order_nodes.emplace_back(it.type, it.null_order, it.expression->Copy());
+			// Need to delete
+			// spec->order_nodes.emplace_back(it.type, it.null_order, it.expression->Copy());
+			spec->order_nodes.emplace_back(it.type, it.null_order, it.expression);
 		}
 		parent->children[child_idx] = std::move(orderby->children[0]);
 		op = parent->children[child_idx].get();

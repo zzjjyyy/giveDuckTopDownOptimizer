@@ -94,9 +94,10 @@ void LogicalJoin::Deserialize(LogicalJoin &join, LogicalDeserializationState &st
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set * LogicalJoin::XformCandidates() const
+duckdb::unique_ptr<CXform_set>
+LogicalJoin::XformCandidates() const
 {
-	CXform_set * xform_set = new CXform_set();
+	auto xform_set = make_uniq<CXform_set>();
 	if(join_type == JoinType::INNER)
 	{
 		(void) xform_set->set(CXform::ExfInnerJoin2NLJoin);

@@ -54,7 +54,9 @@ public:
 	EXformPromise XformPromise(CExpressionHandle &exprhdl) const override;
 
 	// actual transform
-	void Transform(CXformContext *pxfctxt, CXformResult *pxfres, Operator *pexpr) const override;
+	void Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+				   duckdb::unique_ptr<CXformResult> pxfres,
+				   duckdb::unique_ptr<Operator> pexpr) const override;
 };	// class CXformPushGbBelowJoin
 }  // namespace gpopt
 #endif	// !GPOPT_CXformPushGbBelowJoin_H

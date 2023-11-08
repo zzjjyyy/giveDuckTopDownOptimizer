@@ -37,7 +37,8 @@ CXformJoinCommutativity::CXformJoinCommutativity()
 //		Compute promise of xform
 //
 //---------------------------------------------------------------------------
-CXform::EXformPromise CXformJoinCommutativity::XformPromise(CExpressionHandle &exprhdl) const
+CXform::EXformPromise
+CXformJoinCommutativity::XformPromise(CExpressionHandle &exprhdl) const
 {
 	return CXform::ExfpMedium;
 }
@@ -50,16 +51,23 @@ CXform::EXformPromise CXformJoinCommutativity::XformPromise(CExpressionHandle &e
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformJoinCommutativity::Transform(CXformContext* pxfctxt, CXformResult* pxfres, Operator* pexpr) const
+void CXformJoinCommutativity::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+										duckdb::unique_ptr<CXformResult> pxfres,
+										duckdb::unique_ptr<Operator> pexpr) const
 {
-	LogicalComparisonJoin* popJoin = (LogicalComparisonJoin*)pexpr;
+	auto popJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(pexpr);
 	// create alternative expression
-	duckdb::unique_ptr<LogicalComparisonJoin> pexprAlt = make_uniq<LogicalComparisonJoin>(JoinType::INNER);
+	auto pexprAlt = make_uniq<LogicalComparisonJoin>(JoinType::INNER);
 	/* LogicalComparisonJoin fields */
-	for(auto &child : popJoin->conditions) {
+	// Need to delete
+	// for(auto &child : popJoin->conditions) {
+	for(auto child : popJoin->conditions) {
 		JoinCondition jc;
-		jc.left = child.right->Copy();
-		jc.right = child.left->Copy();
+		// Need to delete
+		// jc.left = child.right->Copy();
+		// jc.right = child.left->Copy();
+		jc.left = child.right;
+		jc.right = child.left;
 		jc.comparison = child.comparison;
 		pexprAlt->conditions.emplace_back(std::move(jc));
 	}
@@ -78,16 +86,21 @@ void CXformJoinCommutativity::Transform(CXformContext* pxfctxt, CXformResult* px
 	if (nullptr != popJoin->estimated_props) {
 		pexprAlt->estimated_props = popJoin->estimated_props->Copy();
 	}
-	pexprAlt->AddChild(popJoin->children[1]->Copy());
-	pexprAlt->AddChild(popJoin->children[0]->Copy());
+	// Need to delete
+	// pexprAlt->AddChild(popJoin->children[1]->Copy());
+	// pexprAlt->AddChild(popJoin->children[0]->Copy());
+	pexprAlt->AddChild(popJoin->children[1]);
+	pexprAlt->AddChild(popJoin->children[0]);
 	pexprAlt->ResolveTypes();
 	pexprAlt->estimated_cardinality = popJoin->estimated_cardinality;
 	for (auto &child : popJoin->expressions) {
-		pexprAlt->expressions.push_back(child->Copy());
+		// Need to delete
+		// pexprAlt->expressions.push_back(child->Copy());
+		pexprAlt->expressions.push_back(child);
 	}
 	pexprAlt->has_estimated_cardinality = popJoin->has_estimated_cardinality;
 	pexprAlt->m_cost = GPOPT_INVALID_COST;
 	// add alternative to transformation result
 	pxfres->Add(std::move(pexprAlt));
-	enumeration_pairs++;
+	// enumeration_pairs++;
 }

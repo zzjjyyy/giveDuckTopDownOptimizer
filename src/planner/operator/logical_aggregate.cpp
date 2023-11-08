@@ -157,15 +157,17 @@ unique_ptr<Operator> LogicalAggregate::Copy() {
 	return unique_ptr_cast<LogicalAggregate, Operator>(std::move(copy));
 }
 	
-unique_ptr<Operator> LogicalAggregate::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+unique_ptr<Operator>
+LogicalAggregate::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	unique_ptr<Operator> copy = this->Copy();
 	copy->m_group_expression = pgexpr;
 	return copy;
 }
 
-unique_ptr<Operator> LogicalAggregate::CopyWithNewChildren(CGroupExpression *pgexpr,
-                                        				   duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-                                        				   double cost) {
+unique_ptr<Operator>
+LogicalAggregate::CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+                                      duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                      double cost) {
 	/* LogicalComparisonJoin fields */
 	vector<unique_ptr<Expression>> v;
 	for(auto &child : this->expressions) {
@@ -220,8 +222,8 @@ void LogicalAggregate::CE() {
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set *LogicalAggregate::XformCandidates() const {
-	CXform_set *xform_set = new CXform_set();
+duckdb::unique_ptr<CXform_set> LogicalAggregate::XformCandidates() const {
+	auto xform_set = make_uniq<CXform_set>();
 	(void)xform_set->set(CXform::ExfLogicalAggregateImplementation);
 	return xform_set;
 }

@@ -225,22 +225,24 @@ void PhysicalOperator::Verify() {
 //		Create base container of derived properties
 //
 //---------------------------------------------------------------------------
-CDerivedProperty *PhysicalOperator::CreateDerivedProperty() {
+duckdb::unique_ptr<CDerivedProperty> PhysicalOperator::CreateDerivedProperty() {
 	if (m_derived_physical_property == nullptr)
-		return new CDerivedPhysicalProp();
+		return make_uniq<CDerivedPhysicalProp>();
 
 	return m_derived_physical_property;
 }
 
-CRequiredProperty *PhysicalOperator::CreateRequiredProperty() const {
+duckdb::unique_ptr<CRequiredProperty> PhysicalOperator::CreateRequiredProperty() const {
 	if (m_required_physical_property == nullptr)
-		return new CRequiredPhysicalProp();
+		return make_uniq<CRequiredPhysicalProp>();
 
 	return m_required_physical_property;
 }
 
-COrderProperty::EOrderMatching PhysicalOperator::OrderMatching(CRequiredPhysicalProp *, ULONG,
-                                                               vector<CDerivedProperty *>, ULONG) {
+COrderProperty::EOrderMatching PhysicalOperator::OrderMatching(duckdb::unique_ptr<CRequiredPhysicalProp>,
+															   ULONG,
+                                                               vector<duckdb::unique_ptr<CDerivedProperty>>,
+															   ULONG) {
 	return COrderProperty::EomSatisfy;
 }
 
@@ -277,10 +279,10 @@ COrderProperty::EPropEnforcingType PhysicalOperator::EnforcingTypeOrder(CExpress
 		}
 
 		// derive all the possible order of this CGroupExpression
-		CGroupExpression *group_expr = handle.group_expr();
+		auto group_expr = handle.group_expr();
 		if (group_expr->m_child_groups.size() > 0) {
 			// Only the order of the first child influence the order of its parent
-			CGroup *gp = group_expr->m_child_groups[0];
+			auto gp = group_expr->m_child_groups[0];
 			for (auto &it : gp->m_sht) {
 				auto &opt_context = it.second;
 				auto &order_nodes = opt_context->m_required_plan_properties->m_sort_order->m_order_spec->order_nodes;
@@ -293,12 +295,15 @@ COrderProperty::EPropEnforcingType PhysicalOperator::EnforcingTypeOrder(CExpress
 	return COrderProperty::EPropEnforcingType::EpetRequired;
 }
 
-COrderSpec *PhysicalOperator::RequiredSortSpec(CExpressionHandle &handle, COrderSpec *order_spec, ULONG child_index,
-                                               vector<CDerivedProperty *> children_derived_property,
-                                               ULONG num_opt_request) const {
+duckdb::unique_ptr<COrderSpec>
+PhysicalOperator::RequiredSortSpec(CExpressionHandle &handle,
+								   duckdb::unique_ptr<COrderSpec> order_spec,
+								   ULONG child_index,
+                                   vector<duckdb::unique_ptr<CDerivedProperty>> children_derived_property,
+                                   ULONG num_opt_request) const {
 	if (child_index == 0) {
 		auto first_child_cols = children[0]->GetColumnBindings();
-		COrderSpec *res = new COrderSpec();
+		auto res = make_uniq<COrderSpec>();
 		for (auto &child : order_spec->order_nodes) {
 			unique_ptr<Expression> expr = ExpressionPassThrough(this, child.expression.get());
 			if (CUtils::ContainsAll(first_child_cols, expr->GetColumnBinding())) {
@@ -308,7 +313,7 @@ COrderSpec *PhysicalOperator::RequiredSortSpec(CExpressionHandle &handle, COrder
 		}
 		return res;
 	} else {
-		return new COrderSpec();
+		return make_uniq<COrderSpec>();
 	}
 }
 

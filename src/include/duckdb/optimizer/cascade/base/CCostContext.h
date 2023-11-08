@@ -55,38 +55,54 @@ public:
 	};
 
 public:
-	CCostContext(COptimizationContext *poc, ULONG ulOptReq, CGroupExpression *pgexpr);
+	CCostContext(duckdb::unique_ptr<COptimizationContext> poc,
+				 ULONG ulOptReq,
+				 duckdb::unique_ptr<CGroupExpression> pgexpr);
+
 	CCostContext(const CCostContext &) = delete;
+
 	virtual ~CCostContext();
 
 	// cost of group expression under optimization context
 	double m_cost;
+
 	// cost context state
 	EState m_estate;
+
 	// back pointer to owner group expression
-	CGroupExpression *m_group_expression;
+	duckdb::unique_ptr<CGroupExpression> m_group_expression;
+
 	// group expression to be used stats derivation during costing
-	CGroupExpression *m_group_expr_for_stats;
+	duckdb::unique_ptr<CGroupExpression> m_group_expr_for_stats;
+
 	// array of optimization contexts of child groups
-	duckdb::vector<COptimizationContext *> m_optimization_contexts;
+	duckdb::vector<duckdb::unique_ptr<COptimizationContext>> m_optimization_contexts;
+
 	// derived properties of the carried plan
-	CDerivedPhysicalProp *m_derived_prop_plan;
+	duckdb::unique_ptr<CDerivedPhysicalProp> m_derived_prop_plan;
+
 	// optimization request number
 	ULONG m_optimization_request_num;
+
 	// flag to indicate if cost context is pruned,
 	// a cost context is pruned during branch-and-bound search if there exists
 	// an equivalent context with better cost
 	bool m_fPruned;
+
 	// main optimization context
-	COptimizationContext *m_poc;
+	duckdb::unique_ptr<COptimizationContext> m_poc;
+	
 	// link for cost context hash table in CGroupExpression
 	SLink m_link;
 
 public:
 	// for two cost contexts with join plans of the same cost, break the tie based on join depth,
 	// if tie-resolution succeeded, store a pointer to preferred cost context in output argument
-	static void BreakCostTiesForJoinPlans(CCostContext *pccFst, CCostContext *pccSnd, CCostContext **ppccPrefered,
-	                                      bool *pfTiesResolved);
+	static void
+	BreakCostTiesForJoinPlans(duckdb::unique_ptr<CCostContext> pccFst,
+							  duckdb::unique_ptr<CCostContext> pccSnd,
+							  duckdb::unique_ptr<CCostContext> *ppccPrefered,
+	                          bool *pfTiesResolved);
 
 	// set pruned flag
 	void SetPruned() {
@@ -102,7 +118,7 @@ public:
 	}
 
 	// derive properties of the plan carried by cost context
-	void DerivePlanProps();
+	void DerivePlanProps(duckdb::unique_ptr<CCostContext> this_contxt);
 
 	// set cost context state
 	void SetState(EState estNewState) {
@@ -110,14 +126,16 @@ public:
 	}
 
 	// set child contexts
-	void SetChildContexts(duckdb::vector<COptimizationContext *> optimization_contexts) {
-		for (auto &child : optimization_contexts) {
+	void SetChildContexts(duckdb::vector<duckdb::unique_ptr<COptimizationContext>> optimization_contexts) {
+		// Need to delete
+		// for (auto &child : optimization_contexts)
+		for (auto child : optimization_contexts) {
 			m_optimization_contexts.push_back(child);
 		}
 	}
 
 	// check validity by comparing derived and required properties
-	bool IsValid();
+	bool IsValid(duckdb::unique_ptr<CCostContext> this_contxt);
 
 	// comparison operator
 	bool operator==(const CCostContext &cc) const;
@@ -126,7 +144,7 @@ public:
 	double CostCompute(duckdb::vector<double> pdrgpcostChildren);
 
 	// is current context better than the given equivalent context based on cost?
-	bool FBetterThan(CCostContext *pcc) const;
+	bool FBetterThan(duckdb::unique_ptr<CCostContext> pcc) const;
 
 	// equality function
 	static bool Equals(const CCostContext &ccLeft, const CCostContext &ccRight) {
@@ -139,7 +157,9 @@ public:
 	}
 
 	// equality function
-	static bool Equals(const CCostContext *pccLeft, const CCostContext *pccRight) {
+	static bool
+	Equals(const duckdb::unique_ptr<CCostContext> pccLeft,
+		   const duckdb::unique_ptr<CCostContext> pccRight) {
 		return Equals(*pccLeft, *pccRight);
 	}
 
@@ -154,7 +174,7 @@ public:
 	}
 
 	// hash function
-	static size_t HashValue(const CCostContext *pcc) {
+	static size_t HashValue(const duckdb::unique_ptr<CCostContext> pcc) {
 		return HashValue(*pcc);
 	}
 }; // class CCostContext

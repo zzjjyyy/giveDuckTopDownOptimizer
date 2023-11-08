@@ -52,20 +52,25 @@ public:
 	static void ExtractJoinConditions(JoinType type, unique_ptr<LogicalOperator> &left_child, unique_ptr<LogicalOperator> &right_child, const unordered_set<idx_t> &left_bindings, const unordered_set<idx_t> &right_bindings, vector<unique_ptr<Expression>> &expressions, vector<JoinCondition> &conditions, vector<unique_ptr<Expression>> &arbitrary_expressions);
 
 public:
-	CKeyCollection* DeriveKeyCollection(CExpressionHandle &exprhdl) override;
+	unique_ptr<CKeyCollection> DeriveKeyCollection(CExpressionHandle &exprhdl) override;
 	
-	CPropConstraint* DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
+	unique_ptr<CPropConstraint> DerivePropertyConstraint(CExpressionHandle &exprhdl) override;
 
 	// Rehydrate expression from a given cost context and child expressions
-	Operator* SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan) override;
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+				 duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override;
 
 	unique_ptr<Operator> Copy() override;
 	
-	unique_ptr<Operator> CopyWithNewGroupExpression(CGroupExpression *pgexpr) override;
+	unique_ptr<Operator>
+	CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) override;
 
-	unique_ptr<Operator> CopyWithNewChildren(CGroupExpression *pgexpr,
-                                        duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-                                        double cost) override;
+	unique_ptr<Operator>
+	CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+                        duckdb::vector<unique_ptr<Operator>> pdrgpexpr,
+                        double cost) override;
 	
 	void CE() override;
 

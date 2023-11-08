@@ -60,7 +60,13 @@ public:
 public:
 	// ctor
 	CSyncPool(ULONG size)
-		: m_objects(NULL), m_objs_reserved(NULL), m_objs_recycled(NULL), m_numobjs(size), m_bitmap_size(size / BITS_PER_ULONG + 1), m_last_lookup_idx(0), m_id_offset(gpos::ulong_max)
+		: m_objects(nullptr),
+		  m_objs_reserved(nullptr),
+		  m_objs_recycled(nullptr),
+		  m_numobjs(size),
+		  m_bitmap_size(size / BITS_PER_ULONG + 1),
+		  m_last_lookup_idx(0),
+		  m_id_offset(gpos::ulong_max)
 	{
 	}
 
@@ -72,6 +78,7 @@ public:
 	{
 		if (gpos::ulong_max != m_id_offset)
 		{
+			// Need to delete
 			delete[] m_objects;
 			delete[] m_objs_reserved;
 			delete[] m_objs_recycled;
@@ -139,7 +146,8 @@ public:
 	}
 
 	// find unreserved object and reserve it
-	T* PtRetrieve()
+	T*
+	PtRetrieve()
 	{
 		// iterate over all objects twice (two full clock rotations);
 		// objects marked as recycled cannot be reserved on the first round;
@@ -180,8 +188,9 @@ public:
 		ULONG offset = *(ULONG*) (((BYTE*)elem) + m_id_offset);
 		if (gpos::ulong_max == offset)
 		{
+			// Need to delete
 			// object does not belong to the array, delete it
-			delete elem;
+			// delete elem;
 			return;
 		}
 		ULONG elem_offset = offset / BITS_PER_ULONG;

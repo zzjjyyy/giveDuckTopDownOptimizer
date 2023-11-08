@@ -29,7 +29,8 @@ using namespace gpopt;
 //		Add job as a waiter;
 //
 //---------------------------------------------------------------------------
-CJobQueue::EJobQueueResult CJobQueue::EjqrAdd(CJob* pj)
+CJobQueue::EJobQueueResult
+CJobQueue::EjqrAdd(CJob *pj)
 {
 	EJobQueueResult ejer = EjqrCompleted;
 	// check if job has completed before getting the lock
@@ -73,12 +74,12 @@ CJobQueue::EJobQueueResult CJobQueue::EjqrAdd(CJob* pj)
 //		Notify waiting jobs of job completion
 //
 //---------------------------------------------------------------------------
-void CJobQueue::NotifyCompleted(CSchedulerContext* psc)
+void CJobQueue::NotifyCompleted(duckdb::unique_ptr<CSchedulerContext> psc)
 {
 	m_fCompleted = true;
 	while (!m_listjQueued.IsEmpty())
 	{
-		CJob*  pj = m_listjQueued.RemoveHead();
+		auto pj = m_listjQueued.RemoveHead();
 		// check if job execution has completed
 		if (1 == pj->DecrRefs())
 		{

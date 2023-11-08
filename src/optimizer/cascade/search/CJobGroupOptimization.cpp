@@ -99,7 +99,9 @@ CJobGroupOptimization::~CJobGroupOptimization() {
 //		Initialize job
 //
 //---------------------------------------------------------------------------
-void CJobGroupOptimization::Init(CGroup *pgroup, CGroupExpression *pgexprOrigin, COptimizationContext *poc) {
+void CJobGroupOptimization::Init(duckdb::unique_ptr<CGroup> pgroup,
+								 duckdb::unique_ptr<CGroupExpression> pgexprOrigin,
+								 duckdb::unique_ptr<COptimizationContext> poc) {
 	CJobGroup::Init(pgroup);
 	m_jsm.Init(rgeev1);
 	// set job actions
@@ -124,12 +126,12 @@ void CJobGroupOptimization::Init(CGroup *pgroup, CGroupExpression *pgexprOrigin,
 //		the function returns true if it could schedule any new jobs
 //
 //---------------------------------------------------------------------------
-bool CJobGroupOptimization::FScheduleGroupExpressions(CSchedulerContext *psc) {
+bool CJobGroupOptimization::FScheduleGroupExpressions(duckdb::unique_ptr<CSchedulerContext> psc) {
 	auto Last_itr = m_last_scheduled_expr;
 	// iterate on expressions and schedule them as needed
 	auto itr = PgexprFirstUnsched();
 	while (m_pgroup->m_group_exprs.end() != itr) {
-		CGroupExpression *pgexpr = *itr;
+		auto pgexpr = *itr;
 		// we consider only group expressions matching current optimization level,
 		// other group expressions will be optimized when damping current
 		// optimization level
@@ -161,12 +163,17 @@ bool CJobGroupOptimization::FScheduleGroupExpressions(CSchedulerContext *psc) {
 //		Start group optimization
 //
 //---------------------------------------------------------------------------
-CJobGroupOptimization::EEvent CJobGroupOptimization::EevtStartOptimization(CSchedulerContext *psc, CJob *pjOwner) {
+CJobGroupOptimization::EEvent
+CJobGroupOptimization::EevtStartOptimization(duckdb::unique_ptr<CSchedulerContext> psc,
+											 CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupOptimization *pjgo = ConvertJob(pjOwner);
-	CGroup *pgroup = pjgo->m_pgroup;
+	auto pjgo = ConvertJob(pjOwner);
+#ifdef DEBUG
+	CJobGroup::PrintJob(pjgo, "[StartOptimization]");
+#endif
+	auto pgroup = pjgo->m_pgroup;
 	if (!pgroup->FImplemented()) {
-		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[StartOptimization]");
+		
 		// schedule a group implementation child job
 		CJobGroupImplementation::ScheduleJob(psc, pgroup, pjgo);
 		return eevImplementing;
@@ -192,11 +199,15 @@ CJobGroupOptimization::EEvent CJobGroupOptimization::EevtStartOptimization(CSche
 //		Optimize child group expressions
 //
 //---------------------------------------------------------------------------
-CJobGroupOptimization::EEvent CJobGroupOptimization::EevtOptimizeChildren(CSchedulerContext *psc, CJob *pjOwner) {
+CJobGroupOptimization::EEvent
+CJobGroupOptimization::EevtOptimizeChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+											CJob *pjOwner) {
 	// get a job pointer
-	CJobGroupOptimization *pjgo = ConvertJob(pjOwner);
+	auto pjgo = ConvertJob(pjOwner);
+#ifdef DEBUG
+	CJobGroup::PrintJob(pjgo, "[OptimizeChildren]");
+#endif
 	if (pjgo->FScheduleGroupExpressions(psc)) {
-		// CJobGroup::PrintJob(ConvertJob(pjOwner), "[OptimizeChildren]");
 		// optimization is in progress
 		return eevOptimizing;
 	}
@@ -212,11 +223,14 @@ CJobGroupOptimization::EEvent CJobGroupOptimization::EevtOptimizeChildren(CSched
 //		Complete optimization action
 //
 //---------------------------------------------------------------------------
-CJobGroupOptimization::EEvent CJobGroupOptimization::EevtCompleteOptimization(CSchedulerContext *psc, CJob *pjOwner) {
-	// CJobGroup::PrintJob(ConvertJob(pjOwner), "[CompleteOptimization]");
-
+CJobGroupOptimization::EEvent
+CJobGroupOptimization::EevtCompleteOptimization(duckdb::unique_ptr<CSchedulerContext> psc,
+												CJob *pjOwner) {
+#ifdef DEBUG
+	CJobGroup::PrintJob(ConvertJob(pjOwner), "[CompleteOptimization]");
+#endif
 	// get a job pointer
-	CJobGroupOptimization *pjgo = ConvertJob(pjOwner);
+	auto pjgo = ConvertJob(pjOwner);
 	// move to next optimization level
 	pjgo->DampOptimizationLevel();
 	if (EolSentinel != pjgo->EolCurrent()) {
@@ -237,7 +251,7 @@ CJobGroupOptimization::EEvent CJobGroupOptimization::EevtCompleteOptimization(CS
 //		Main job function
 //
 //---------------------------------------------------------------------------
-bool CJobGroupOptimization::FExecute(CSchedulerContext *psc) {
+bool CJobGroupOptimization::FExecute(duckdb::unique_ptr<CSchedulerContext> psc) {
 	return m_jsm.FRun(psc, this);
 }
 
@@ -249,12 +263,14 @@ bool CJobGroupOptimization::FExecute(CSchedulerContext *psc) {
 //		Schedule a new group optimization job
 //
 //---------------------------------------------------------------------------
-void CJobGroupOptimization::ScheduleJob(CSchedulerContext *scheduler_context, CGroup *group,
-                                        CGroupExpression *group_expr_origin, COptimizationContext *opt_context,
-                                        CJob *parent_job) {
-	CJob *job = scheduler_context->m_job_factory->CreateJob(CJob::EjtGroupOptimization);
+void CJobGroupOptimization::ScheduleJob(duckdb::unique_ptr<CSchedulerContext> scheduler_context,
+										duckdb::unique_ptr<CGroup> group,
+										duckdb::unique_ptr<CGroupExpression> group_expr_origin,
+										duckdb::unique_ptr<COptimizationContext> opt_context,
+                                        CJob* parent_job) {
+	auto job = scheduler_context->m_job_factory->CreateJob(CJob::EjtGroupOptimization);
 	// initialize job
-	CJobGroupOptimization *job_group_opt = ConvertJob(job);
+	auto job_group_opt = ConvertJob(job);
 	job_group_opt->Init(group, group_expr_origin, opt_context);
 	scheduler_context->m_scheduler->Add(job_group_opt, parent_job);
 }

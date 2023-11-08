@@ -212,11 +212,13 @@ bool PhysicalTableScan::FProvidesReqdCols(CExpressionHandle &exprhdl, vector<Col
 	return result;
 }
 
-CKeyCollection *PhysicalTableScan::DeriveKeyCollection(CExpressionHandle &exprhdl) {
+duckdb::unique_ptr<CKeyCollection>
+PhysicalTableScan::DeriveKeyCollection(CExpressionHandle &exprhdl) {
 	return nullptr;
 }
 
-CPropConstraint *PhysicalTableScan::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
+duckdb::unique_ptr<CPropConstraint>
+PhysicalTableScan::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
 	return nullptr;
 }
 
@@ -225,9 +227,11 @@ ULONG PhysicalTableScan::DeriveJoinDepth(CExpressionHandle &exprhdl) {
 }
 
 // Rehydrate expression from a given cost context and child expressions
-Operator *PhysicalTableScan::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-                                           CDrvdPropCtxtPlan *pdpctxtplan) {
-	CGroupExpression *pgexpr = pcc->m_group_expression;
+duckdb::unique_ptr<Operator>
+PhysicalTableScan::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+								 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                 duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
+	auto pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	// if (!table_filters->filters.empty())
 	// {
@@ -240,8 +244,9 @@ Operator *PhysicalTableScan::SelfRehydrate(CCostContext *pcc, duckdb::vector<Ope
 	    make_uniq<TableScanBindData>(bind_data->Cast<TableScanBindData>().table);
 	tmp_bind_data->column_ids = bind_data->Cast<TableFunctionData>().column_ids;
 	duckdb::unique_ptr<TableFilterSet> table_filters;
-	PhysicalTableScan *pexpr = new PhysicalTableScan(returned_types, tmp_function, std::move(tmp_bind_data), column_ids,
-	                                                 names, std::move(table_filters), 1);
+	auto pexpr =
+		make_uniq<PhysicalTableScan>(returned_types, tmp_function, std::move(tmp_bind_data), column_ids,
+	                                 names, std::move(table_filters), 1);
 	pexpr->m_cost = cost;
 	pexpr->m_group_expression = pgexpr;
 	return pexpr;
@@ -284,7 +289,8 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::Copy() {
 	return unique_ptr_cast<PhysicalTableScan, Operator>(std::move(result));
 }
 
-duckdb::unique_ptr<Operator> PhysicalTableScan::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+duckdb::unique_ptr<Operator>
+PhysicalTableScan::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	unique_ptr<TableScanBindData> tmp_bind_data =
 	    make_uniq<TableScanBindData>(this->bind_data->Cast<TableScanBindData>().table);
 	tmp_bind_data->column_ids = this->bind_data->Cast<TableFunctionData>().column_ids;
@@ -322,8 +328,9 @@ duckdb::unique_ptr<Operator> PhysicalTableScan::CopyWithNewGroupExpression(CGrou
 	return unique_ptr_cast<PhysicalTableScan, Operator>(std::move(result));
 }
 
-duckdb::unique_ptr<Operator>
-PhysicalTableScan::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+unique_ptr<Operator>
+PhysicalTableScan::CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+									   duckdb::vector<unique_ptr<Operator>> pdrgpexpr,
                                        double cost) {
 	unique_ptr<TableScanBindData> tmp_bind_data =
 	    make_uniq<TableScanBindData>(this->bind_data->Cast<TableScanBindData>().table);
@@ -371,32 +378,15 @@ void PhysicalTableScan::CE() {
 	if(this->has_estimated_cardinality) {
 		return;
 	}
-	idx_t relids = this->GetChildrenRelIds();
-	char* pos;
-	char* p;
-	char cmp[1000];
-	int relid_in_file;
-	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
-	while(fgets(cmp, 1000, fp) != NULL) {
-		if((pos = strchr(cmp, '\n')) != NULL) {
-			*pos = '\0';
-		}
-		p = strtok(cmp, ":");
-		relid_in_file = atoi(p);
-		if(relid_in_file == relids) {
-			p = strtok(NULL, ":");
-			double true_val = atof(p);
-			if(true_val < 9999999999999.0) {
-				fclose(fp);
-				this->has_estimated_cardinality = true;
-				this->estimated_cardinality = true_val;
-				return;
-			}
-		}
-	}
-	fclose(fp);
 	this->has_estimated_cardinality = true;
-	this->estimated_cardinality = static_cast<double>(rand() % 1000);
+	idx_t relids = this->GetChildrenRelIds();
+	auto true_val = true_set.find(relids);
+	if(true_val != true_set.end()) {
+		this->estimated_cardinality = true_val->second;
+	} else {
+		this->estimated_cardinality = 9999999999.0;
+	}
+	// this->estimated_cardinality = static_cast<double>(rand() % 1000);
 	return;
 }
 } // namespace duckdb

@@ -37,28 +37,54 @@ class CBinding
 {
 public:
 	// initialize cursors of child expressions
-	bool FInitChildCursors(CGroupExpression* pgexpr, Operator* pexprPattern, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr);
+	bool FInitChildCursors(duckdb::unique_ptr<CGroupExpression> pgexpr,
+						   duckdb::unique_ptr<Operator> pexprPattern,
+						   duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr);
 
 	// advance cursors of child expressions
-	bool FAdvanceChildCursors(CGroupExpression* pgexpr, Operator* pexprPattern, Operator* pexprLast, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr);
+	bool FAdvanceChildCursors(duckdb::unique_ptr<CGroupExpression> pgexpr,
+							  duckdb::unique_ptr<Operator> pexprPattern,
+							  duckdb::unique_ptr<Operator> pexprLast,
+							  duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexpr);
 
 	// move cursor
-	list<CGroupExpression*>::iterator PgexprNext(CGroup* pgroup, CGroupExpression* pgexpr) const;
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	PgexprNext(duckdb::unique_ptr<CGroup> pgroup,
+			   duckdb::unique_ptr<CGroupExpression> pgexpr) const;
 
 	// expand n-th child of pattern
-	Operator* PexprExpandPattern(Operator* pexpr, ULONG ulPos, ULONG arity);
+	duckdb::unique_ptr<Operator>
+	PexprExpandPattern(duckdb::unique_ptr<Operator> pexpr,
+					   ULONG ulPos, ULONG arity);
 
 	// get binding for children
-	BOOL FExtractChildren(CGroupExpression* pgexpr, Operator* pexprPattern, Operator* pexprLast, duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexprChildren);
+	bool FExtractChildren(duckdb::unique_ptr<CGroupExpression> pgexpr,
+						  duckdb::unique_ptr<Operator> pexprPattern,
+						  duckdb::unique_ptr<Operator>pexprLast,
+						  duckdb::vector<duckdb::unique_ptr<Operator>> &pdrgpexprChildren);
 
 	// extract binding from a group
-	Operator* PexprExtract(CGroup* pgroup, Operator* pexprPattern, Operator* pexprLast);
+	// Need to delete
+	// Operator* PexprExtract(CGroup* pgroup, Operator* pexprPattern, Operator* pexprLast);
+	duckdb::unique_ptr<Operator>
+	PexprExtract(duckdb::unique_ptr<CGroup> pgroup,
+				 duckdb::unique_ptr<Operator> pexprPattern,
+				 duckdb::unique_ptr<Operator> pexprLast);
 	
 	// extract binding from group expression
-	Operator* PexprExtract(CGroupExpression* pgexpr, Operator* pexprPatetrn, Operator* pexprLast);
-	
+	// Need to delete
+	// Operator* PexprExtract(CGroupExpression* pgexpr, Operator* pexprPatetrn, Operator* pexprLast);
+	duckdb::unique_ptr<Operator>
+	PexprExtract(duckdb::unique_ptr<CGroupExpression> pgexpr,
+				 duckdb::unique_ptr<Operator> pexprPattern,
+				 duckdb::unique_ptr<Operator> pexprLast);
+
 	// build expression
-	Operator* PexprFinalize(CGroupExpression* pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexprChildren);
+	// Need to delete
+	// Operator* PexprFinalize(CGroupExpression* pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexprChildren);
+	duckdb::unique_ptr<Operator>
+	PexprFinalize(duckdb::unique_ptr<CGroupExpression> pgexpr,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr);
 
 public:
 	// ctor

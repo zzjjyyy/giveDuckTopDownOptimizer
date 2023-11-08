@@ -55,7 +55,7 @@ CMemo::~CMemo() {
 //		Set root group
 //
 //---------------------------------------------------------------------------
-void CMemo::SetRoot(CGroup *group) {
+void CMemo::SetRoot(duckdb::unique_ptr<CGroup> group) {
 	m_root = group;
 }
 
@@ -67,9 +67,9 @@ void CMemo::SetRoot(CGroup *group) {
 //		Add new group to list
 //
 //---------------------------------------------------------------------------
-void CMemo::Add(CGroup *group, Operator *expr_origin) {
+void CMemo::Add(duckdb::unique_ptr<CGroup> group, duckdb::unique_ptr<Operator> expr_origin) {
 	// extract expression props
-	CDerivedProperty *pdp = expr_origin->m_derived_logical_property;
+	auto pdp = expr_origin->m_derived_logical_property;
 	ULONG id = m_id_counter++;
 	{
 		CGroupProxy gp(group);
@@ -88,7 +88,10 @@ void CMemo::Add(CGroup *group, Operator *expr_origin) {
 //		Helper for inserting group expression in target group
 //
 //---------------------------------------------------------------------------
-CGroup *CMemo::GroupInsert(CGroup *target_group, CGroupExpression *group_expr, Operator *expr_origin, bool is_new) {
+duckdb::unique_ptr<CGroup>
+CMemo::GroupInsert(duckdb::unique_ptr<CGroup> target_group,
+				   duckdb::unique_ptr<CGroupExpression> group_expr,
+				   duckdb::unique_ptr<Operator> expr_origin, bool is_new) {
 	auto itr = group_expr_hashmap.find(group_expr);
 	// we do a lookup since group expression may have been already inserted
 	if (group_expr_hashmap.end() == itr) {
@@ -103,7 +106,7 @@ CGroup *CMemo::GroupInsert(CGroup *target_group, CGroupExpression *group_expr, O
 		}
 		return group_expr->m_group;
 	}
-	CGroupExpression *group_expr_found = itr->second;
+	auto group_expr_found = itr->second;
 	return group_expr_found->m_group;
 }
 
@@ -115,9 +118,11 @@ CGroup *CMemo::GroupInsert(CGroup *target_group, CGroupExpression *group_expr, O
 //		Helper to check if a new group needs to be created
 //
 //---------------------------------------------------------------------------
-bool CMemo::FNewGroup(CGroup **target_group, CGroupExpression *group_expr, bool is_scalar) {
+bool CMemo::FNewGroup(duckdb::unique_ptr<CGroup> *target_group,
+					  duckdb::unique_ptr<CGroupExpression> group_expr,
+					  bool is_scalar) {
 	if (nullptr == *target_group && nullptr == group_expr) {
-		*target_group = new CGroup(is_scalar);
+		*target_group = make_uniq<CGroup>(is_scalar);
 		return true;
 	}
 	return false;
@@ -135,10 +140,12 @@ bool CMemo::FNewGroup(CGroup **target_group, CGroupExpression *group_expr, bool 
 //		group containing the existing group expression
 //
 //---------------------------------------------------------------------------
-CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
-	Operator *op = group_expr->m_operator.get();
-	CGroup *group_container = nullptr;
-	CGroupExpression *group_expr_found = nullptr;
+duckdb::unique_ptr<CGroup>
+CMemo::GroupInsert(duckdb::unique_ptr<CGroup> group_target,
+				   duckdb::unique_ptr<CGroupExpression> group_expr) {
+	duckdb::unique_ptr<Operator> op = group_expr->m_operator;
+	duckdb::unique_ptr<CGroup> group_container = nullptr;
+	duckdb::unique_ptr<CGroupExpression> group_expr_found = nullptr;
 	// hash table accessor's scope
 	{
 		auto itr = group_expr_hashmap.find(group_expr);
@@ -150,7 +157,7 @@ CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
 	bool is_new = FNewGroup(&group_target, group_expr_found, false);
 	if (is_new) {
 		// we may add a new group to Memo, so we derive props here
-		(void)op->PdpDerive();
+		(void)op->PdpDerive(op);
 	}
 	if (nullptr != group_expr_found) {
 		group_container = group_expr_found->m_group;
@@ -164,7 +171,7 @@ CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
 	// if a new scalar group is added, we materialize a scalar expression
 	// for statistics derivation purposes
 	if (is_new && group_target->m_is_scalar) {
-		group_target->CreateDummyCostContext();
+		group_target->CreateDummyCostContext(group_target);
 	}
 	return group_container;
 }
@@ -177,10 +184,11 @@ CGroup *CMemo::GroupInsert(CGroup *group_target, CGroupExpression *group_expr) {
 //		Extract a plan that delivers the given required properties
 //
 //---------------------------------------------------------------------------
-duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPhysicalProp *required_property,
-                                                ULONG search_stage) {
-	CGroupExpression *best_group_expr;
-	COptimizationContext *opt_context;
+duckdb::unique_ptr<Operator> 
+CMemo::ExtractPlan(duckdb::unique_ptr<CGroup> root, duckdb::unique_ptr<CRequiredPhysicalProp> required_property,
+                   ULONG search_stage) {
+	duckdb::unique_ptr<CGroupExpression> best_group_expr;
+	duckdb::unique_ptr<COptimizationContext> opt_context;
 	double cost = GPOPT_INVALID_COST;
 	if (root->m_is_scalar) {
 		// If the group has scalar expression, this group is called scalar group.
@@ -195,7 +203,7 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPhysicalP
 		// or physical children_expr. In this case, we lookup the best optimization context
 		// for the given required plan properties, and then retrieve the best group
 		// expression under the optimization context.
-		opt_context = root->PocLookupBest(search_stage, required_property);
+		opt_context = root->PocLookupBest(root, search_stage, required_property);
 		best_group_expr = root->BestExpression(opt_context);
 		if (nullptr != best_group_expr) {
 			cost = opt_context->m_best_cost_context->m_cost;
@@ -214,8 +222,8 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPhysicalP
 	// Group 1 and Group 7. Every single child is a CGroup.
 	ULONG arity = best_group_expr->Arity();
 	for (ULONG i = 0; i < arity; i++) {
-		CGroup *child_group = (*best_group_expr)[i];
-		CRequiredPhysicalProp *child_required_property = nullptr;
+		auto child_group = (*best_group_expr)[i];
+		duckdb::unique_ptr<CRequiredPhysicalProp> child_required_property = nullptr;
 		// If the child group doesn't have scalar expression, we get the optimization
 		// context for that child group as well as the required plan properties.
 		//
@@ -239,14 +247,14 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPhysicalP
 				// Orca doesn't support this feature yet, so falls back to planner.
 				assert(false);
 			}
-			COptimizationContext *child_opt_context = opt_context->m_best_cost_context->m_optimization_contexts[i];
+			auto child_opt_context = opt_context->m_best_cost_context->m_optimization_contexts[i];
 			child_required_property = child_opt_context->m_required_plan_properties;
 		}
 		duckdb::unique_ptr<Operator> child_expr = ExtractPlan(child_group, child_required_property, search_stage);
 		children_expr.emplace_back(std::move(child_expr));
 	}
 	duckdb::unique_ptr<Operator> expr =
-	    best_group_expr->m_operator->CopyWithNewChildren(best_group_expr, std::move(children_expr), cost);
+	    best_group_expr->m_operator->CopyWithNewChildren(best_group_expr, children_expr, cost);
 	return expr;
 }
 
@@ -258,8 +266,8 @@ duckdb::unique_ptr<Operator> CMemo::ExtractPlan(CGroup *root, CRequiredPhysicalP
 //		Mark groups as duplicates
 //
 //---------------------------------------------------------------------------
-void CMemo::MarkDuplicates(CGroup *left, CGroup *right) {
-	left->AddDuplicateGrp(right);
+void CMemo::MarkDuplicates(duckdb::unique_ptr<CGroup> left, duckdb::unique_ptr<CGroup> right) {
+	left->AddDuplicateGrp(left, right);
 	left->ResolveDuplicateMaster();
 	right->ResolveDuplicateMaster();
 }
@@ -287,9 +295,9 @@ void CMemo::MarkDuplicates(CGroup *left, CGroup *right) {
 //---------------------------------------------------------------------------
 bool CMemo::FRehash() {
 	// dump memo hash table into a local list
-	list<CGroupExpression *> listGExprs;
+	list<duckdb::unique_ptr<CGroupExpression>> listGExprs;
 	auto itr = group_expr_hashmap.begin();
-	CGroupExpression *pgexpr;
+	duckdb::unique_ptr<CGroupExpression> pgexpr;
 	while (group_expr_hashmap.end() != itr) {
 		pgexpr = itr->second;
 		if (NULL != pgexpr) {
@@ -305,7 +313,7 @@ bool CMemo::FRehash() {
 	while (!listGExprs.empty()) {
 		pgexpr = *(listGExprs.begin());
 		listGExprs.pop_front();
-		CGroupExpression *pgexprFound = NULL;
+		duckdb::unique_ptr<CGroupExpression> pgexprFound = nullptr;
 		{
 			// hash table accessor scope
 			itr = group_expr_hashmap.find(pgexpr);
@@ -318,7 +326,7 @@ bool CMemo::FRehash() {
 		}
 		// mark duplicate group expression
 		pgexpr->SetDuplicate(pgexprFound);
-		CGroup *pgroup = pgexpr->m_group;
+		duckdb::unique_ptr<CGroup> pgroup = pgexpr->m_group;
 		// move group expression to duplicates list in owner group
 		{
 			// group proxy scope
@@ -326,10 +334,10 @@ bool CMemo::FRehash() {
 			gp.MoveDuplicateGExpr(pgexpr);
 		}
 		// check if we need also to mark duplicate groups
-		CGroup *pgroupFound = pgexprFound->m_group;
+		duckdb::unique_ptr<CGroup> pgroupFound = pgexprFound->m_group;
 		if (pgroupFound != pgroup) {
-			CGroup *pgroupDup = pgroup->m_group_for_duplicate_groups;
-			CGroup *pgroupFoundDup = pgroupFound->m_group_for_duplicate_groups;
+			auto pgroupDup = pgroup->m_group_for_duplicate_groups;
+			auto pgroupFoundDup = pgroupFound->m_group_for_duplicate_groups;
 			if ((nullptr == pgroupDup && nullptr == pgroupFoundDup) || (pgroupDup != pgroupFoundDup)) {
 				MarkDuplicates(pgroup, pgroupFound);
 				fNewDupGroups = true;
@@ -353,7 +361,7 @@ void CMemo::GroupMerge() {
 	while (has_dup_groups) {
 		auto itr = m_groups_list.begin();
 		while (m_groups_list.end() != itr) {
-			CGroup *group = *itr;
+			auto group = *itr;
 			group->MergeGroup();
 			++itr;
 		}
@@ -395,9 +403,9 @@ void CMemo::DeriveStatsIfAbsent() {
 void CMemo::ResetGroupStates() {
 	auto itr = m_groups_list.begin();
 	while (m_groups_list.end() != itr) {
-		CGroup *group = *itr;
-		group->ResetGroupState();
-		group->ResetGroupJobQueues();
+		duckdb::unique_ptr<CGroup> group = *itr;
+		group->ResetGroupState(group);
+		group->ResetGroupJobQueues(group);
 		group->ResetHasNewLogicalOperators();
 		++itr;
 	}
@@ -411,9 +419,9 @@ void CMemo::ResetGroupStates() {
 //		Build tree map of member group expressions
 //
 //---------------------------------------------------------------------------
-void CMemo::BuildTreeMap(COptimizationContext *poc) {
-	m_tree_map = new MemoTreeMap(gpopt::Operator::PexprRehydrate);
-	m_root->BuildTreeMap(poc, NULL, gpos::ulong_max, m_tree_map);
+void CMemo::BuildTreeMap(duckdb::unique_ptr<COptimizationContext> poc) {
+	m_tree_map = make_uniq<MemoTreeMap>(gpopt::Operator::PexprRehydrate);
+	m_root->BuildTreeMap(m_root, poc, NULL, gpos::ulong_max, m_tree_map);
 }
 
 //---------------------------------------------------------------------------
@@ -426,13 +434,15 @@ void CMemo::BuildTreeMap(COptimizationContext *poc) {
 //---------------------------------------------------------------------------
 void CMemo::ResetTreeMap() {
 	if (nullptr != m_tree_map) {
-		delete m_tree_map;
-		m_tree_map = nullptr;
+		// Need to delete
+		// delete m_tree_map;
+		// m_tree_map = nullptr;
+		m_tree_map.reset();
 	}
 	auto itr = m_groups_list.begin();
 	while (m_groups_list.end() != itr) {
 		// reset link map of all groups
-		CGroup *pgroup = *itr;
+		duckdb::unique_ptr<CGroup> pgroup = *itr;
 		pgroup->ResetLinkMap();
 		++itr;
 	}
@@ -450,7 +460,7 @@ ULONG CMemo::NumDuplicateGroups() {
 	ULONG ulDuplicates = 0;
 	auto itr = m_groups_list.begin();
 	while (m_groups_list.end() != itr) {
-		CGroup *pgroup = *itr;
+		duckdb::unique_ptr<CGroup> pgroup = *itr;
 		if (pgroup->FDuplicateGroup()) {
 			ulDuplicates++;
 		}
@@ -471,7 +481,7 @@ ULONG CMemo::NumExprs() {
 	ULONG ulGExprs = 0;
 	auto itr = m_groups_list.begin();
 	while (m_groups_list.end() != itr) {
-		CGroup *pgroup = *itr;
+		duckdb::unique_ptr<CGroup> pgroup = *itr;
 		ulGExprs += pgroup->m_num_exprs;
 		++itr;
 	}

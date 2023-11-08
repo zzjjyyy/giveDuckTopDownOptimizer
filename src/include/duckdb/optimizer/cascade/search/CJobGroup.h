@@ -30,10 +30,10 @@ class CGroupExpression;
 class CJobGroup : public CJob {
 public:
 	// target group
-	CGroup *m_pgroup;
+	duckdb::unique_ptr<CGroup> m_pgroup;
 
 	// last scheduled group expression
-	list<CGroupExpression *>::iterator m_last_scheduled_expr;
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator m_last_scheduled_expr;
 
 	// ctor
 	CJobGroup() : m_pgroup(NULL) {
@@ -46,32 +46,36 @@ public:
 	virtual ~CJobGroup() {};
 
 	// initialize job
-	void Init(CGroup *pgroup);
+	void Init(duckdb::unique_ptr<CGroup> pgroup);
 
 	// get first unscheduled logical expression
-	virtual list<CGroupExpression *>::iterator PgexprFirstUnschedLogical();
+	virtual list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	PgexprFirstUnschedLogical();
 
 	// get first unscheduled non-logical expression
-	virtual list<CGroupExpression *>::iterator PgexprFirstUnschedNonLogical();
+	virtual list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	PgexprFirstUnschedNonLogical();
 
 	// get first unscheduled expression
-	virtual list<CGroupExpression *>::iterator PgexprFirstUnsched() = 0;
+	virtual list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	PgexprFirstUnsched() = 0;
 
 	// schedule jobs for of all new group expressions
-	virtual bool FScheduleGroupExpressions(CSchedulerContext *psc) = 0;
+	virtual bool
+	FScheduleGroupExpressions(duckdb::unique_ptr<CSchedulerContext> psc) = 0;
 
 	// job's function
-	bool FExecute(CSchedulerContext *psc) override = 0;
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) override = 0;
 
 public:
-	static void PrintJob(CJobGroup *job, std::string info) {
-		CGroup *group = job->m_pgroup;
-		CGroupExpression *expr = group->m_group_exprs.front();
-		Operator *op = expr->m_operator.get();
+	static void PrintJob(CJobGroup* job, std::string info) {
+		auto group = job->m_pgroup;
+		auto expr = group->m_group_exprs.front();
+		auto op = expr->m_operator;
 
 		std::string op_names = "Logical Type: " + LogicalOperatorToString(op->logical_type);
 		size_t group_id = group->m_id;
-
 		duckdb::Printer::Print(info + " " + op_names + "\tGroup Id " + std::to_string(group_id));
 	}
 }; // class CJobGroup

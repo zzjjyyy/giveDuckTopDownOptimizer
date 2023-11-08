@@ -19,9 +19,11 @@ using namespace gpos;
 class CXformUtils
 {
 public:
-    static duckdb::unique_ptr<Operator> PexprPushGbBelowJoin(Operator *expr);
+    static duckdb::unique_ptr<Operator>
+	PexprPushGbBelowJoin(duckdb::unique_ptr<Operator> expr);
 
-    static bool IsPK(duckdb::vector<ColumnBinding> v, Operator *m_operator);
+    static bool IsPK(duckdb::vector<ColumnBinding> v,
+				     duckdb::unique_ptr<Operator> m_operator);
 
     static bool FCanPushGbAggBelowJoin(duckdb::vector<ColumnBinding> pcrsGrpCols,
 									   duckdb::vector<ColumnBinding> pcrsJoinOuterChildOutput,
@@ -30,9 +32,10 @@ public:
 									   duckdb::vector<ColumnBinding> pcrsGrpByUsed,
 									   duckdb::vector<ColumnBinding> pcrsFKey);
 
-    static duckdb::unique_ptr<LogicalAggregate> PopGbAggPushableBelowJoin(LogicalAggregate *popGbAggOld,
-									   									  duckdb::vector<ColumnBinding> pcrsOutputOuter,
-									   									  duckdb::vector<ColumnBinding> pcrsGrpCols);
+    static duckdb::unique_ptr<LogicalAggregate>
+	PopGbAggPushableBelowJoin(duckdb::unique_ptr<LogicalAggregate> popGbAggOld,
+							  duckdb::vector<ColumnBinding> pcrsOutputOuter,
+							  duckdb::vector<ColumnBinding> pcrsGrpCols);
 };
 
 }

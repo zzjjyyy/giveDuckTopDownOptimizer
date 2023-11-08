@@ -20,7 +20,9 @@ namespace gpopt {
 //
 //---------------------------------------------------------------------------
 void CXformResult::Add(duckdb::unique_ptr<Operator> expression) {
-	m_alternative_expressions.push_back(std::move(expression));
+	// Need to delete
+	// m_alternative_expressions.push_back(std::move(expression));
+	m_alternative_expressions.push_back(expression);
 }
 
 //---------------------------------------------------------------------------
@@ -34,7 +36,9 @@ void CXformResult::Add(duckdb::unique_ptr<Operator> expression) {
 duckdb::unique_ptr<Operator> CXformResult::NextExpression() {
 	duckdb::unique_ptr<Operator> expression = nullptr;
 	if (m_expression < m_alternative_expressions.size()) {
-		expression = std::move(m_alternative_expressions[m_expression]);
+		// Need to delete
+		// expression = std::move(m_alternative_expressions[m_expression]);
+		expression = m_alternative_expressions[m_expression];
 	}
 	m_expression++;
 	return expression;

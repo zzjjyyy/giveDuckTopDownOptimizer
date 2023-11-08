@@ -204,27 +204,13 @@ double CardinalityEstimator::EstimateCardinalityWithSet(JoinRelationSet &new_set
 	for (idx_t i = 0; i < new_set.count; i++) {
 		bms = bms + (1 << (new_set.relations[i] + 1));
 	}
-	char* pos;
-	char* p;
-	char cmp[1000];
-	int relid;
-	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
-	while(fgets(cmp, 1000, fp) != NULL) {
-		if((pos = strchr(cmp, '\n')) != NULL) {
-			*pos = '\0';
-		}
-		p = strtok(cmp, ":");
-		relid = atoi(p);
-		if(relid == bms) {
-			p = strtok(NULL, ":");
-			double true_val = atof(p);
-			if(true_val < 9999999999999.0) {
-				fclose(fp);
-				return true_val;
-			}
-		}
+	auto true_val = true_set.find(bms);
+	if(true_val != true_set.end()) {
+		return true_val->second;
+	} else {
+		return 9999999999.0;
 	}
-	fclose(fp);
+	
 	double numerator = 1;
 	unordered_set<idx_t> actual_set;
 	for (idx_t i = 0; i < new_set.count; i++) {
@@ -616,28 +602,16 @@ void CardinalityEstimator::EstimateBaseTableCardinality(JoinNode &node, LogicalO
 	auto has_logical_filter = IsLogicalFilter(op);
 	D_ASSERT(node.set.count == 1);
 	auto relation_id = node.set.relations[0];
-	char* pos;
-	char* p;
-	char cmp[1000];
-	int relid;
-	FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
-	while(fgets(cmp, 1000, fp) != NULL) {
-		if((pos = strchr(cmp, '\n')) != NULL) {
-			*pos = '\0';
-		}
-		p = strtok(cmp, ":");
-		relid = atoi(p);
-		if(relid == (1 << (relation_id + 1))) {
-			p = strtok(NULL, ":");
-			double true_val = atof(p);
-			if(true_val < 9999999999999.0) {
-				fclose(fp);
-				node.SetEstimatedCardinality(true_val);
-				return;
-			}
-		}
+	int bms = 1 << (relation_id + 1);
+	auto true_val = true_set.find(bms);
+	if(true_val != true_set.end()) {
+		node.SetEstimatedCardinality(true_val->second);
+		return;
+	} else {
+		node.SetEstimatedCardinality(9999999999.0);
+		return;
 	}
-	fclose(fp);
+
 	double lowest_card_found = NumericLimits<double>::Maximum();
 	for (auto &column : relation_attributes[relation_id].columns) {
 		auto card_after_filters = node.GetBaseTableCardinality();

@@ -46,9 +46,9 @@ CDerivedPhysicalProp::~CDerivedPhysicalProp() {
 //		Derive plan props
 //
 //---------------------------------------------------------------------------
-void CDerivedPhysicalProp::Derive(gpopt::CExpressionHandle &exprhdl, CDerivedPropertyContext *pdpctxt) {
+void CDerivedPhysicalProp::Derive(gpopt::CExpressionHandle &exprhdl, duckdb::unique_ptr<CDerivedPropertyContext> pdpctxt) {
 	// call property derivation functions on the operator
-	m_sort_order = ((PhysicalOperator *)exprhdl.Pop())->PosDerive(exprhdl);
+	m_sort_order = (unique_ptr_cast<Operator, PhysicalOperator>(exprhdl.Pop()))->PosDerive(exprhdl);
 }
 
 //---------------------------------------------------------------------------
@@ -59,8 +59,8 @@ void CDerivedPhysicalProp::Derive(gpopt::CExpressionHandle &exprhdl, CDerivedPro
 //		Short hand for conversion
 //
 //---------------------------------------------------------------------------
-CDerivedPhysicalProp *CDerivedPhysicalProp::DrvdPlanProperty(CDerivedProperty *pdp) {
-	return (CDerivedPhysicalProp *)pdp;
+duckdb::unique_ptr<CDerivedPhysicalProp> CDerivedPhysicalProp::DrvdPlanProperty(duckdb::unique_ptr<CDerivedProperty> pdp) {
+	return unique_ptr_cast<CDerivedProperty, CDerivedPhysicalProp>(pdp);
 }
 
 //---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ CDerivedPhysicalProp *CDerivedPhysicalProp::DrvdPlanProperty(CDerivedProperty *p
 //		Check for satisfying required properties
 //
 //---------------------------------------------------------------------------
-BOOL CDerivedPhysicalProp::FSatisfies(const CRequiredPhysicalProp *prop_plan) const {
+bool CDerivedPhysicalProp::FSatisfies(const duckdb::unique_ptr<CRequiredPhysicalProp> prop_plan) const {
 	return m_sort_order->FSatisfies(prop_plan->m_sort_order->m_order_spec);
 }
 
@@ -96,7 +96,7 @@ size_t CDerivedPhysicalProp::HashValue() const {
 //		Equality function
 //
 //---------------------------------------------------------------------------
-ULONG CDerivedPhysicalProp::Equals(const CDerivedPhysicalProp *pdpplan) const {
+ULONG CDerivedPhysicalProp::Equals(const duckdb::unique_ptr<CDerivedPhysicalProp> pdpplan) const {
 	return m_sort_order->Matches(pdpplan->m_sort_order);
 }
 } // namespace gpopt

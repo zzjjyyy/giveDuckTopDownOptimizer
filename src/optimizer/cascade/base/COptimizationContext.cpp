@@ -22,7 +22,7 @@ namespace gpopt {
 const COptimizationContext COptimizationContext::M_INVALID_OPT_CONTEXT;
 
 // invalid optimization context pointer
-const OPTCTXT_PTR COptimizationContext::M_INVALID_OPT_CONTEXT_PTR = NULL;
+const OPTCTXT_PTR COptimizationContext::M_INVALID_OPT_CONTEXT_PTR = nullptr;
 
 //---------------------------------------------------------------------------
 //	@function:
@@ -43,7 +43,8 @@ COptimizationContext::~COptimizationContext() {
 //		Best group expression accessor
 //
 //---------------------------------------------------------------------------
-CGroupExpression *COptimizationContext::BestExpression() const {
+duckdb::unique_ptr<CGroupExpression>
+COptimizationContext::BestExpression() const {
 	if (nullptr == m_best_cost_context) {
 		return nullptr;
 	}
@@ -58,7 +59,7 @@ CGroupExpression *COptimizationContext::BestExpression() const {
 //		 Set best cost context
 //
 //---------------------------------------------------------------------------
-void COptimizationContext::SetBest(CCostContext *pcc) {
+void COptimizationContext::SetBest(duckdb::unique_ptr<CCostContext> pcc) {
 	m_best_cost_context = pcc;
 }
 
@@ -70,15 +71,15 @@ void COptimizationContext::SetBest(CCostContext *pcc) {
 //		Match against another context
 //
 //---------------------------------------------------------------------------
-bool COptimizationContext::Matches(const COptimizationContext *poc) const {
+bool COptimizationContext::Matches(const duckdb::unique_ptr<COptimizationContext> poc) const {
 	if (m_group != poc->m_group || m_search_stage != poc->UlSearchStageIndex()) {
 		return false;
 	}
-	CRequiredPhysicalProp *prppFst = this->m_required_plan_properties;
-	CRequiredPhysicalProp *prppSnd = poc->m_required_plan_properties;
+	auto prppFst = this->m_required_plan_properties;
+	auto prppSnd = poc->m_required_plan_properties;
 	// make sure we are not comparing to invalid context
-	if (NULL == prppFst || NULL == prppSnd) {
-		return NULL == prppFst && NULL == prppSnd;
+	if (nullptr == prppFst || nullptr == prppSnd) {
+		return nullptr == prppFst && nullptr == prppSnd;
 	}
 	return prppFst->Equals(prppSnd);
 }
@@ -91,7 +92,8 @@ bool COptimizationContext::Matches(const COptimizationContext *poc) const {
 //		Equality function used for computing stats during costing
 //
 //---------------------------------------------------------------------------
-bool COptimizationContext::FEqualForStats(const COptimizationContext *pocLeft, const COptimizationContext *pocRight) {
+bool COptimizationContext::FEqualForStats(const duckdb::unique_ptr<COptimizationContext> pocLeft,
+										  const duckdb::unique_ptr<COptimizationContext> pocRight) {
 	return CUtils::Equals(pocLeft->m_required_relational_properties->PcrsStat(),
 	                      pocRight->m_required_relational_properties->PcrsStat());
 }
@@ -105,8 +107,10 @@ bool COptimizationContext::FEqualForStats(const COptimizationContext *pocLeft, c
 //		given context
 //
 //---------------------------------------------------------------------------
-bool COptimizationContext::FOptimize(CGroupExpression *pgexprParent, CGroupExpression *pgexprChild,
-                                     COptimizationContext *pocChild, ULONG ulSearchStages) {
+bool COptimizationContext::FOptimize(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+									 duckdb::unique_ptr<CGroupExpression> pgexprChild,
+                                     duckdb::unique_ptr<COptimizationContext> pocChild,
+									 ULONG ulSearchStages) {
 	if (PhysicalOperatorType::ORDER_BY == pgexprChild->m_operator->physical_type) {
 		return FOptimizeSort(pgexprParent, pgexprChild, pocChild, ulSearchStages);
 	}
@@ -124,8 +128,8 @@ bool COptimizationContext::FOptimize(CGroupExpression *pgexprParent, CGroupExpre
 //		Compare array of optimization contexts based on context ids
 //
 //---------------------------------------------------------------------------
-bool COptimizationContext::FEqualContextIds(duckdb::vector<COptimizationContext *> pdrgpocFst,
-                                            duckdb::vector<COptimizationContext *> pdrgpocSnd) {
+bool COptimizationContext::FEqualContextIds(duckdb::vector<duckdb::unique_ptr<COptimizationContext>> pdrgpocFst,
+                                            duckdb::vector<duckdb::unique_ptr<COptimizationContext>> pdrgpocSnd) {
 	if (0 == pdrgpocFst.size() || 0 == pdrgpocSnd.size()) {
 		return (0 == pdrgpocFst.size() && 0 == pdrgpocSnd.size());
 	}
@@ -148,10 +152,12 @@ bool COptimizationContext::FEqualContextIds(duckdb::vector<COptimizationContext 
 //		Check if a Sort node should be optimized for the given context
 //
 //---------------------------------------------------------------------------
-bool COptimizationContext::FOptimizeSort(CGroupExpression *pgexprParent, CGroupExpression *pgexprSort,
-                                         COptimizationContext *poc, ULONG ulSearchStages) {
-	return poc->m_required_plan_properties->m_sort_order->FCompatible(
-	    ((PhysicalOrder *)pgexprSort->m_operator.get())->OrderSpec());
+bool COptimizationContext::FOptimizeSort(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+										 duckdb::unique_ptr<CGroupExpression> pgexprSort,
+                                         duckdb::unique_ptr<COptimizationContext> poc,
+										 ULONG ulSearchStages) {
+	return poc->m_required_plan_properties
+		->m_sort_order->FCompatible(((PhysicalOrder *)pgexprSort->m_operator.get())->OrderSpec());
 }
 
 //---------------------------------------------------------------------------
@@ -162,11 +168,13 @@ bool COptimizationContext::FOptimizeSort(CGroupExpression *pgexprParent, CGroupE
 //		Check if Agg node should be optimized for the given context
 //
 //---------------------------------------------------------------------------
-bool COptimizationContext::FOptimizeAgg(CGroupExpression *pgexprParent, CGroupExpression *pgexprAgg,
-                                        COptimizationContext *poc, ULONG ulSearchStages) {
+bool COptimizationContext::FOptimizeAgg(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+										duckdb::unique_ptr<CGroupExpression> pgexprAgg,
+                                        duckdb::unique_ptr<COptimizationContext> poc,
+										ULONG ulSearchStages) {
 	// otherwise, we need to avoid optimizing node unless it is a multi-stage agg
 	// COptimizationContext* pocFound = pgexprAgg->m_group->PocLookupBest(ulSearchStages,
-	// poc->m_required_physical_property); if (NULL != pocFound && pocFound->FHasMultiStageAggPlan())
+	// poc->m_required_physical_property); if (nullptr != pocFound && pocFound->FHasMultiStageAggPlan())
 	// {
 	//  	// context already has a multi-stage agg plan, optimize child only if it is also a multi-stage agg
 	// 	    return CPhysicalAgg::PopConvert(pgexprAgg->Pop())->FMultiStage();
@@ -183,12 +191,14 @@ bool COptimizationContext::FOptimizeAgg(CGroupExpression *pgexprParent, CGroupEx
 //		Check if NL join node should be optimized for the given context
 //
 //---------------------------------------------------------------------------
-bool COptimizationContext::FOptimizeNLJoin(CGroupExpression *pgexprParent, CGroupExpression *pgexprJoin,
-                                           COptimizationContext *poc, ULONG ulSearchStages) {
+bool COptimizationContext::FOptimizeNLJoin(duckdb::unique_ptr<CGroupExpression> pgexprParent,
+										   duckdb::unique_ptr<CGroupExpression> pgexprJoin,
+                                           duckdb::unique_ptr<COptimizationContext> poc,
+										   ULONG ulSearchStages) {
 	// For correlated join, the requested columns must be covered by outer child
 	// columns and columns to be generated from inner child
 	duckdb::vector<ColumnBinding> pcrs;
-	duckdb::vector<ColumnBinding> pcrsOuterChild =
+	auto pcrsOuterChild =
 	    CDerivedLogicalProp::GetRelationalProperties((*pgexprJoin)[0]->m_derived_properties)->GetOutputColumns();
 	pcrs.insert(pcrsOuterChild.begin(), pcrsOuterChild.end(), pcrs.end());
 	bool fIncluded = CUtils::ContainsAll(pcrs, poc->m_required_plan_properties->m_cols);

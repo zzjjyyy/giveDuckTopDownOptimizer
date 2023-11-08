@@ -45,14 +45,15 @@ public:
 
 public:
 	// copy function
-	virtual CDerivedPropertyContext *PdpctxtCopy() const = 0;
+	virtual duckdb::unique_ptr<CDerivedPropertyContext> PdpctxtCopy() const = 0;
 
 	// add props to context
-	virtual void AddProps(CDerivedProperty *pdp) = 0;
+	virtual void AddProps(duckdb::unique_ptr<CDerivedProperty> pdp) = 0;
 
 public:
 	// copy function
-	static CDerivedPropertyContext *PdpctxtCopy(CDerivedPropertyContext *pdpctxt) {
+	static duckdb::unique_ptr<CDerivedPropertyContext>
+	PdpctxtCopy(duckdb::unique_ptr<CDerivedPropertyContext> pdpctxt) {
 		if (nullptr == pdpctxt) {
 			return nullptr;
 		}
@@ -60,7 +61,9 @@ public:
 	}
 
 	// add derived props to context
-	static void AddDerivedProps(CDerivedProperty *pdp, CDerivedPropertyContext *pdpctxt) {
+	static void
+	AddDerivedProps(duckdb::unique_ptr<CDerivedProperty> pdp,
+					duckdb::unique_ptr<CDerivedPropertyContext> pdpctxt) {
 		if (nullptr != pdpctxt) {
 			pdpctxt->AddProps(pdp);
 		}

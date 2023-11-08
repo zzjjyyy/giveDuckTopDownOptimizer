@@ -10,7 +10,7 @@ BoundResultModifier::~BoundResultModifier() {
 }
 
 BoundOrderByNode::BoundOrderByNode(const BoundOrderByNode &other)
-	: type(other.type), null_order(other.null_order), expression(other.expression->Copy())
+	: type(other.type), null_order(other.null_order), expression(other.expression)
 {		
 }
 

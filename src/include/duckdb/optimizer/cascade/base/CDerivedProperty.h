@@ -58,23 +58,27 @@ public:
 
 public:
 	CDerivedProperty();
+
+	// no copy ctor
+	CDerivedProperty(const CDerivedProperty &) = delete;
+	
 	virtual ~CDerivedProperty() {
 	}
 
 	// type of properties
 	virtual EPropType PropertyType() = 0;
+
 	// derivation function
-	virtual void Derive(CExpressionHandle &pop, CDerivedPropertyContext *pdpctxt) = 0;
+	virtual void Derive(CExpressionHandle &pop,
+					    duckdb::unique_ptr<CDerivedPropertyContext> pdpctxt) = 0;
+
 	// check for satisfying required plan properties
-	virtual BOOL FSatisfies(const CRequiredPhysicalProp *prpp) const = 0;
-	virtual BOOL IsComplete() const {
+	virtual bool
+	FSatisfies(const duckdb::unique_ptr<CRequiredPhysicalProp> prpp) const = 0;
+
+	virtual bool IsComplete() const {
 		return true;
 	}
-
-private:
-	// private copy ctor
-	CDerivedProperty(const CDerivedProperty &);
-
 }; // class CDerivedProperty
 } // namespace gpopt
 #endif

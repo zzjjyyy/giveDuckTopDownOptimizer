@@ -40,7 +40,8 @@ CXformGet2TableScan::CXformGet2TableScan()
 //		Compute promise of xform
 //
 //---------------------------------------------------------------------------
-CXform::EXformPromise CXformGet2TableScan::XformPromise(CExpressionHandle &expression_handle) const {
+CXform::EXformPromise
+CXformGet2TableScan::XformPromise(CExpressionHandle &expression_handle) const {
 	return CXform::ExfpHigh;
 }
 
@@ -52,12 +53,13 @@ CXform::EXformPromise CXformGet2TableScan::XformPromise(CExpressionHandle &expre
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformGet2TableScan::Transform(CXformContext *xform_context, CXformResult *xform_result,
-                                    Operator *expression) const {
-	LogicalGet *op = static_cast<LogicalGet *>(expression);
+void CXformGet2TableScan::Transform(duckdb::unique_ptr<CXformContext> xform_context,
+									duckdb::unique_ptr<CXformResult> xform_result,
+                                    duckdb::unique_ptr<Operator>expression) const {
+	auto op = unique_ptr_cast<Operator, LogicalGet>(expression);
 
 	// copy bind data
-	duckdb::unique_ptr<TableScanBindData> cpy_bind_data =
+	auto cpy_bind_data =
 	    make_uniq<TableScanBindData>(op->bind_data->Cast<TableScanBindData>().table);
 	cpy_bind_data->column_ids = op->bind_data->Cast<TableFunctionData>().column_ids;
 
@@ -68,7 +70,7 @@ void CXformGet2TableScan::Transform(CXformContext *xform_context, CXformResult *
 	}
 
 	// create alternative expression
-	duckdb::unique_ptr<PhysicalTableScan> alternative_expression = make_uniq<PhysicalTableScan>(
+	auto alternative_expression = make_uniq<PhysicalTableScan>(
 	    op->types, op->function, std::move(cpy_bind_data), op->returned_types, op->column_ids,
 	    duckdb::vector<column_t>(), op->names, std::move(table_filters), op->estimated_cardinality);
 
@@ -96,7 +98,9 @@ CXformGet2TableScan::CreateTableFilterSet(TableFilterSet &table_filters, duckdb:
 		if (column_index == DConstants::INVALID_INDEX) {
 			throw InternalException("Could not find column index for table filter");
 		}
-		table_filter_set->filters[column_index] = table_filter.second->Copy();
+		// Need to delete
+		// table_filter_set->filters[column_index] = table_filter.second->Copy();
+		table_filter_set->filters[column_index] = table_filter.second;
 	}
 	return table_filter_set;
 }

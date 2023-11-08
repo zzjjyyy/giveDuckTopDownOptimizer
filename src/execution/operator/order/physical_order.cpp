@@ -43,11 +43,15 @@ COrderProperty::EPropEnforcingType PhysicalOrder::EnforcingTypeOrder(CExpression
 	return COrderProperty::EpetProhibited;
 }
 
-COrderSpec *PhysicalOrder::RequiredSortSpec(CExpressionHandle &exprhdl, COrderSpec *pos_required, ULONG child_index,
-                                            vector<CDerivedProperty *> pdrgpdp_ctxt, ULONG ul_opt_req) const {
+duckdb::unique_ptr<COrderSpec>
+PhysicalOrder::RequiredSortSpec(CExpressionHandle &exprhdl,
+								duckdb::unique_ptr<COrderSpec> pos_required,
+								ULONG child_index,
+                                vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdp_ctxt,
+								ULONG ul_opt_req) const {
 	// sort operator is order-establishing and does not require child to deliver
 	// any sort order; we return an empty sort order as child requirement
-	return new COrderSpec();
+	return make_uniq<COrderSpec>();
 }
 
 bool PhysicalOrder::FProvidesReqdCols(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrs_required,
@@ -67,9 +71,12 @@ vector<ColumnBinding> PhysicalOrder::GetColumnBindings() {
 //		Compute required columns of the n-th child;
 //
 //---------------------------------------------------------------------------
-vector<ColumnBinding> PhysicalOrder::PcrsRequired(CExpressionHandle &exprhdl, vector<ColumnBinding> pcrs_required,
-                                                  ULONG child_index, vector<CDerivedProperty *> pdrgpdp_ctxt,
-                                                  ULONG ul_opt_req) {
+vector<ColumnBinding>
+PhysicalOrder::PcrsRequired(CExpressionHandle &exprhdl,
+							vector<ColumnBinding> pcrs_required,
+                            ULONG child_index,
+							vector<duckdb::unique_ptr<CDerivedProperty>> pdrgpdp_ctxt,
+                            ULONG ul_opt_req) {
 	vector<ColumnBinding> pcrs_sort;
 	for (auto &child : orders) {
 		vector<ColumnBinding> cell = child.expression->GetColumnBinding();
@@ -92,13 +99,16 @@ vector<ColumnBinding> PhysicalOrder::PcrsRequired(CExpressionHandle &exprhdl, ve
 	return pcrs_child_reqd;
 }
 
-CKeyCollection *DeriveKeyCollection(CExpressionHandle &exprhdl) {
+duckdb::unique_ptr<CKeyCollection>
+DeriveKeyCollection(CExpressionHandle &exprhdl) {
 	return nullptr;
 }
 
-Operator *PhysicalOrder::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-                                       CDrvdPropCtxtPlan *pdpctxtplan) {
-	CGroupExpression *pgexpr = pcc->m_group_expression;
+duckdb::unique_ptr<Operator>
+PhysicalOrder::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+							 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                             duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
+	auto pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	ULONG arity = pgexpr->Arity();
 	vector<double> pdrgpcost;
@@ -111,7 +121,7 @@ Operator *PhysicalOrder::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operato
 	for (auto &child : this->orders) {
 		v_orders.emplace_back(child.Copy());
 	}
-	PhysicalOrder *pexpr = new PhysicalOrder(types, std::move(v_orders), projections, 0);
+	auto pexpr = make_uniq<PhysicalOrder>(types, std::move(v_orders), projections, 0);
 	pexpr->m_cost = cost;
 	pexpr->m_group_expression = pgexpr;
 	return pexpr;
@@ -146,7 +156,8 @@ unique_ptr<Operator> PhysicalOrder::Copy() {
 	return unique_ptr_cast<PhysicalOrder, Operator>(std::move(copy));
 }
 
-unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+unique_ptr<Operator>
+PhysicalOrder::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	/* PhysicalOrder fields */
 	vector<BoundOrderByNode> v_orders;
 	for (auto &child : this->orders) {
@@ -175,8 +186,10 @@ unique_ptr<Operator> PhysicalOrder::CopyWithNewGroupExpression(CGroupExpression 
 	return unique_ptr_cast<PhysicalOrder, Operator>(std::move(copy));
 }
 
-unique_ptr<Operator> PhysicalOrder::CopyWithNewChildren(CGroupExpression *pgexpr,
-                                                        vector<unique_ptr<Operator>> pdrgpexpr, double cost) {
+unique_ptr<Operator>
+PhysicalOrder::CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+                                   vector<unique_ptr<Operator>> pdrgpexpr,
+								   double cost) {
 	/* PhysicalOrder fields */
 	vector<BoundOrderByNode> v_orders;
 	for (auto &child : this->orders) {

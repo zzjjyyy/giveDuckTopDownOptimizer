@@ -47,8 +47,10 @@ CXform::EXformPromise CXformLogicalAggregateImplementation::XformPromise(CExpres
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformLogicalAggregateImplementation::Transform(CXformContext *pxfctxt, CXformResult *pxfres, Operator *pexpr) const {
-	LogicalAggregate *op_agg = static_cast<LogicalAggregate *>(pexpr);
+void CXformLogicalAggregateImplementation::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+													 duckdb::unique_ptr<CXformResult> pxfres,
+													 duckdb::unique_ptr<Operator> pexpr) const {
+	auto op_agg = unique_ptr_cast<Operator, LogicalAggregate>(pexpr);
     if (op_agg->groups.empty()) {
 		// no groups, check if we can use a simple aggregation
 		// special case: aggregate entire columns together
@@ -63,14 +65,20 @@ void CXformLogicalAggregateImplementation::Transform(CXformContext *pxfctxt, CXf
 		}
         duckdb::vector<duckdb::unique_ptr<Expression>> v;
         for(auto &child : op_agg->expressions) {
-            v.push_back(child->Copy());
+			// Need to delete
+            // v.push_back(child->Copy());
+			v.push_back(child);
         }
 		if (use_simple_aggregation) {
 			auto Agg = make_uniq<PhysicalUngroupedAggregate>(op_agg->types, std::move(v),
 			                                                 op_agg->estimated_cardinality);
 			Agg->v_column_binding = op_agg->GetColumnBindings();
-			for(auto &child : pexpr->children) {
-				Agg->AddChild(child->Copy());
+			// Need to delete
+			// for(auto &child : pexpr->children) {
+			for(auto child : pexpr->children) {
+				// Need to delete
+				// Agg->AddChild(child->Copy());
+				Agg->AddChild(child);
 			}
 			// Cardinality Estimation
 			Agg->CE();
@@ -80,8 +88,12 @@ void CXformLogicalAggregateImplementation::Transform(CXformContext *pxfctxt, CXf
 			auto groupby = make_uniq<PhysicalHashAggregate>(op_agg->types, std::move(v),
                                                             op_agg->estimated_cardinality);
 			groupby->v_column_binding = op_agg->GetColumnBindings();
-			for(auto &child : pexpr->children) {
-				groupby->AddChild(child->Copy());
+			// Need to delete
+			// for(auto &child : pexpr->children) {
+			for(auto child : pexpr->children) {
+				// Need to delete
+				// groupby->AddChild(child->Copy());
+				groupby->AddChild(child);
 			}
 			// Cardinality Estimation
 			groupby->CE();
@@ -93,11 +105,15 @@ void CXformLogicalAggregateImplementation::Transform(CXformContext *pxfctxt, CXf
 		duckdb::vector<idx_t> required_bits;
 		duckdb::vector<duckdb::unique_ptr<Expression>> expressions;
 		for(auto &child : op_agg->expressions) {
-            expressions.push_back(child->Copy());
+			// Need to delete
+            // expressions.push_back(child->Copy());
+			expressions.push_back(child);
         }
 		duckdb::vector<duckdb::unique_ptr<Expression>> groups;
 		for(auto &child : op_agg->groups) {
-            groups.push_back(child->Copy());
+			// Need to delete
+            // groups.push_back(child->Copy());
+			groups.push_back(child);
         }
 		duckdb::vector<duckdb::GroupingSet> grouping_sets;
 		for(auto &child : op_agg->grouping_sets) {
@@ -111,8 +127,12 @@ void CXformLogicalAggregateImplementation::Transform(CXformContext *pxfctxt, CXf
 			    op_agg->types, std::move(expressions), std::move(groups), std::move(grouping_sets),
 			    std::move(grouping_functions), op_agg->estimated_cardinality);
 		groupby->v_column_binding = op_agg->GetColumnBindings();
-		for(auto &child : pexpr->children) {
-			groupby->AddChild(child->Copy());
+		// Need to delete
+		// for(auto &child : pexpr->children) {
+		for(auto child : pexpr->children) {
+			// Need to delete
+			// groupby->AddChild(child->Copy());
+			groupby->AddChild(child);
 		}
 		groupby->CE();
 		pxfres->Add(std::move(groupby));

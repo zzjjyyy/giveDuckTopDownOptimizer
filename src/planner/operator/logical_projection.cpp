@@ -34,7 +34,8 @@ vector<idx_t> LogicalProjection::GetTableIndex() const {
 	return vector<idx_t> {table_index};
 }
 
-CKeyCollection *LogicalProjection::DeriveKeyCollection(CExpressionHandle &exprhdl) {
+duckdb::unique_ptr<CKeyCollection>
+LogicalProjection::DeriveKeyCollection(CExpressionHandle &exprhdl) {
 	return PkcDeriveKeysPassThru(exprhdl, 0);
 }
 
@@ -46,24 +47,31 @@ CKeyCollection *LogicalProjection::DeriveKeyCollection(CExpressionHandle &exprhd
 //		Derive constraint property
 //
 //---------------------------------------------------------------------------
-CPropConstraint *LogicalProjection::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
+duckdb::unique_ptr<CPropConstraint>
+LogicalProjection::DerivePropertyConstraint(CExpressionHandle &exprhdl) {
 	return nullptr;
 	// return PpcDeriveConstraintPassThru(exprhdl, 0);
 }
 
 // Rehydrate expression from a given cost context and child expressions
-Operator *LogicalProjection::SelfRehydrate(CCostContext *pcc, duckdb::vector<Operator *> pdrgpexpr,
-                                           CDrvdPropCtxtPlan *pdpctxtplan) {
-	CGroupExpression *pgexpr = pcc->m_group_expression;
+duckdb::unique_ptr<Operator>
+LogicalProjection::SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+								 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                                 duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
+	auto pgexpr = pcc->m_group_expression;
 	double cost = pcc->m_cost;
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
-	for (auto &child : pgexpr->m_operator.get()->expressions) {
-		v.push_back(child->Copy());
+	// Need to delete
+	// for (auto &child : pgexpr->m_operator.get()->expressions) {
+	for (auto child : pgexpr->m_operator->expressions) {
+		v.push_back(child);
 	}
-	LogicalProjection *pexpr =
-	    new LogicalProjection(((LogicalProjection *)pgexpr->m_operator.get())->table_index, std::move(v));
-	for (auto &child : pdrgpexpr) {
-		pexpr->AddChild(child->Copy());
+	auto pexpr =
+	    make_uniq<LogicalProjection>(((LogicalProjection *)pgexpr->m_operator.get())->table_index, std::move(v));
+	// Need to delete
+	// for (auto &child : pdrgpexpr) {
+	for (auto child : pdrgpexpr) {
+		pexpr->AddChild(child);
 	}
 	pexpr->m_cost = cost;
 	pexpr->m_group_expression = pgexpr;
@@ -78,8 +86,9 @@ Operator *LogicalProjection::SelfRehydrate(CCostContext *pcc, duckdb::vector<Ope
 //		Get candidate xforms
 //
 //---------------------------------------------------------------------------
-CXform_set *LogicalProjection::XformCandidates() const {
-	CXform_set *xform_set = new CXform_set();
+duckdb::unique_ptr<CXform_set>
+LogicalProjection::XformCandidates() const {
+	auto xform_set = make_uniq<CXform_set>();
 	(void)xform_set->set(CXform::ExfLogicalProj2PhysicalProj);
 	return xform_set;
 }
@@ -109,7 +118,8 @@ duckdb::unique_ptr<Operator> LogicalProjection::Copy() {
 	return unique_ptr_cast<LogicalProjection, Operator>(std::move(result));
 }
 
-duckdb::unique_ptr<Operator> LogicalProjection::CopyWithNewGroupExpression(CGroupExpression *pgexpr) {
+duckdb::unique_ptr<Operator>
+LogicalProjection::CopyWithNewGroupExpression(unique_ptr<CGroupExpression> pgexpr) {
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
 	for (auto &child : expressions) {
 		v.push_back(child->Copy());
@@ -135,7 +145,8 @@ duckdb::unique_ptr<Operator> LogicalProjection::CopyWithNewGroupExpression(CGrou
 }
 
 duckdb::unique_ptr<Operator>
-LogicalProjection::CopyWithNewChildren(CGroupExpression *pgexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+LogicalProjection::CopyWithNewChildren(unique_ptr<CGroupExpression> pgexpr,
+									   duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
                                        double cost) {
 	duckdb::vector<duckdb::unique_ptr<Expression>> v;
 	for (auto &child : expressions) {

@@ -6,7 +6,8 @@ namespace gpopt
 using namespace gpos;
 using namespace duckdb;
 
-bool CUtils::IsDisjoint(duckdb::vector<ColumnBinding> pcrs1, duckdb::vector<ColumnBinding> pcrs2)
+bool CUtils::IsDisjoint(duckdb::vector<ColumnBinding> pcrs1,
+						duckdb::vector<ColumnBinding> pcrs2)
 {
     duckdb::vector<ColumnBinding> target;
     std::set_intersection(pcrs1.begin(), pcrs1.end(), pcrs2.begin(), pcrs2.end(), target.begin());
@@ -20,14 +21,16 @@ bool CUtils::IsDisjoint(duckdb::vector<ColumnBinding> pcrs1, duckdb::vector<Colu
 // add an equivalence class to the array. If the new equiv class contains
 // columns from separate equiv classes, then these are merged. Returns a new
 // array of equivalence classes
-duckdb::vector<duckdb::vector<ColumnBinding>> CUtils::AddEquivClassToArray(duckdb::vector<ColumnBinding> pcrsNew, duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs)
+duckdb::vector<duckdb::vector<ColumnBinding>>
+CUtils::AddEquivClassToArray(duckdb::vector<ColumnBinding> pcrsNew,
+							 duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs)
 {
 	duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsNew;
-	duckdb::vector<ColumnBinding> pcrsCopy = pcrsNew;
+	auto pcrsCopy = pcrsNew;
 	const ULONG length = pdrgpcrs.size();
 	for (ULONG ul = 0; ul < length; ul++)
 	{
-		duckdb::vector<ColumnBinding> pcrs = pdrgpcrs[ul];
+		auto pcrs = pdrgpcrs[ul];
 		if (IsDisjoint(pcrsCopy, pcrs))
 		{
 			pdrgpcrsNew.push_back(pcrs);
@@ -42,20 +45,23 @@ duckdb::vector<duckdb::vector<ColumnBinding>> CUtils::AddEquivClassToArray(duckd
 }
 
 // merge 2 arrays of equivalence classes
-duckdb::vector<duckdb::vector<ColumnBinding>> CUtils::PdrgpcrsMergeEquivClasses(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsFst, duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsSnd)
+duckdb::vector<duckdb::vector<ColumnBinding>>
+CUtils::PdrgpcrsMergeEquivClasses(duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsFst,
+								  duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsSnd)
 {
-	duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrsMerged = pdrgpcrsFst;
+	auto pdrgpcrsMerged = pdrgpcrsFst;
 	ULONG length = pdrgpcrsSnd.size();
 	for (ULONG ul = 0; ul < length; ul++)
 	{
-		duckdb::vector<ColumnBinding> pcrs = pdrgpcrsSnd[ul];
-		duckdb::vector<duckdb::vector<ColumnBinding>> pdrgpcrs = AddEquivClassToArray(pcrs, pdrgpcrsMerged);
+		auto pcrs = pdrgpcrsSnd[ul];
+		auto pdrgpcrs = AddEquivClassToArray(pcrs, pdrgpcrsMerged);
 		pdrgpcrsMerged = pdrgpcrs;
 	}
 	return pdrgpcrsMerged;
 }
 
-bool CUtils::Equals(duckdb::vector<ColumnBinding> first, duckdb::vector<ColumnBinding> second)
+bool CUtils::Equals(duckdb::vector<ColumnBinding> first,
+					duckdb::vector<ColumnBinding> second)
 {
 	if(first.size() != second.size())
 		return false;
@@ -78,7 +84,8 @@ bool CUtils::Equals(duckdb::vector<ColumnBinding> first, duckdb::vector<ColumnBi
 	return true;
 }
 
-bool CUtils::ContainsAll(duckdb::vector<ColumnBinding> parent, duckdb::vector<ColumnBinding> child)
+bool CUtils::ContainsAll(duckdb::vector<ColumnBinding> parent,
+						 duckdb::vector<ColumnBinding> child)
 {
 	if(parent.size() < child.size())
 	{
@@ -103,7 +110,8 @@ bool CUtils::ContainsAll(duckdb::vector<ColumnBinding> parent, duckdb::vector<Co
 	return true;
 }
 
-bool CUtils::ContainsAll(duckdb::vector<BoundOrderByNode> &parent, duckdb::vector<BoundOrderByNode> &child)
+bool CUtils::ContainsAll(duckdb::vector<BoundOrderByNode> &parent,
+						 duckdb::vector<BoundOrderByNode> &child)
 {
 	if(parent.size() < child.size())
 	{
@@ -129,19 +137,21 @@ bool CUtils::ContainsAll(duckdb::vector<BoundOrderByNode> &parent, duckdb::vecto
 }
 
 // check if a given operator is an FEnforcer
-bool CUtils::FEnforcer(Operator* pop)
+bool CUtils::FEnforcer(duckdb::unique_ptr<Operator> pop)
 {
-	return PhysicalOperatorType::ORDER_BY == pop->physical_type || LogicalOperatorType::LOGICAL_ORDER_BY == pop->logical_type;
+	return PhysicalOperatorType::ORDER_BY == pop->physical_type ||
+		   LogicalOperatorType::LOGICAL_ORDER_BY == pop->logical_type;
 }
 
 // return the number of occurrences of the given expression in the given array of expressions
-ULONG CUtils::UlOccurrences(Operator* pexpr, duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr)
+ULONG CUtils::UlOccurrences(duckdb::unique_ptr<Operator> pexpr,
+							duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr)
 {
 	ULONG count = 0;
 	ULONG size = pdrgpexpr.size();
 	for (ULONG ul = 0; ul < size; ul++)
 	{
-		if (Equals(pexpr, pdrgpexpr[ul].get()))
+		if (Equals(pexpr, pdrgpexpr[ul]))
 		{
 			count++;
 		}
@@ -150,7 +160,8 @@ ULONG CUtils::UlOccurrences(Operator* pexpr, duckdb::vector<duckdb::unique_ptr<O
 }
 
 // check if two expressions have the same children in any order
-bool CUtils::FMatchChildrenUnordered(Operator* pexprLeft, Operator* pexprRight)
+bool CUtils::FMatchChildrenUnordered(duckdb::unique_ptr<Operator> pexprLeft,
+									 duckdb::unique_ptr<Operator> pexprRight)
 {
 	if(pexprLeft->Arity() != pexprRight->Arity())
 	{
@@ -163,7 +174,7 @@ bool CUtils::FMatchChildrenUnordered(Operator* pexprLeft, Operator* pexprRight)
 		fEqual = false;
 		for(ULONG cnt = 0; cnt < pexprRight->Arity(); cnt++)
 		{
-			if(Equals(pexprLeft->children[ul].get(), pexprRight->children[cnt].get()))
+			if(Equals(pexprLeft->children[ul], pexprRight->children[cnt]))
 			{
 				fEqual = true;
 				break;
@@ -175,20 +186,22 @@ bool CUtils::FMatchChildrenUnordered(Operator* pexprLeft, Operator* pexprRight)
 }
 
 // check if two expressions have the same children in the same order
-bool CUtils::FMatchChildrenOrdered(Operator *pexprLeft, Operator *pexprRight)
+bool CUtils::FMatchChildrenOrdered(duckdb::unique_ptr<Operator> pexprLeft,
+								   duckdb::unique_ptr<Operator> pexprRight)
 {
 	bool fEqual = true;
 	const ULONG arity = pexprLeft->Arity();
 	for (ULONG ul = 0; fEqual && ul < arity; ul++)
 	{
 		// child must be at the same position in the other expression
-		fEqual = CUtils::Equals(pexprLeft->children[ul].get(), pexprRight->children[ul].get());
+		fEqual = CUtils::Equals(pexprLeft->children[ul], pexprRight->children[ul]);
 	}
 	return fEqual;
 }
 
 // deep equality of expression trees
-bool CUtils::Equals(Operator* pexprLeft, Operator* pexprRight)
+bool CUtils::Equals(duckdb::unique_ptr<Operator> pexprLeft,
+					duckdb::unique_ptr<Operator> pexprRight)
 {
 	// NULL expressions are equal
 	if (NULL == pexprLeft || NULL == pexprRight)
@@ -201,7 +214,8 @@ bool CUtils::Equals(Operator* pexprLeft, Operator* pexprRight)
 		return true;
 	}
 	// compare number of children and root operators
-	if (pexprLeft->Arity() != pexprRight->Arity() || !pexprLeft->Matches(pexprRight))
+	if (pexprLeft->Arity() != pexprRight->Arity() ||
+		!pexprLeft->Matches(pexprLeft, pexprRight))
 	{
 		return false;
 	}
@@ -213,7 +227,8 @@ bool CUtils::Equals(Operator* pexprLeft, Operator* pexprRight)
 }
 
 // deep equality of expression arrays
-bool CUtils::Equals(duckdb::vector<Operator*> pdrgpexprLeft, duckdb::vector<Operator*> pdrgpexprRight)
+bool CUtils::Equals(duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexprLeft,
+					duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexprRight)
 {
 	// NULL arrays are equal
 	if (0 == pdrgpexprLeft.size() || 0 == pdrgpexprRight.size())

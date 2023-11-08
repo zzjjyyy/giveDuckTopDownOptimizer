@@ -52,7 +52,9 @@ public:
 	virtual EXformPromise XformPromise(CExpressionHandle &exprhdl) const;
 
 	// actual transform
-	void Transform(CXformContext* pxfctxt, CXformResult* pxfres, Operator* pexpr) const override;
+	void Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+				   duckdb::unique_ptr<CXformResult> pxfres,
+				   duckdb::unique_ptr<Operator> pexpr) const override;
 };
 }  // namespace gpopt
 #endif

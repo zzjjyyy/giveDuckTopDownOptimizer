@@ -48,19 +48,26 @@ public:
 
 public:
 	// schedule transformation jobs for applicable xforms
-	virtual void ScheduleApplicableTransformations(CSchedulerContext* psc);
+	virtual void
+	ScheduleApplicableTransformations(duckdb::unique_ptr<CSchedulerContext> psc);
 
 	// schedule exploration jobs for all child groups
-	virtual void ScheduleChildGroupsJobs(CSchedulerContext* psc);
+	virtual void ScheduleChildGroupsJobs(duckdb::unique_ptr<CSchedulerContext> psc);
 
 	// explore child groups action
-	static EEvent EevtExploreChildren(CSchedulerContext* psc, CJob* pj);
+	static EEvent
+	EevtExploreChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+						CJob *pj);
 
 	// explore group expression action
-	static EEvent EevtExploreSelf(CSchedulerContext* psc, CJob* pj);
+	static EEvent
+	EevtExploreSelf(duckdb::unique_ptr<CSchedulerContext> psc,
+					CJob *pj);
 
 	// finalize action
-	static EEvent EevtFinalize(CSchedulerContext* psc, CJob* pj);
+	static EEvent
+	EevtFinalize(duckdb::unique_ptr<CSchedulerContext> psc,
+				 CJob *pj);
 
 public:
 	// ctor
@@ -73,16 +80,21 @@ public:
 	virtual ~CJobGroupExpressionExploration();
 
 	// initialize job
-	void Init(CGroupExpression* pgexpr);
+	void Init(duckdb::unique_ptr<CGroupExpression> pgexpr);
 
 	// schedule a new group expression exploration job
-	static void ScheduleJob(CSchedulerContext* psc, CGroupExpression* pgexpr, CJob* pjParent);
+	static void
+	ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+				duckdb::unique_ptr<CGroupExpression> pgexpr,
+				CJob *pjParent);
 
 	// job's main function
-	virtual bool FExecute(CSchedulerContext* psc);
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc) override;
 
 	// conversion function
-	static CJobGroupExpressionExploration* PjConvert(CJob* pj)
+	static CJobGroupExpressionExploration*
+	PjConvert(CJob *pj)
 	{
 		return dynamic_cast<CJobGroupExpressionExploration*>(pj);
 	}

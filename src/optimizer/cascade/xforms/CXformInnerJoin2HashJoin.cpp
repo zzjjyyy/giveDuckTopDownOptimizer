@@ -50,21 +50,30 @@ CXform::EXformPromise CXformInnerJoin2HashJoin::XformPromise(CExpressionHandle &
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformInnerJoin2HashJoin::Transform(CXformContext* pxfctxt, CXformResult* pxfres, Operator* pexpr) const
+void CXformInnerJoin2HashJoin::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+										 duckdb::unique_ptr<CXformResult> pxfres,
+										 duckdb::unique_ptr<Operator> pexpr) const
 {
-	LogicalComparisonJoin* popJoin = (LogicalComparisonJoin*)pexpr;
+	auto popJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(pexpr);
     PerfectHashJoinStats perfect_join_stats;
 	duckdb::vector<JoinCondition> v;
-	for(auto &child : popJoin->conditions) {
+	// Need to delete
+	// for(auto &child : popJoin->conditions) {
+	for(auto child : popJoin->conditions) {
 		JoinCondition jc;
-		jc.left = child.left->Copy();
-		jc.right = child.right->Copy();
+		// Need to delete
+		// jc.left = child.left->Copy();
+		// jc.right = child.right->Copy();
+		jc.left = child.left;
+		jc.right = child.right;
 		jc.comparison = child.comparison;
 		v.push_back(std::move(jc));
 	}
 	// create alternative expression
-	duckdb::unique_ptr<PhysicalHashJoin> pexprAlt = make_uniq<PhysicalHashJoin>(*popJoin, popJoin->children[0]->Copy(), popJoin->children[1]->Copy(), 
-                                                                         		std::move(v), popJoin->join_type,
+	// Need to delete
+	// duckdb::unique_ptr<PhysicalHashJoin> pexprAlt = make_uniq<PhysicalHashJoin>(*popJoin, popJoin->children[0]->Copy(), popJoin->children[1]->Copy(), 
+    duckdb::unique_ptr<PhysicalHashJoin> pexprAlt = make_uniq<PhysicalHashJoin>(*popJoin, popJoin->children[0], popJoin->children[1], 
+	                                                                     		std::move(v), popJoin->join_type,
                                                                         		popJoin->left_projection_map, popJoin->right_projection_map,
                                                                         		popJoin->delim_types, popJoin->estimated_cardinality,
 																				perfect_join_stats);

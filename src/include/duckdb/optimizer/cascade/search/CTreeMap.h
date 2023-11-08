@@ -39,15 +39,15 @@ namespace gpopt
 //		rehydrate function of type PrFn.
 //
 //---------------------------------------------------------------------------
-template <class T, class R, class U, size_t (*HashFn)(const T *), bool (*EqFn)(const T *, const T *)> class CTreeMap
+template <class T, class R, class U, size_t (*HashFn)(const duckdb::unique_ptr<T> ), bool (*EqFn)(const duckdb::unique_ptr<T>, const duckdb::unique_ptr<T>)> class CTreeMap
 {
 	// array of source pointers (sources owned by 3rd party)
-	typedef duckdb::vector<T*> DrgPt;
+	typedef duckdb::vector<duckdb::unique_ptr<T>> DrgPt;
 
-	typedef duckdb::vector<R*> DrgPr;
+	typedef duckdb::vector<duckdb::unique_ptr<R>> DrgPr;
 
 	// generic rehydrate function
-	typedef R* (*PrFn)(T*, DrgPr , U*);
+	typedef duckdb::unique_ptr<R> (*PrFn)(duckdb::unique_ptr<T>, DrgPr, duckdb::unique_ptr<U>);
 
 public:
 	// fwd declaration
@@ -66,17 +66,17 @@ public:
 	{
 	public:
 		// parent node
-		const T* m_ptParent;
+		const duckdb::unique_ptr<T> m_ptParent;
 
 		// child index
 		ULONG m_ulChildIndex;
 
 		// child node
-		const T* m_ptChild;
+		const duckdb::unique_ptr<T> m_ptChild;
 
 	public:
 		// ctor
-		STreeLink(const T* ptParent, ULONG child_index, const T* ptChild)
+		STreeLink(const duckdb::unique_ptr<T> ptParent, ULONG child_index, const duckdb::unique_ptr<T> ptChild)
 			: m_ptParent(ptParent), m_ulChildIndex(child_index), m_ptChild(ptChild)
 		{
 		}
@@ -97,9 +97,13 @@ public:
 		}
 
 		// equality function
-		static bool Equals(const STreeLink *ptlink1, const STreeLink *ptlink2)
+		static bool
+		Equals(const duckdb::unique_ptr<STreeLink> ptlink1,
+			   const duckdb::unique_ptr<STreeLink> ptlink2)
 		{
-			return EqFn(ptlink1->m_ptParent, ptlink2->m_ptParent) && EqFn(ptlink1->m_ptChild, ptlink2->m_ptChild) && ptlink1->m_ulChildIndex == ptlink2->m_ulChildIndex;
+			return EqFn(ptlink1->m_ptParent, ptlink2->m_ptParent) &&
+				   EqFn(ptlink1->m_ptChild, ptlink2->m_ptChild) &&
+				   ptlink1->m_ulChildIndex == ptlink2->m_ulChildIndex;
 		}
 
 		bool operator==(const STreeLink & ptlink) const
@@ -130,7 +134,7 @@ public:
 		ULONG m_ul;
 
 		// element
-		const T* m_value;
+		const duckdb::unique_ptr<T> m_value;
 
 		// array of children arrays
 		duckdb::vector<duckdb::vector<shared_ptr<CTreeNode>>> m_pdrgdrgptn;
@@ -159,7 +163,7 @@ public:
 		}
 
 		// rehydrate tree
-		R* PrUnrank(PrFn prfn, U* pU, ULONG ulChild, ULLONG ullRank)
+		duckdb::unique_ptr<R> PrUnrank(PrFn prfn, duckdb::unique_ptr<U> pU, ULONG ulChild, ULLONG ullRank)
 		{
 			duckdb::vector<shared_ptr<CTreeNode>> pdrgptn = m_pdrgdrgptn[ulChild];
 			ULONG ulCandidates = pdrgptn.size();
@@ -180,7 +184,7 @@ public:
 
 	public:
 		// ctor
-		CTreeNode(ULONG ul, const T* value)
+		CTreeNode(ULONG ul, const duckdb::unique_ptr<T> value)
 			: m_ul(ul), m_value(value), m_ullCount(gpos::ullong_max), m_ulIncoming(0), m_ens(EnsUncounted)
 		{
 		}
@@ -191,7 +195,7 @@ public:
 		}
 
 		// add child alternative
-		void Add(ULONG ulPos, CTreeNode* ptn)
+		void Add(ULONG ulPos, duckdb::unique_ptr<CTreeNode> ptn)
 		{
 			// insert any child arrays skipped so far; make sure we have a dense
 			// array up to the position of ulPos
@@ -209,7 +213,7 @@ public:
 		}
 
 		// accessor
-		const T* Value() const
+		const duckdb::unique_ptr<T> Value() const
 		{
 			return m_value;
 		}
@@ -255,9 +259,9 @@ public:
 		}
 
 		// unrank tree of a given rank with a given rehydrate function
-		R* PrUnrank(PrFn prfn, U *pU, ULLONG ullRank)
+		duckdb::unique_ptr<R> PrUnrank(PrFn prfn, duckdb::unique_ptr<U> pU, ULLONG ullRank)
 		{
-			R* pr = NULL;
+			duckdb::unique_ptr<R> pr = nullptr;
 			if (0 == this->m_ul)
 			{
 				// global root, just unrank 0-th child
@@ -275,7 +279,7 @@ public:
 					pdrg.emplace_back(PrUnrank(prfn, pU, ulChild, ullLocalRank));
 					ullRankRem /= ullLocalCount;
 				}
-				pr = prfn(const_cast<T*>(this->Value()), pdrg, pU);
+				pr = prfn(this->Value(), pdrg, pU);
 			}
 			return pr;
 		}
@@ -292,9 +296,9 @@ public:
 	PrFn m_prfn;
 
 	// universal root (internally used only)
-	CTreeNode* m_ptnRoot;
+	duckdb::unique_ptr<CTreeNode> m_ptnRoot;
 
-	unordered_map<ULONG, CTreeNode*> m_ptmap;
+	unordered_map<ULONG, duckdb::unique_ptr<CTreeNode>> m_ptmap;
 
 	// map of nodes to outgoing links
 	unordered_map<ULONG, bool> m_plinkmap;
@@ -302,10 +306,10 @@ public:
 public:
 	// ctor
 	CTreeMap(PrFn prfn)
-		: m_ulCountNodes(0), m_ulCountLinks(0), m_prfn(prfn), m_ptnRoot(NULL)
+		: m_ulCountNodes(0), m_ulCountLinks(0), m_prfn(prfn), m_ptnRoot(nullptr)
 	{
 		// insert dummy node as global root -- the only node with NULL payload
-		m_ptnRoot = new CTreeNode(0, NULL);
+		m_ptnRoot = make_uniq<CTreeNode>(0, nullptr);
 	}
 	
 	// no copy ctor
@@ -316,28 +320,29 @@ public:
 	{
 		m_ptmap.clear();
 		m_plinkmap.clear();
-		delete m_ptnRoot;
+		// Need to delete
+		// delete m_ptnRoot;
 	}
 
 public:
 	// recursive count starting in given node
-	ULLONG UllCount(CTreeNode* ptn);
+	ULLONG UllCount(duckdb::unique_ptr<CTreeNode> ptn);
 
 	// Convert to corresponding treenode, create treenode as necessary
-	CTreeNode* Ptn(const T* value)
+	duckdb::unique_ptr<CTreeNode> Ptn(const duckdb::unique_ptr<T> value)
 	{	
 		auto itr = m_ptmap.find(HashFn(value));
-		CTreeNode* ptn = const_cast<CTreeNode*>(itr->second);
+		auto ptn = itr->second;
 		if (NULL == ptn)
 		{
-			ptn = new CTreeNode(++m_ulCountNodes, value);
+			ptn = make_uniq<CTreeNode>(++m_ulCountNodes, value);
 			m_ptmap.insert(make_pair(HashFn(value), ptn));
 		}
 		return ptn;
 	}
 
 	// insert edge as n-th child
-	void Insert(const T* ptParent, ULONG ulPos, const T* ptChild)
+	void Insert(const duckdb::unique_ptr<T> ptParent, ULONG ulPos, const duckdb::unique_ptr<T> ptChild)
 	{
 		// exit function if link already exists
 		STreeLink ptlink(ptParent, ulPos, ptChild);
@@ -345,8 +350,8 @@ public:
 		{
 			return;
 		}
-		CTreeNode* ptnParent = Ptn(ptParent);
-		CTreeNode* ptnChild = Ptn(ptChild);
+		auto ptnParent = Ptn(ptParent);
+		auto ptnChild = Ptn(ptChild);
 		ptnParent->Add(ulPos, ptnChild);
 		++m_ulCountLinks;
 		// add created link to links map
@@ -354,7 +359,7 @@ public:
 	}
 	
 	// insert a root node
-	void InsertRoot(const T* value)
+	void InsertRoot(const duckdb::unique_ptr<T> value)
 	{
 		// add logical root as 0-th child to global root
 		m_ptnRoot->Add(0, Ptn(value));
@@ -366,7 +371,7 @@ public:
 		// first, hookup all logical root nodes to the global root
 		for (auto ulNodes = m_ptmap.begin(); ulNodes != m_ptmap.end(); ulNodes++)
 		{
-			CTreeNode* ptn = const_cast<CTreeNode*>(ulNodes->second);
+			auto ptn = ulNodes->second;
 			if (0 == ptn->UlIncoming())
 			{
 				// add logical root as 0-th child to global root
@@ -382,7 +387,7 @@ public:
 	}
 
 	// unrank a specific tree
-	R* PrUnrank(U* pU, ULLONG ullRank) const
+	duckdb::unique_ptr<R> PrUnrank(duckdb::unique_ptr<U> pU, ULLONG ullRank) const
 	{
 		return m_ptnRoot->PrUnrank(m_prfn, pU, ullRank);
 	}

@@ -50,13 +50,14 @@ public:
 	}
 
 	// create derived properties container
-	CDerivedProperty *CreateDerivedProperty() override;
+	duckdb::unique_ptr<CDerivedProperty> CreateDerivedProperty() override;
 
 	// create required properties container
-	CRequiredProperty *CreateRequiredProperty() const override;
+	duckdb::unique_ptr<CRequiredProperty> CreateRequiredProperty() const override;
 
 	// match function
-	bool Matches(Operator* op) override;
+	bool Matches(duckdb::unique_ptr<Operator> this_op,
+				 duckdb::unique_ptr<Operator> op) override;
 
 	// sensitivity to order of inputs
 	bool FInputOrderSensitive() override;
@@ -79,12 +80,14 @@ public:
 		return v;
 	}
 
-	CKeyCollection* DeriveKeyCollection(CExpressionHandle &exprhdl) override
+	duckdb::unique_ptr<CKeyCollection>
+	DeriveKeyCollection(CExpressionHandle &exprhdl) override
 	{
 		return nullptr;
 	}
 
-	CPropConstraint* DerivePropertyConstraint(CExpressionHandle &exprhdl) override
+	duckdb::unique_ptr<CPropConstraint>
+	DerivePropertyConstraint(CExpressionHandle &exprhdl) override
 	{
 		return nullptr;
 	}
@@ -94,7 +97,10 @@ public:
 		return 0;
 	}
 
-	Operator* SelfRehydrate(CCostContext* pcc, duckdb::vector<Operator*> pdrgpexpr, CDrvdPropCtxtPlan* pdpctxtplan) override
+	duckdb::unique_ptr<Operator>
+	SelfRehydrate(duckdb::unique_ptr<CCostContext> pcc,
+				  duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+				  duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) override
 	{
 		return nullptr;
 	}

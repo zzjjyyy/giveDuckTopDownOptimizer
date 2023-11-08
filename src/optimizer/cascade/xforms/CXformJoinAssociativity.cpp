@@ -29,7 +29,9 @@ CXformJoinAssociativity::CXformJoinAssociativity()
     duckdb::unique_ptr<LogicalComparisonJoin> left_child = make_uniq<LogicalComparisonJoin>(JoinType::INNER);
     left_child->AddChild(make_uniq<CPatternLeaf>());
     left_child->AddChild(make_uniq<CPatternLeaf>());
-	this->m_operator->AddChild(std::move(left_child));
+    // Need to delete
+	// this->m_operator->AddChild(std::move(left_child));
+    this->m_operator->AddChild(left_child);
 	this->m_operator->AddChild(make_uniq<CPatternLeaf>());
 }
 
@@ -45,21 +47,26 @@ CXform::EXformPromise CXformJoinAssociativity::XformPromise(CExpressionHandle &e
 	return CXform::ExfpMedium;
 }
 
-void CXformJoinAssociativity::CreatePredicates(Operator* join, duckdb::vector<JoinCondition> &upper_join_condition,
-                                            duckdb::vector<JoinCondition> &lower_join_condition) const {
-    LogicalComparisonJoin* UpperJoin = (LogicalComparisonJoin*)join;
-    LogicalComparisonJoin* LowerJoin = (LogicalComparisonJoin*)UpperJoin->children[0].get();
+void CXformJoinAssociativity::CreatePredicates(duckdb::unique_ptr<Operator> join,
+                                               duckdb::vector<JoinCondition> &upper_join_condition,
+                                               duckdb::vector<JoinCondition> &lower_join_condition) const {
+    auto UpperJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(join);
+    auto LowerJoin =
+        unique_ptr_cast<Operator, LogicalComparisonJoin>(UpperJoin->children[0]);
     duckdb::vector<ColumnBinding> NewLowerOutputCols;
-    duckdb::vector<ColumnBinding> LowerLeftOutputCols = LowerJoin->children[0]->GetColumnBindings();
-    duckdb::vector<ColumnBinding> UpperRightOutputCols = UpperJoin->children[1]->GetColumnBindings();
+    auto LowerLeftOutputCols = LowerJoin->children[0]->GetColumnBindings();
+    auto UpperRightOutputCols = UpperJoin->children[1]->GetColumnBindings();
     NewLowerOutputCols.insert(NewLowerOutputCols.end(), LowerLeftOutputCols.begin(), LowerLeftOutputCols.end());
     NewLowerOutputCols.insert(NewLowerOutputCols.end(), UpperRightOutputCols.begin(), UpperRightOutputCols.end());
     for (auto &child : UpperJoin->conditions) {
         if (CUtils::ContainsAll(NewLowerOutputCols, child.left->GetColumnBinding())
             && CUtils::ContainsAll(NewLowerOutputCols, child.right->GetColumnBinding())) {
             JoinCondition jc;
-            jc.left = child.left->Copy();
-            jc.right = child.right->Copy();
+            // Need to delete
+            // jc.left = child.left->Copy();
+            // jc.right = child.right->Copy();
+            jc.left = child.left;
+            jc.right = child.right;
             jc.comparison = child.comparison;
             lower_join_condition.emplace_back(std::move(jc));
         }
@@ -70,15 +77,21 @@ void CXformJoinAssociativity::CreatePredicates(Operator* join, duckdb::vector<Jo
             continue;
         }
         JoinCondition jc;
-        jc.left = child.right->Copy();
-        jc.right = child.left->Copy();
+        // Need to delete
+        // jc.left = child.right->Copy();
+        // jc.right = child.left->Copy();
+        jc.left = child.right;
+        jc.right = child.left;
         jc.comparison = child.comparison;
         upper_join_condition.emplace_back(std::move(jc));
     }
     for (auto &child : LowerJoin->conditions) {
         JoinCondition jc;
-        jc.left = child.left->Copy();
-        jc.right = child.right->Copy();
+        // Need to delete
+        // jc.left = child.left->Copy();
+        // jc.right = child.right->Copy();
+        jc.left = child.left;
+        jc.right = child.right;
         jc.comparison = child.comparison;
         upper_join_condition.emplace_back(std::move(jc));
     }
@@ -92,27 +105,34 @@ void CXformJoinAssociativity::CreatePredicates(Operator* join, duckdb::vector<Jo
 //		Actual transformation
 //
 //---------------------------------------------------------------------------
-void CXformJoinAssociativity::Transform(CXformContext* pxfctxt, CXformResult* pxfres, Operator* pexpr) const {
-    enumeration_pairs++;
-	LogicalComparisonJoin* UpperJoin = (LogicalComparisonJoin*)pexpr;
-    LogicalComparisonJoin* LowerJoin = (LogicalComparisonJoin*)pexpr->children[0].get();
+void CXformJoinAssociativity::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+                                        duckdb::unique_ptr<CXformResult> pxfres,
+                                        duckdb::unique_ptr<Operator> pexpr) const {
+    // enumeration_pairs++;
+	auto UpperJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(pexpr);
+    auto LowerJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(pexpr->children[0]);
     duckdb::vector<JoinCondition> NewUpperJoinCondition;
     duckdb::vector<JoinCondition> NewLowerJoinCondition;
     CreatePredicates(UpperJoin, NewUpperJoinCondition, NewLowerJoinCondition);
     if(NewUpperJoinCondition.size() == 0 || NewLowerJoinCondition.size() == 0)
         return;
     duckdb::unique_ptr<LogicalComparisonJoin> NewLowerJoin = make_uniq<LogicalComparisonJoin>(JoinType::INNER);
-    NewLowerJoin->AddChild(LowerJoin->children[0]->Copy());
-    NewLowerJoin->AddChild(UpperJoin->children[1]->Copy());
+    // Need to delete
+    // NewLowerJoin->AddChild(LowerJoin->children[0]->Copy());
+    // NewLowerJoin->AddChild(UpperJoin->children[1]->Copy());
+    NewLowerJoin->AddChild(LowerJoin->children[0]);
+    NewLowerJoin->AddChild(UpperJoin->children[1]);
     NewLowerJoin->conditions = std::move(NewLowerJoinCondition);
     NewLowerJoin->ResolveTypes();
     duckdb::unique_ptr<LogicalComparisonJoin> NewUpperJoin = make_uniq<LogicalComparisonJoin>(JoinType::INNER);
     NewUpperJoin->AddChild(std::move(NewLowerJoin));
-    NewUpperJoin->AddChild(LowerJoin->children[1]->Copy());
+    // Need to delete
+    // NewUpperJoin->AddChild(LowerJoin->children[1]->Copy());
+    NewUpperJoin->AddChild(LowerJoin->children[1]);
     NewUpperJoin->conditions = std::move(NewUpperJoinCondition);
     NewUpperJoin->ResolveTypes();
     // Cardinality Estimation
-	NewUpperJoin->CE();
+	// NewUpperJoin->CE();
 	// add alternative to transformation result
 	pxfres->Add(std::move(NewUpperJoin));
 }

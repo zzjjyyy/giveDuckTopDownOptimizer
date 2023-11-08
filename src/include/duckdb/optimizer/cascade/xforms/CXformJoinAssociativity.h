@@ -30,7 +30,7 @@ public:
 	// ctor
 	explicit CXformJoinAssociativity();
     
-    CXformJoinAssociativity(const CXformJoinCommutativity &) = delete;
+    CXformJoinAssociativity(const CXformJoinAssociativity &) = delete;
 	
     // dtor
 	virtual ~CXformJoinAssociativity()
@@ -52,11 +52,14 @@ public:
 	// compute xform promise for a given expression handle
 	virtual EXformPromise XformPromise(CExpressionHandle &exprhdl) const;
 	
-	void CreatePredicates(Operator* join, duckdb::vector<JoinCondition> &upper_join_condition,
-                        duckdb::vector<JoinCondition> &lower_join_condition) const;
+	void CreatePredicates(duckdb::unique_ptr<Operator> join,
+						  duckdb::vector<JoinCondition> &upper_join_condition,
+                          duckdb::vector<JoinCondition> &lower_join_condition) const;
 
 	// actual transform
-	void Transform(CXformContext* pxfctxt, CXformResult* pxfres, Operator* pexpr) const override;
+	void Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
+				   duckdb::unique_ptr<CXformResult> pxfres,
+				   duckdb::unique_ptr<Operator> pexpr) const override;
 };
 }  // namespace gpopt
 #endif

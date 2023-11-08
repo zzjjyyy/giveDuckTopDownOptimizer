@@ -54,9 +54,8 @@ CScheduler::~CScheduler() {
 //		Main job processing task
 //
 //---------------------------------------------------------------------------
-void *CScheduler::Run(void *pv) {
-	CSchedulerContext *scheduler_context = reinterpret_cast<CSchedulerContext *>(pv);
-	scheduler_context->m_scheduler->ExecuteJobs(scheduler_context);
+void *CScheduler::Run(duckdb::unique_ptr<CSchedulerContext> pv) {
+	pv->m_scheduler->ExecuteJobs(pv);
 	return nullptr;
 }
 
@@ -69,8 +68,8 @@ void *CScheduler::Run(void *pv) {
 //		keeps executing jobs as long as there is work queued;
 //
 //---------------------------------------------------------------------------
-void CScheduler::ExecuteJobs(CSchedulerContext *psc) {
-	CJob *job;
+void CScheduler::ExecuteJobs(duckdb::unique_ptr<CSchedulerContext> psc) {
+	CJob* job;
 	ULONG count = 0;
 	// keep retrieving jobs
 	while (nullptr != (job = RetrieveJob())) {
@@ -110,7 +109,7 @@ void CScheduler::ExecuteJobs(CSchedulerContext *psc) {
 //		Add new job for execution
 //
 //---------------------------------------------------------------------------
-void CScheduler::Add(CJob *pj, CJob *pjParent) {
+void CScheduler::Add(CJob* pj, CJob* pjParent) {
 	// increment ref counter for parent job
 	if (nullptr != pjParent) {
 		pjParent->IncRefs();
@@ -130,7 +129,7 @@ void CScheduler::Add(CJob *pj, CJob *pjParent) {
 //		Resume suspended job
 //
 //---------------------------------------------------------------------------
-void CScheduler::Resume(CJob *pj) {
+void CScheduler::Resume(CJob* pj) {
 	Schedule(pj);
 }
 
@@ -144,7 +143,7 @@ void CScheduler::Resume(CJob *pj) {
 //---------------------------------------------------------------------------
 void CScheduler::Schedule(CJob *pj) {
 	// get job link
-	SJobLink *pjl = m_job_links.PtRetrieve();
+	auto pjl = m_job_links.PtRetrieve();
 	pjl->Init(pj);
 	// add to waiting list
 	m_todo_jobs.Push(pjl);
@@ -177,9 +176,10 @@ void CScheduler::PreExecute(CJob *pj) {
 //		Execution function using job queue
 //
 //---------------------------------------------------------------------------
-bool CScheduler::FExecute(CJob *pj, CSchedulerContext *psc) {
+bool CScheduler::FExecute(CJob *pj,
+                          duckdb::unique_ptr<CSchedulerContext> psc) {
 	bool is_completed = true;
-	CJobQueue *job_queue = pj->JobQueue();
+	auto job_queue = pj->JobQueue();
 	// check if job is associated to a job queue
 	if (nullptr == job_queue) {
 		is_completed = pj->FExecute(psc);
@@ -215,7 +215,9 @@ bool CScheduler::FExecute(CJob *pj, CSchedulerContext *psc) {
 // 		Process job execution outcome
 //
 //---------------------------------------------------------------------------
-CScheduler::EJobResult CScheduler::JobPostExecute(CJob *pj, bool is_completed) {
+CScheduler::EJobResult
+CScheduler::JobPostExecute(CJob *pj,
+						   bool is_completed) {
 	// decrement job ref counter
 	ULONG_PTR ulRefs = pj->DecrRefs();
 	// decrement number of running jobs
@@ -239,10 +241,10 @@ CScheduler::EJobResult CScheduler::JobPostExecute(CJob *pj, bool is_completed) {
 //		Retrieve next runnable job from queue
 //
 //---------------------------------------------------------------------------
-CJob *CScheduler::RetrieveJob() {
+CJob* CScheduler::RetrieveJob() {
 	// retrieve runnable job from lists of waiting jobs
-	SJobLink *pjl = m_todo_jobs.Pop();
-	CJob *pj = nullptr;
+	auto pjl = m_todo_jobs.Pop();
+	CJob* pj = nullptr;
 	if (NULL != pjl) {
 		pj = pjl->m_job;
 		// decrement number of queued jobs
@@ -263,7 +265,7 @@ CJob *CScheduler::RetrieveJob() {
 //		Transition job to suspended
 //
 //---------------------------------------------------------------------------
-void CScheduler::Suspend(CJob *) {
+void CScheduler::Suspend(CJob *pj) {
 	m_stats_suspended++;
 }
 
@@ -307,7 +309,7 @@ void CScheduler::CompleteQueued(CJob *pj) {
 //
 //---------------------------------------------------------------------------
 void CScheduler::ResumeParent(CJob *pj) {
-	CJob *pjParent = pj->PJobParent();
+	auto pjParent = pj->PJobParent();
 	if (nullptr != pjParent) {
 		// notify parent job
 		if (pj->FResumeParent()) {

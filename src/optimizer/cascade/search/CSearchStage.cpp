@@ -20,7 +20,7 @@ using namespace gpos;
 //		Ctor
 //
 //---------------------------------------------------------------------------
-CSearchStage::CSearchStage(CXform_set *xform_set, ULONG time_threshold, double cost_threshold)
+CSearchStage::CSearchStage(duckdb::unique_ptr<CXform_set> xform_set, ULONG time_threshold, double cost_threshold)
     : m_xforms(xform_set), m_time_threshold(time_threshold), m_cost_threshold(cost_threshold), m_best_cost(-0.5) {
 	// include all implementation rules in any search strategy
 	*m_xforms |= *(CXformFactory::XformFactory()->XformImplementation());
@@ -36,7 +36,7 @@ CSearchStage::CSearchStage(CXform_set *xform_set, ULONG time_threshold, double c
 //
 //---------------------------------------------------------------------------
 CSearchStage::~CSearchStage() {
-	delete m_xforms;
+	// delete m_xforms;
 	// CRefCount::SafeRelease(m_best_expr);
 }
 
@@ -48,11 +48,15 @@ CSearchStage::~CSearchStage() {
 //		Set best plan found at the end of search stage
 //
 //---------------------------------------------------------------------------
-void CSearchStage::SetBestExpr(Operator *pexpr) {
+// Need to delete
+// void CSearchStage::SetBestExpr(Operator *pexpr) {
+void CSearchStage::SetBestExpr(duckdb::unique_ptr<Operator> pexpr) {
 	if(pexpr == nullptr) {
 		InternalException("In CSearchStage::SetBestExpr: The pointer should not be nullptr!");
 	}
-	m_best_expr = pexpr->Copy();
+	// Need to delete
+	// m_best_expr = pexpr->Copy();
+	m_best_expr = pexpr;
 	if (NULL != m_best_expr) {
 		m_best_cost = m_best_expr->m_cost;
 	}
@@ -67,10 +71,10 @@ void CSearchStage::SetBestExpr(Operator *pexpr) {
 //		one stage with all xforms and no time/cost thresholds
 //
 //---------------------------------------------------------------------------
-duckdb::vector<CSearchStage *> CSearchStage::DefaultStrategy() {
-	CXform_set *xform_set = new CXform_set();
+duckdb::vector<duckdb::unique_ptr<CSearchStage>> CSearchStage::DefaultStrategy() {
+	auto xform_set = make_uniq<CXform_set>();
 	*xform_set |= *(CXformFactory::XformFactory()->XformExploration());
-	duckdb::vector<CSearchStage *> search_stage_array;
-	search_stage_array.push_back(new CSearchStage(xform_set));
+	duckdb::vector<duckdb::unique_ptr<CSearchStage>> search_stage_array;
+	search_stage_array.push_back(make_uniq<CSearchStage>(xform_set));
 	return search_stage_array;
 }

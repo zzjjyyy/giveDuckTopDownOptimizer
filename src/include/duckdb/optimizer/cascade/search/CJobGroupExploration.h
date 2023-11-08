@@ -58,32 +58,42 @@ public:
 	~CJobGroupExploration();
 
 	// initialize job
-	void Init(CGroup *pgroup);
+	void Init(duckdb::unique_ptr<CGroup> pgroup);
 
 	// get first unscheduled expression
-	virtual list<CGroupExpression *>::iterator PgexprFirstUnsched() {
+	virtual list<duckdb::unique_ptr<CGroupExpression>>::iterator PgexprFirstUnsched() override {
 		return CJobGroup::PgexprFirstUnschedLogical();
 	}
 
 	// schedule exploration jobs for of all new group expressions
-	virtual bool FScheduleGroupExpressions(CSchedulerContext *psc);
+	virtual bool
+	FScheduleGroupExpressions(duckdb::unique_ptr<CSchedulerContext> psc);
 
 	// schedule a new group exploration job
-	static void ScheduleJob(CSchedulerContext *psc, CGroup *pgroup, CJob *pjParent);
+	static void
+	ScheduleJob(duckdb::unique_ptr<CSchedulerContext> psc,
+				duckdb::unique_ptr<CGroup> pgroup,
+				CJob *pjParent);
 
 	// job's function
-	virtual bool FExecute(CSchedulerContext *psc);
+	bool
+	FExecute(duckdb::unique_ptr<CSchedulerContext> psc);
 
 	// conversion function
-	static CJobGroupExploration *ConvertJob(CJob *pj) {
-		return dynamic_cast<CJobGroupExploration *>(pj);
+	static CJobGroupExploration*
+	ConvertJob(CJob *pj) {
+		return dynamic_cast< CJobGroupExploration*>(pj);
 	}
 
 	// start exploration action
-	static EEvent EevtStartExploration(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtStartExploration(duckdb::unique_ptr<CSchedulerContext> psc,
+						 CJob *pj);
 
 	// explore child group expressions action
-	static EEvent EevtExploreChildren(CSchedulerContext *psc, CJob *pj);
+	static EEvent
+	EevtExploreChildren(duckdb::unique_ptr<CSchedulerContext> psc,
+						CJob *pj);
 }; // class CJobGroupExploration
 } // namespace gpopt
 #endif

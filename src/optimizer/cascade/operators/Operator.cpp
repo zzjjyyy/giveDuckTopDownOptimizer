@@ -30,11 +30,11 @@ size_t Operator::HashValue() const {
 	return duckdb::CombineHash(duckdb::Hash<size_t>(ul_logical_type), duckdb::Hash<size_t>(ul_physical_type));
 }
 
-size_t Operator::HashValue(const Operator *op) {
+size_t Operator::HashValue(const duckdb::unique_ptr<Operator> op) {
 	size_t ul_hash = op->HashValue();
 	const size_t arity = op->Arity();
 	for (size_t ul = 0; ul < arity; ul++) {
-		ul_hash = CombineHashes(ul_hash, HashValue(op->children[ul].get()));
+		ul_hash = CombineHashes(ul_hash, HashValue(op->children[ul]));
 	}
 	return ul_hash;
 }
@@ -54,7 +54,8 @@ idx_t Operator::EstimateCardinality(ClientContext &context) {
 	return estimated_cardinality;
 }
 
-duckdb::vector<CFunctionalDependency *> Operator::DeriveFunctionalDependencies(CExpressionHandle &expression_handle) {
+duckdb::vector<duckdb::unique_ptr<CFunctionalDependency>>
+Operator::DeriveFunctionalDependencies(CExpressionHandle &expression_handle) {
 	return m_derived_logical_property->DeriveFunctionalDependencies(expression_handle);
 }
 
@@ -67,7 +68,7 @@ duckdb::vector<CFunctionalDependency *> Operator::DeriveFunctionalDependencies(C
 //		shallow, do not	match its children, check only arity of the root
 //
 //---------------------------------------------------------------------------
-bool Operator::FMatchPattern(CGroupExpression *group_expression) {
+bool Operator::FMatchPattern(duckdb::unique_ptr<CGroupExpression> group_expression) {
 	if (this->FPattern()) {
 		return true;
 	} else {
@@ -81,30 +82,33 @@ bool Operator::FMatchPattern(CGroupExpression *group_expression) {
 	return false;
 }
 
-CRequiredPhysicalProp *Operator::PrppCompute(CRequiredPhysicalProp *required_properties_input) {
+duckdb::unique_ptr<CRequiredPhysicalProp>
+Operator::PrppCompute(duckdb::unique_ptr<Operator> this_operator,
+					  duckdb::unique_ptr<CRequiredPhysicalProp> required_properties_input) {
 	// derive plan properties
-	CDrvdPropCtxtPlan *pdpctxtplan = new CDrvdPropCtxtPlan();
-	(void)PdpDerive(pdpctxtplan);
+	auto pdpctxtplan = make_uniq<CDrvdPropCtxtPlan>();
+	(void)PdpDerive(this_operator, pdpctxtplan);
 	// decorate nodes with required properties
 	return m_required_physical_property;
 }
 
-CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
+duckdb::unique_ptr<CDerivedProperty>
+Operator::PdpDerive(duckdb::unique_ptr<Operator> this_operator, duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxt) {
 	const CDerivedProperty::EPropType ept = Ept();
 	CExpressionHandle expression_handle;
-	expression_handle.Attach(this);
+	expression_handle.Attach(this_operator);
 	// see if suitable prop is already cached. This only applies to plan properties.
 	// relational properties are never null and are handled in the next case
 	if (nullptr == Pdp(ept)) {
 		const ULONG arity = Arity();
 		for (ULONG ul = 0; ul < arity; ul++) {
-			CDerivedProperty *pdp = children[ul]->PdpDerive(pdpctxt);
+			auto pdp = children[ul]->PdpDerive(children[ul], pdpctxt);
 			// add child props to derivation context
 			CDerivedPropertyContext::AddDerivedProps(pdp, pdpctxt);
 		}
 		switch (ept) {
 		case CDerivedProperty::EptPlan:
-			m_derived_physical_property = new CDerivedPhysicalProp();
+			m_derived_physical_property = make_uniq<CDerivedPhysicalProp>();
 			break;
 		default:
 			break;
@@ -120,7 +124,8 @@ CDerivedProperty *Operator::PdpDerive(CDrvdPropCtxtPlan *pdpctxt) {
 	return Pdp(ept);
 }
 
-CRequiredPhysicalProp *Operator::PrppDecorate(CRequiredPhysicalProp *required_properties_input) {
+duckdb::unique_ptr<CRequiredPhysicalProp>
+Operator::PrppDecorate(duckdb::unique_ptr<CRequiredPhysicalProp> required_properties_input) {
 	return m_required_physical_property;
 }
 
@@ -130,21 +135,27 @@ duckdb::unique_ptr<Operator> Operator::Copy() {
 	return result;
 }
 
-duckdb::unique_ptr<Operator> Operator::CopyWithNewGroupExpression(CGroupExpression *group_expression) {
+duckdb::unique_ptr<Operator>
+Operator::CopyWithNewGroupExpression(duckdb::unique_ptr<CGroupExpression> group_expression) {
 	throw InternalException("Shouldn't go here.");
 	duckdb::unique_ptr<Operator> result = make_uniq<Operator>();
 	result->m_group_expression = group_expression;
 	return result;
 }
 
-duckdb::unique_ptr<Operator> Operator::CopyWithNewChildren(CGroupExpression *group_expression,
-                                                           duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
-                                                           double cost) {
+duckdb::unique_ptr<Operator>
+Operator::CopyWithNewChildren(duckdb::unique_ptr<CGroupExpression> group_expression,
+                              duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                              double cost) {
 	throw InternalException("Shouldn't go here.");
 	duckdb::unique_ptr<Operator> result = make_uniq<Operator>();
 	result->m_group_expression = group_expression;
-	for (auto &child : pdrgpexpr) {
-		result->AddChild(child->Copy());
+	// Need to delete
+	// for (auto &child : pdrgpexpr) {
+	for (auto child : pdrgpexpr) {
+		// Need to delete
+		// result->AddChild(child->Copy());
+		result->AddChild(child);
 	}
 	result->m_cost = cost;
 	return result;
@@ -164,12 +175,12 @@ void Operator::CE() {
 	return;
 }
 
-CDerivedProperty *Operator::Pdp(const CDerivedProperty::EPropType ept) const {
+duckdb::unique_ptr<CDerivedProperty> Operator::Pdp(const CDerivedProperty::EPropType ept) const {
 	switch (ept) {
 	case CDerivedProperty::EptRelational:
-		return (CDerivedProperty *)m_derived_logical_property;
+		return unique_ptr_cast<CDerivedLogicalProp, CDerivedProperty>(m_derived_logical_property);
 	case CDerivedProperty::EptPlan:
-		return (CDerivedProperty *)m_derived_physical_property;
+		return unique_ptr_cast<CDerivedPhysicalProp, CDerivedProperty>(m_derived_physical_property);
 	default:
 		break;
 	}
@@ -186,9 +197,11 @@ CDerivedProperty::EPropType Operator::Ept() const {
 	return CDerivedProperty::EptInvalid;
 }
 
-Operator *Operator::PexprRehydrate(CCostContext *cost_context, duckdb::vector<Operator *> pdrgpexpr,
-                                   CDrvdPropCtxtPlan *pdpctxtplan) {
-	CGroupExpression *group_expression = cost_context->m_group_expression;
+duckdb::unique_ptr<Operator>
+Operator::PexprRehydrate(duckdb::unique_ptr<CCostContext> cost_context,
+						 duckdb::vector<duckdb::unique_ptr<Operator>> pdrgpexpr,
+                         duckdb::unique_ptr<CDrvdPropCtxtPlan> pdpctxtplan) {
+	auto group_expression = cost_context->m_group_expression;
 	return group_expression->m_operator->SelfRehydrate(cost_context, pdrgpexpr, pdpctxtplan);
 }
 

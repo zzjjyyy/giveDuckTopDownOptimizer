@@ -44,25 +44,33 @@ namespace gpopt {
 //---------------------------------------------------------------------------
 class CQueryContext {
 public:
-	CQueryContext(duckdb::unique_ptr<Operator> expr, CRequiredPhysicalProp *property,
-	              duckdb::vector<ColumnBinding> col_ids, duckdb::vector<std::string> col_names, bool derive_stats);
+	CQueryContext(duckdb::unique_ptr<Operator> expr,
+				  duckdb::unique_ptr<CRequiredPhysicalProp> property,
+	              duckdb::vector<ColumnBinding> col_ids,
+				  duckdb::vector<std::string> col_names,
+				  bool derive_stats);
+
 	CQueryContext(const CQueryContext &) = delete;
+
 	virtual ~CQueryContext();
 
 	// required plan properties in optimizer's produced plan
-	CRequiredPhysicalProp *m_required_plan_property;
+	duckdb::unique_ptr<CRequiredPhysicalProp> m_required_plan_property;
 
 	// required array of output columns
 	duckdb::vector<ColumnBinding> m_required_output_cols;
+
 	// array of output column names
 	duckdb::vector<std::string> m_output_col_names;
+
 	// logical expression tree to be optimized
 	duckdb::unique_ptr<Operator> m_expr;
+
 	// should statistics derivation take place
 	bool m_derivation_stats;
 
 	// return top level operator in the given expression
-	static LogicalOperator *PopTop(LogicalOperator *expr);
+	static duckdb::unique_ptr<LogicalOperator> PopTop(duckdb::unique_ptr<LogicalOperator> expr);
 
 public:
 	bool FDeriveStats() const {
@@ -85,8 +93,11 @@ public:
 	//    CQueryContext
 	//
 	//---------------------------------------------------------------------------
-	static CQueryContext *QueryContextGenerate(duckdb::unique_ptr<Operator> expr, duckdb::vector<ULONG *> col_ids,
-	                                           duckdb::vector<std::string> col_names, bool derive_stats);
+	static duckdb::unique_ptr<CQueryContext>
+	QueryContextGenerate(duckdb::unique_ptr<Operator> expr,
+						 duckdb::vector<ULONG *> col_ids,
+	                     duckdb::vector<std::string> col_names,
+						 bool derive_stats);
 
 private:
 	static void RemoveOrderBy(COrderSpec *spec, Operator *parent, Operator *op, size_t child_idx);
