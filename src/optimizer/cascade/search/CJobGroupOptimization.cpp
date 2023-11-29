@@ -132,14 +132,16 @@ bool CJobGroupOptimization::FScheduleGroupExpressions(duckdb::unique_ptr<CSchedu
 	auto itr = PgexprFirstUnsched();
 	while (m_pgroup->m_group_exprs.end() != itr) {
 		auto pgexpr = *itr;
-		// we consider only group expressions matching current optimization level,
-		// other group expressions will be optimized when damping current
-		// optimization level
-		if (psc->m_engine->FOptimizeChild(m_pgexprOrigin, pgexpr, m_poc, EolCurrent())) {
-			const ULONG ulOptRequests = ((PhysicalOperator *)pgexpr->m_operator.get())->UlOptRequests();
-			for (ULONG ul = 0; ul < ulOptRequests; ul++) {
-				// schedule an optimization job for each request
-				CJobGroupExpressionOptimization::ScheduleJob(psc, pgexpr, m_poc, ul, this);
+		if(pgexpr->m_operator->FPhysical()) {
+			// we consider only group expressions matching current optimization level,
+			// other group expressions will be optimized when damping current
+			// optimization level
+			if (psc->m_engine->FOptimizeChild(m_pgexprOrigin, pgexpr, m_poc, EolCurrent())) {
+				const ULONG ulOptRequests = ((PhysicalOperator *)pgexpr->m_operator.get())->UlOptRequests();
+				for (ULONG ul = 0; ul < ulOptRequests; ul++) {
+					// schedule an optimization job for each request
+					CJobGroupExpressionOptimization::ScheduleJob(psc, pgexpr, m_poc, ul, this);
+				}
 			}
 		}
 		Last_itr = itr;

@@ -89,7 +89,8 @@ void CGroupProxy::InitProperties(duckdb::unique_ptr<CDerivedProperty> pdp)
 //		Retrieve first group expression iterator;
 //
 //---------------------------------------------------------------------------
-list<duckdb::unique_ptr<CGroupExpression>>::iterator CGroupProxy::PgexprFirst()
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CGroupProxy::PgexprFirst()
 {
 	return m_pgroup->FirstGroupExpr();
 }
@@ -108,7 +109,8 @@ list<duckdb::unique_ptr<CGroupExpression>>::iterator
 CGroupProxy::PgexprSkip(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexprStart, bool fSkipLogical)
 {
 	auto iter = pgexprStart;
-	while (m_pgroup->m_group_exprs.end() != iter && fSkipLogical == (*iter)->m_operator->FLogical())
+	while (m_pgroup->m_group_exprs.end() != iter
+	    && fSkipLogical == (*iter)->m_operator->FLogical())
 	{
 		++iter;
 	}

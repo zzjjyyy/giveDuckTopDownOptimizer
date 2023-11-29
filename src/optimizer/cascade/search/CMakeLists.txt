@@ -20,7 +20,11 @@ add_library_unity(
     CJobGroupImplementation.cpp
     CJobTransformation.cpp
     CScheduler.cpp
-    CJobGroupExpressionImplementation.cpp)
+    CJobGroupExpressionImplementation.cpp
+    CGroupExpressionCmp.cpp
+    CGroupExpressionHash.cpp
+    CGroupExpressionPtrCmp.cpp
+    CGroupExpressionPtrHash.cpp)
 set(ALL_OBJECT_FILES
     ${ALL_OBJECT_FILES} $<TARGET_OBJECTS:search>
     PARENT_SCOPE)

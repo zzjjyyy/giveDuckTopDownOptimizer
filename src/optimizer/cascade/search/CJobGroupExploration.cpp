@@ -181,7 +181,7 @@ CJobGroupExploration::EevtExploreChildren(duckdb::unique_ptr<CSchedulerContext> 
 		if (psc->m_engine->FRoot(pjge->m_pgroup)) {
 			// end_exploration = clock();
 			// exploration_time = double(end_exploration - start_exploration) / CLOCKS_PER_SEC;
-			// FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			// FILE* time_f = fopen("/home/ecs-user/giveDuckTopDownOptimizer/expr/result.txt", "a+");
 			// fprintf(time_f, "explor = %lf s, ", exploration_time);
 			// fclose(time_f);
 			psc->m_engine->FinalizeExploration();

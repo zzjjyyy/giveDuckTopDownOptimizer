@@ -12,6 +12,11 @@
 #include "duckdb/optimizer/cascade/common/CSyncList.h"
 #include "duckdb/optimizer/cascade/search/CJobQueue.h"
 #include "duckdb/optimizer/cascade/search/CTreeMap.h"
+#include "duckdb/optimizer/cascade/operators/Operator.h"
+#include "duckdb/optimizer/cascade/search/CGroupExpressionHash.h"
+#include "duckdb/optimizer/cascade/search/CGroupExpressionCmp.h"
+#include "duckdb/optimizer/cascade/search/CGroupExpressionPtrHash.h"
+#include "duckdb/optimizer/cascade/search/CGroupExpressionPtrCmp.h"
 
 #include <list>
 #include <unordered_map>
@@ -122,7 +127,15 @@ public:
 	duckdb::vector<duckdb::unique_ptr<Expression>> m_join_keys_inner;
 
 	// list of group expressions
+	// List to Hash
+	// std::list<duckdb::unique_ptr<CGroupExpression>> m_group_exprs;
 	std::list<duckdb::unique_ptr<CGroupExpression>> m_group_exprs;
+
+	// Hash table of the pos of CGroupExpression in m_group_exprs
+	std::unordered_map<duckdb::unique_ptr<CGroupExpression>,
+					   std::list<duckdb::unique_ptr<CGroupExpression>>::iterator,
+					   CGroupExpressionPtrHash,
+					   CGroupExpressionPtrCmp> m_group_exprs_pos;
 
 	// list of duplicate group expressions identified by group merge
 	// std::list<CGroupExpression *> m_duplicate_group_exprs;
@@ -211,7 +224,8 @@ public:
 	void InitProperties(duckdb::unique_ptr<CDerivedProperty> pdp);
 
 	// retrieve first group expression
-	list<duckdb::unique_ptr<CGroupExpression>>::iterator FirstGroupExpr();
+	list<duckdb::unique_ptr<CGroupExpression>>::iterator
+	FirstGroupExpr();
 
 	// retrieve next group expression
 	list<duckdb::unique_ptr<CGroupExpression>>::iterator

@@ -83,7 +83,9 @@ unique_ptr<ParsedExpression> FunctionExpression::Copy() const {
 	}
 	unique_ptr<OrderModifier> order_copy;
 	if (order_bys) {
-		order_copy.reset(static_cast<OrderModifier *>(order_bys->Copy().release()));
+		// Need to delete
+		order_copy = order_bys;
+		// order_copy.reset(static_cast<OrderModifier *>(order_bys->Copy().release()));
 	}
 
 	auto copy =

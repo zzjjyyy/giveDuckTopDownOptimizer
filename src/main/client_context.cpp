@@ -356,7 +356,7 @@ shared_ptr<PreparedStatementData> ClientContext::CreatePreparedStatement(ClientC
 		char* p;
 		char cmp[1000];
 		int relid_in_file;
-		FILE* fp = fopen("/root/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
+		FILE* fp = fopen("/home/ecs-user/giveDuckTopDownOptimizer/optimal/query.txt", "r+");
 		while(fgets(cmp, 1000, fp) != NULL) {
 			if((pos = strchr(cmp, '\n')) != NULL) {
 				*pos = '\0';
@@ -371,8 +371,6 @@ shared_ptr<PreparedStatementData> ClientContext::CreatePreparedStatement(ClientC
 		if (statement_type == StatementType::SELECT_STATEMENT) {
 			clock_t start, end;
 			start = clock();
-			exploration_time = 0.0;
-			implementation_time = 0.0;
 			Optimizer optimizer(*planner.binder, *this, true);
 			plan = optimizer.Optimize(std::move(plan));
 			D_ASSERT(plan);
@@ -380,24 +378,25 @@ shared_ptr<PreparedStatementData> ClientContext::CreatePreparedStatement(ClientC
 			unique_ptr<LogicalOperator> logical_plan = unique_ptr_cast<Operator, LogicalOperator>(std::move(plan));
 			physical_plan = cascade.Optimize(std::move(logical_plan));
 			end = clock();
-			FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			FILE* time_f = fopen("/home/ecs-user/giveDuckTopDownOptimizer/expr/result.txt", "a+");
 			fprintf(time_f, "%lf\n", double(end - start) / CLOCKS_PER_SEC);
 			fclose(time_f);
 		} else {
-			clock_t start, end;
-			start = clock();
+			// clock_t start, end;
+			// start = clock();
 			Optimizer optimizer(*planner.binder, *this);
 			unique_ptr<LogicalOperator> new_plan = optimizer.Optimize(std::move(plan));
 			// now convert logical query plan into a physical query plan
 			PhysicalPlanGenerator physical_planner(*this);
 			physical_plan = physical_planner.CreatePlan(std::move(new_plan));
-			// physical_plan = physical_planner.CreatePlan(unique_ptr_cast<Operator, LogicalOperator>(std::move(new_plan)));
-			end = clock();
+			// end = clock();
+			/*
 			if (statement_type == StatementType::SELECT_STATEMENT) {
-				FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+				FILE* time_f = fopen("/home/ecs-user/giveDuckTopDownOptimizer/expr/result.txt", "a+");
 				fprintf(time_f, "%lf\n", double(end - start) / CLOCKS_PER_SEC);
 				fclose(time_f);
 			}
+			*/
 		}
 		profiler.EndPhase();
 	}

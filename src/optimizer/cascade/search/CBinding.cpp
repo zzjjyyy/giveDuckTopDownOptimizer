@@ -32,12 +32,11 @@ CBinding::PgexprNext(duckdb::unique_ptr<CGroup> pgroup,
 	if (nullptr == pgexpr) {
 		return gp.PgexprFirst();
 	}
-	auto itr = std::find(gp.m_pgroup->m_group_exprs.begin(), gp.m_pgroup->m_group_exprs.end(), pgexpr);
-	if (pgroup->m_is_scalar) {
-		return ++itr;
-	}
+	// auto itr = std::find(gp.m_pgroup->m_group_exprs.begin(), gp.m_pgroup->m_group_exprs.end(), pgexpr);
+	auto itr = pgroup->m_group_exprs_pos.find(pgexpr);
+	auto list_itr = (*itr).second;
 	// for non-scalar group, we only consider logical expressions in bindings
-	return gp.PgexprNextLogical(++itr);
+	return gp.PgexprNextLogical(++list_itr);
 }
 
 //---------------------------------------------------------------------------
@@ -268,12 +267,15 @@ CBinding::PexprExtract(duckdb::unique_ptr<CGroup> pgroup,
 					   duckdb::unique_ptr<Operator> pexprPattern,
 					   duckdb::unique_ptr<Operator> pexprLast) {
 	duckdb::unique_ptr<CGroupExpression> pgexpr = nullptr;
-	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
+	auto itr = pgroup->m_group_exprs.begin();
 	if (nullptr != pexprLast) {
-		itr = find(pgroup->m_group_exprs.begin(), pgroup->m_group_exprs.end(), pexprLast->m_group_expression);
+		/*
+		itr = std::find(pgroup->m_group_exprs.begin(), pgroup->m_group_exprs.end(), pexprLast->m_group_expression);
 		if(pgroup->m_group_exprs.end() != itr) {
 			pgexpr = *itr;
 		}
+		*/
+		pgexpr = pexprLast->m_group_expression;
 	} else {
 		// init cursor
 		itr = PgexprNext(pgroup, nullptr);

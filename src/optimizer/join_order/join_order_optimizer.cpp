@@ -1097,9 +1097,9 @@ unique_ptr<LogicalOperator> JoinOrderOptimizer::Optimize(unique_ptr<LogicalOpera
 		final_plan = plans.find(&total_relation);
 		D_ASSERT(final_plan != plans.end());
 	}
-	// FILE* f_pair = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
-	// fprintf(f_pair, "Considered join pairs: %ld, ", pairs);
-	// fclose(f_pair);
+	FILE* f_pair = fopen("/home/ecs-user/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+	fprintf(f_pair, "%ld\t", pairs);
+	fclose(f_pair);
 	// now perform the actual reordering
 	return RewritePlan(std::move(plan), *final_plan->second);
 }

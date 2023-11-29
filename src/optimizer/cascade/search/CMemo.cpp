@@ -331,6 +331,7 @@ bool CMemo::FRehash() {
 		{
 			// group proxy scope
 			CGroupProxy gp(pgroup);
+			// enumeration_pairs++;
 			gp.MoveDuplicateGExpr(pgexpr);
 		}
 		// check if we need also to mark duplicate groups

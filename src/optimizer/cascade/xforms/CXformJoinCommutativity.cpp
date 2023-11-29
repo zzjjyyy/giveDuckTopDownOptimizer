@@ -102,5 +102,5 @@ void CXformJoinCommutativity::Transform(duckdb::unique_ptr<CXformContext> pxfctx
 	pexprAlt->m_cost = GPOPT_INVALID_COST;
 	// add alternative to transformation result
 	pxfres->Add(std::move(pexprAlt));
-	// enumeration_pairs++;
+	enumeration_pairs++;
 }

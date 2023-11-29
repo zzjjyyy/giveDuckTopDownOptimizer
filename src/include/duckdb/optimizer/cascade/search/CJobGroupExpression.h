@@ -88,10 +88,14 @@ public:
 		auto group = job->m_group_expression->m_group;
 		auto expr = group->m_group_exprs.front();
 		auto op = expr->m_operator;
-
-		std::string op_names = "Logical Type: " + LogicalOperatorToString(op->logical_type);
+		std::string op_names;
+		if(op->logical_type == LogicalOperatorType::LOGICAL_INVALID) {
+			op_names = "Physical Type: " + PhysicalOperatorToString(op->physical_type);
+		}
+		if(op->physical_type == PhysicalOperatorType::INVALID) {
+			op_names = "Logical Type: " + LogicalOperatorToString(op->logical_type);
+		}
 		size_t group_id = group->m_id;
-
 		duckdb::Printer::Print(info + " " + op_names + "\tGroup Id " + std::to_string(group_id));
 	}
 }; // class CJobGroupExpression

@@ -37,9 +37,10 @@ void CJobGroup::Init(duckdb::unique_ptr<CGroup> pgroup)
 //		Get first non-logical group expression with an unscheduled job
 //
 //---------------------------------------------------------------------------
-list<duckdb::unique_ptr<CGroupExpression>>::iterator CJobGroup::PgexprFirstUnschedNonLogical()
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CJobGroup::PgexprFirstUnschedNonLogical()
 {
-	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
+	auto itr = m_pgroup->m_group_exprs.begin();
 	{
 		CGroupProxy gp(m_pgroup);
 		if (m_pgroup->m_group_exprs.end() == m_last_scheduled_expr)
@@ -65,22 +66,20 @@ list<duckdb::unique_ptr<CGroupExpression>>::iterator CJobGroup::PgexprFirstUnsch
 //		Get first logical group expression with an unscheduled job
 //
 //---------------------------------------------------------------------------
-list<duckdb::unique_ptr<CGroupExpression>>::iterator CJobGroup::PgexprFirstUnschedLogical()
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CJobGroup::PgexprFirstUnschedLogical()
 {
-	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
+	auto itr = m_pgroup->m_group_exprs.begin();;
+	if (m_pgroup->m_group_exprs.end() == m_last_scheduled_expr)
 	{
-		CGroupProxy gp(m_pgroup);
-		if (m_pgroup->m_group_exprs.end() == m_last_scheduled_expr)
-		{
-			// get first group expression
-			itr = m_pgroup->m_group_exprs.begin();
-		}
-		else
-		{
-			// get group expression next to last scheduled one
-			itr = m_last_scheduled_expr;
-			++itr;
-		}
+		// get first group expression
+		itr = m_pgroup->m_group_exprs.begin();
+	}
+	else
+	{
+		// get group expression next to last scheduled one
+		itr = m_last_scheduled_expr;
+		++itr;
 	}
 	return itr;
 }

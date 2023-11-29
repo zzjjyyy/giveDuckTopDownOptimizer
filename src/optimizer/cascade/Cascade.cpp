@@ -99,9 +99,9 @@ duckdb::unique_ptr<PhysicalOperator> Cascade::Optimize(duckdb::unique_ptr<Logica
 	task_proxy.DestroyAll();
 	worker.release();
 
-	// FILE* f_pair = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
-	// fprintf(f_pair, "Considered join pairs: %d, ", enumeration_pairs);
-	// fclose(f_pair);
+	FILE* f_pair = fopen("/home/ecs-user/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+	fprintf(f_pair, "%d\t", enumeration_pairs);
+	fclose(f_pair);
 
 	// print physical plan
 	// Printer::Print("Physical Plan: \n");

@@ -108,7 +108,7 @@ void CXformJoinAssociativity::CreatePredicates(duckdb::unique_ptr<Operator> join
 void CXformJoinAssociativity::Transform(duckdb::unique_ptr<CXformContext> pxfctxt,
                                         duckdb::unique_ptr<CXformResult> pxfres,
                                         duckdb::unique_ptr<Operator> pexpr) const {
-    // enumeration_pairs++;
+    enumeration_pairs++;
 	auto UpperJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(pexpr);
     auto LowerJoin = unique_ptr_cast<Operator, LogicalComparisonJoin>(pexpr->children[0]);
     duckdb::vector<JoinCondition> NewUpperJoinCondition;

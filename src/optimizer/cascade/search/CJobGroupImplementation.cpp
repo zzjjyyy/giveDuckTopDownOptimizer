@@ -196,7 +196,7 @@ CJobGroupImplementation::EevtImplementChildren(duckdb::unique_ptr<CSchedulerCont
 		if (psc->m_engine->FRoot(pjgi->m_pgroup)) {
 			// end_implementation = clock();
 			// implementation_time = double(end_implementation - start_implementation) / CLOCKS_PER_SEC;
-			// FILE* time_f = fopen("/root/giveDuckTopDownOptimizer/expr/result.txt", "a+");
+			// FILE* time_f = fopen("/home/ecs-user/giveDuckTopDownOptimizer/expr/result.txt", "a+");
 			// fprintf(time_f, "imple = %lf s, ", implementation_time);
 			// fclose(time_f);
 			psc->m_engine->FinalizeImplementation();

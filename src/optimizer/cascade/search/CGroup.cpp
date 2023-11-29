@@ -325,6 +325,10 @@ size_t CGroup::HashValue() const {
 //---------------------------------------------------------------------------
 void CGroup::Insert(duckdb::unique_ptr<CGroupExpression> pgexpr) {
 	m_group_exprs.emplace_back(pgexpr);
+	auto cur_pos = m_group_exprs.end();
+	// Back to the pgexpr position
+	cur_pos--;
+	m_group_exprs_pos.insert(make_pair(pgexpr, cur_pos));
 	if (pgexpr->m_operator->FLogical()) {
 		m_has_new_logical_operators = true;
 	}
@@ -342,15 +346,15 @@ void CGroup::Insert(duckdb::unique_ptr<CGroupExpression> pgexpr) {
 //
 //---------------------------------------------------------------------------
 void CGroup::MoveDuplicateGExpr(duckdb::unique_ptr<CGroupExpression> pgexpr) {
-	// need to delete
-	// m_group_exprs.clear();
-	// m_num_exprs = 0;
-
-	m_group_exprs.remove(pgexpr);
-	m_num_exprs--;
-
-	// need to delete
-	// m_duplicate_group_exprs.emplace_back(pgexpr);
+	auto cur_pos_in_hashmap = m_group_exprs_pos.find(pgexpr);
+	if(cur_pos_in_hashmap != nullptr) {
+		auto cur_pos_in_list = cur_pos_in_hashmap->second;
+		m_group_exprs_pos.erase(cur_pos_in_hashmap);
+		m_group_exprs.erase(cur_pos_in_list);
+		m_num_exprs--;	
+	} else {
+		D_ASSERT(false);
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -361,7 +365,8 @@ void CGroup::MoveDuplicateGExpr(duckdb::unique_ptr<CGroupExpression> pgexpr) {
 //		Retrieve first expression in group
 //
 //---------------------------------------------------------------------------
-list<duckdb::unique_ptr<CGroupExpression>>::iterator CGroup::FirstGroupExpr() {
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CGroup::FirstGroupExpr() {
 	return m_group_exprs.begin();
 }
 
@@ -373,7 +378,8 @@ list<duckdb::unique_ptr<CGroupExpression>>::iterator CGroup::FirstGroupExpr() {
 //		Retrieve next expression in group
 //
 //---------------------------------------------------------------------------
-list<duckdb::unique_ptr<CGroupExpression>>::iterator CGroup::NextGroupExpr(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexpr_iter) {
+list<duckdb::unique_ptr<CGroupExpression>>::iterator
+CGroup::NextGroupExpr(list<duckdb::unique_ptr<CGroupExpression>>::iterator pgexpr_iter) {
 	return pgexpr_iter++;
 }
 
@@ -512,6 +518,7 @@ void CGroup::MergeGroup() {
 		pgexpr->Reset(pgroupTarget, pgroupTarget->m_num_exprs++);
 		pgroupTarget->Insert(pgexpr);
 	}
+	m_group_exprs_pos.clear();
 }
 
 //---------------------------------------------------------------------------
@@ -606,7 +613,7 @@ void CGroup::BuildTreeMap(duckdb::unique_ptr<CGroup> this_group,
 		// link is already processed
 		return;
 	}
-	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
+	auto itr = this_group->m_group_exprs.begin();;
 	// start with first non-logical group expression
 	duckdb::unique_ptr<CGroupExpression> pgexprCurrent = nullptr;
 	{
@@ -655,7 +662,7 @@ CGroup::BestPromiseGroupExpr(duckdb::unique_ptr<CGroup> this_group,
 	duckdb::vector<ColumnBinding> v;
 	duckdb::unique_ptr<CGroupExpression> pgexprCurrent = nullptr;
 	duckdb::unique_ptr<CGroupExpression> pgexprBest = nullptr;
-	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
+	auto itr = this_group->m_group_exprs.begin();
 	// get first logical group expression
 	{
 		CGroupProxy gp(this_group);
@@ -753,7 +760,7 @@ double CGroup::CostLowerBound(duckdb::unique_ptr<CGroup> this_group,
 	double costLowerBound = GPOPT_INFINITE_COST;
 	// start with first non-logical group expression
 	duckdb::unique_ptr<CGroupExpression> pgexprCurrent = nullptr;
-	list<duckdb::unique_ptr<CGroupExpression>>::iterator itr;
+	auto itr = this_group->m_group_exprs.begin();
 	{
 		CGroupProxy gp(this_group);
 		itr = gp.m_pgroup->m_group_exprs.begin();
